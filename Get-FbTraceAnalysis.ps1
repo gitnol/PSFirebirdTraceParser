@@ -124,3 +124,17 @@ end {
     # 4. Bericht ausgeben, sortiert nach Häufigkeit (Count)
     $report | Sort-Object Count -Descending
 }
+
+# Um die 10 langsamsten *individuellen* Abfragen zu finden (wie in deinem RANK-Beispiel),
+# brauchst du das Skript nicht. Das machst du direkt mit der Ausgabe des Parsers:
+# $erg = .\Show-TraceStructure.ps1 -Path "C:\temp\20251113\trace_output_ib_aid_20251112\trace_output_ib_aid_20251112.log" 
+# $erg | Sort-Object DurationMs -Descending | Select-Object -First 10
+
+
+# Führt die Analyse durch und speichert die nach SqlHash gruppierten Ergebnisse:
+# $sqlStats = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy SqlHash
+
+# Zeigt die 10 häufigsten SQL-Abfragen an
+# $sqlStats | Select-Object -First 10 | Format-Table Count, AvgDurationMs, TotalFetches, FirstSqlStatement -Wrap
+
+# $sqlStats | Where-Object FirstSqlStatement -ne $null | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property Count, AvgDurationMs, TotalFetches, @{N="bla";E={$_.FirstSqlStatement.Substring(0,100)}} | ogv

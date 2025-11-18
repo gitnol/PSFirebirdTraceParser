@@ -124,4 +124,3 @@ end {
 
 # Zeigt die 10 häufigsten SQL-Abfragen an
 # $sqlStats | Select-Object -First 10 | Format-Table Count, AvgDurationMs, TotalFetches, FirstSqlStatement -Wrap
-
