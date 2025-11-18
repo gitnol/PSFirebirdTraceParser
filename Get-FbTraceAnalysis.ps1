@@ -1,3 +1,10 @@
+# Dienstag, 18. November 2025 11:07:26
+# Starte Analyse. Sammle Einträge aus der Pipeline...
+# Alle 532623 Einträge empfangen. Berechne Hashes...
+# Hashes berechnet. Gruppiere Daten...
+# Analyse abgeschlossen. Gebe 2693 Gruppen zurück.
+# Dienstag, 18. November 2025 11:09:30
+
 <#
 .SYNOPSIS
     Analysiert eine Sammlung von geparsten Firebird-Trace-Objekten,
