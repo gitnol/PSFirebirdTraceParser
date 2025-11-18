@@ -137,4 +137,22 @@ end {
 # Zeigt die 10 häufigsten SQL-Abfragen an
 # $sqlStats | Select-Object -First 10 | Format-Table Count, AvgDurationMs, TotalFetches, FirstSqlStatement -Wrap
 
-# $sqlStats | Where-Object FirstSqlStatement -ne $null | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property Count, AvgDurationMs, TotalFetches, @{N="bla";E={$_.FirstSqlStatement.Substring(0,100)}} | ogv
+# $sqlStats | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property Count, AvgDurationMs, TotalFetches, @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}  | Out-GridView
+# $sqlStats | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property *, @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}  | Out-GridView
+
+# Zeigt die 100 SQL-Abfragen mit dem größten Gesamteinfluss (Count * AvgDurationMs) an.
+# $sqlStats | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | 
+#     Sort-Object -Property @{E={$_.Count * $_.AvgDurationMs}} -Descending | 
+#     Select-Object -First 100 -Property Count, AvgDurationMs, 
+#         @{N="TotalImpact";E={$_.Count * $_.AvgDurationMs}}, 
+#         TotalFetches, 
+#         @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}} | 
+#     Out-GridView
+
+# Exportiert die 100 SQL-Abfragen mit dem größten Gesamteinfluss (Count * AvgDurationMs) in eine Excel-Datei.
+# $sqlStats | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | 
+#     Sort-Object -Property @{E={$_.Count * $_.AvgDurationMs}} -Descending | 
+#     Select-Object -First 100 -Property *, 
+#         @{N="TotalImpact";E={$_.Count * $_.AvgDurationMs}}, 
+#         @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}} | 
+#     Export-Excel
