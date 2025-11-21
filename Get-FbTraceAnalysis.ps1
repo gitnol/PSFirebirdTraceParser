@@ -188,34 +188,32 @@ end {
 
 # Zeigt die 100 SQL-Abfragen mit dem größten Gesamteinfluss (Count * AvgDurationMs) an.
 # $sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | 
-#     Sort-Object -Property @{E={$_.Count * $_.AvgDurationMs}} -Descending | 
-#     Select-Object -First 100 -Property Count, AvgDurationMs, 
-#         @{N="TotalImpact";E={$_.Count * $_.AvgDurationMs}}, 
-#         TotalFetches, 
-#         @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}} | 
-#     Out-GridView
+# Sort-Object -Property @{E={$_.Count * $_.AvgDurationMs}} -Descending | 
+# Select-Object -First 100 -Property @{N="TotalImpactByDuration";E={$_.Count * $_.AvgDurationMs}}, 
+# @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}},* | 
+# Out-GridView
 
 # Exportiert die 100 SQL-Abfragen mit dem größten Gesamteinfluss (Count * AvgDurationMs) in eine Excel-Datei.
 # $sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | 
-#     Sort-Object -Property @{E={$_.Count * $_.AvgDurationMs}} -Descending | 
-#     Select-Object -First 100 -Property *, 
-#         @{N="TotalImpact";E={$_.Count * $_.AvgDurationMs}}, 
-#         @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}} | 
-#     Export-Excel
+# Sort-Object -Property @{E={$_.Count * $_.AvgDurationMs}} -Descending | 
+# Select-Object -First 100 -Property 
+# @{N="TotalImpactByDuration";E={$_.Count * $_.AvgDurationMs}}, 
+# @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}},* | 
+# Export-Excel
 
 
 # # 1. Parsen (falls noch nicht geschehen)
 # # $erg = .\Show-TraceStructure.ps1 -Path "DeinLog.log"
 
 # # 2. Transaktions-Analyse durchführen
-# $chains = $erg | .\Get-FbTransactionGrouping.ps1
+# $sqlStatsRootTxID = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID
 
 # # 3. Die "teuersten" Ketten bzgl. Schreibzugriffen (Writes) ansehen
-# $chains | Select-Object RootTxID, User, TotalWrites, TotalDurationMs, UniqueSqlCount -First 10 | Format-Table
+# $sqlStatsRootTxID | Select-Object RootTxID, User, TotalWrites, TotalDurationMs, UniqueSqlCount -First 10 | Format-Table
 
 # # 4. Detail-Analyse einer spezifischen Kette (z.B. die teuerste):
 # # Hier siehst du endlich, WELCHE SQLs zu den Writes geführt haben!
-# $topChain = $chains | Select-Object -First 1
+# $topChain = $sqlStatsRootTxID | Select-Object -First 1
 # $topChain.SqlStatements
 
 # Mit `$topChain.SqlStatements` bekommst du jetzt die Antwort auf deine Frage: "Welche SQL-Befehle haben diese Writes verursacht?" (auch wenn die Writes erst beim Commit geloggt wurden).
