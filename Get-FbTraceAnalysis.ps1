@@ -7,6 +7,9 @@
     Dieses Skript nimmt die Ausgabe von 'Show-TraceStructure.ps1' über die
     Pipeline entgegen. Es berechnet Hashes für SQL-Statements und Pläne,
     ermittelt die Root-Transaktions-ID und gruppiert die Einträge.
+    
+    Es liefert aggregierte Statistiken sowie eine Liste der eindeutigen SQL-Statements
+    pro Gruppe zurück.
 
 .PARAMETER InputObject
     Die [PSCustomObject]-Einträge, die von 'Show-TraceStructure.ps1'
@@ -25,8 +28,9 @@
     .\Show-TraceStructure.ps1 -Path "trace.log" | .\Get-FbTraceAnalysis.ps1 -GroupBy SqlHash
 
 .EXAMPLE
-    # Findet die teuersten Transaktions-Ketten
-    .\Show-TraceStructure.ps1 -Path "trace.log" | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID | Sort-Object TotalDurationMs -Descending
+    # Findet die teuersten Transaktions-Ketten und zeigt deren SQLs an
+    $res = .\Show-TraceStructure.ps1 -Path "trace.log" | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID 
+    $res | Sort-Object TotalWrites -Descending | Select-Object -First 5 | Select-Object RootTxID, TotalWrites, SqlStatements
 
 .OUTPUTS
     [System.Management.Automation.PSCustomObject[]]
@@ -38,7 +42,6 @@ param (
     [psobject]$InputObject,
 
     [Parameter(Mandatory = $false)]
-    # NEU: RootTxID hinzugefügt
     [ValidateSet("SqlHash", "PlanHash", "RootTxID", "User", "ApplicationPath")]
     [string]$GroupBy = "SqlHash"
 )
@@ -76,15 +79,13 @@ end {
         $planHash = Get-StringHash $obj.SqlPlan
 
         # HINWEIS: RootTxID wird jetzt vom Parser (Show-TraceStructure.ps1) geliefert.
-        # Wir müssen sie nicht mehr berechnen, aber sicherstellen, dass sie für die Gruppierung existiert.
+        # Falls alte Parser-Version genutzt wird, Fallback:
         if (-not $obj.psobject.Properties['RootTxID']) {
-            # Fallback, falls alte Parser-Version genutzt wird (sollte nicht passieren)
             $obj.psobject.Properties.Add([System.Management.Automation.PSNoteProperty]::new("RootTxID", "NoTx"))
         }
 
         # Eigenschaften direkt hinzufügen (schneller als Add-Member)
         $props = $obj.psobject.Properties
-        # Prüfen, ob Property schon existiert, um Fehler bei erneutem Lauf zu vermeiden
         if (-not $props['SqlHash']) {
             $props.Add([System.Management.Automation.PSNoteProperty]::new("SqlHash", $sqlHash))
         }
@@ -96,34 +97,64 @@ end {
     Write-Host "Daten angereichert. Gruppiere nach '$GroupBy'..."
 
     # 2. Filtern und Gruppieren
-    # Jetzt arbeiten wir direkt mit $allObjects weiter
     $groupedData = $allObjects | Where-Object { $_.$GroupBy } | Group-Object -Property $GroupBy
 
     # 3. Statistik-Objekte erstellen
     $report = $groupedData | ForEach-Object {
         
-        # Aggregierte Werte für die Gruppe berechnen
-        $totalDuration = ($_.Group | Measure-Object DurationMs -Sum).Sum
-        $totalFetches = ($_.Group | Measure-Object Fetches -Sum).Sum
-        $totalWrites = ($_.Group | Measure-Object Writes -Sum).Sum
-        $totalReads = ($_.Group | Measure-Object Reads -Sum).Sum # NEU: Auch Reads aufsummieren
+        $groupList = $_.Group
         
+        # Aggregierte Werte für die Gruppe berechnen
+        $totalDuration = ($groupList | Measure-Object DurationMs -Sum).Sum
+        $totalFetches = ($groupList | Measure-Object Fetches -Sum).Sum
+        $totalWrites = ($groupList | Measure-Object Writes -Sum).Sum
+        $totalReads = ($groupList | Measure-Object Reads -Sum).Sum 
+        
+        # Zeitspanne ermitteln (nur sinnvoll bei RootTxID, aber schadet sonst auch nicht)
+        # Wir sortieren kurz die Gruppe nach Zeit, um Start/Ende zu finden
+        # (Bei sehr großen Gruppen kann das Zeit kosten, ist aber für die Analyse wertvoll)
+        $startTime = $null
+        $endTime = $null
+        if ($groupList.Count -gt 0) {
+            # Wir nehmen an, die Liste ist grob sortiert durch das Einlesen, 
+            # aber sicherheitshalber nehmen wir Min/Max wenn nötig. 
+            # Da Trace-Logs chronologisch sind, sind First/Last meist korrekt.
+            $startTime = ($groupList | Select-Object -First 1).Timestamp
+            $endTime = ($groupList | Select-Object -Last 1).Timestamp
+        }
+
+        # Eindeutige SQL-Statements sammeln
+        # Das ist das Feature aus Get-FbTransactionGrouping.ps1
+        $uniqueSqls = $groupList.SqlStatement | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+
         [PSCustomObject]@{
             GroupValue        = $_.Name
             GroupBy           = $GroupBy
             Count             = $_.Count
+            
+            # Summen
             TotalDurationMs   = $totalDuration
             TotalFetches      = $totalFetches
-            TotalReads        = $totalReads # NEU
+            TotalReads        = $totalReads
             TotalWrites       = $totalWrites
+            
+            # Durchschnitte
             AvgDurationMs     = if ($_.Count -gt 0) { [Math]::Round($totalDuration / $_.Count, 2) } else { 0 }
             AvgFetches        = if ($_.Count -gt 0) { [Math]::Round($totalFetches / $_.Count, 0) } else { 0 }
             
-            # Referenzwerte für Textfelder
-            FirstSqlStatement = ($_.Group | Select-Object -First 1).SqlStatement
-            FirstSqlPlan      = ($_.Group | Select-Object -First 1).SqlPlan
-            FirstUser         = ($_.Group | Select-Object -First 1).User
-            FirstRootTxID     = ($_.Group | Select-Object -First 1).RootTxID
+            # Zeit
+            StartTime         = $startTime
+            EndTime           = $endTime
+
+            # SQL-Details
+            UniqueSqlCount    = $uniqueSqls.Count
+            SqlStatements     = $uniqueSqls # Array aller eindeutigen Statements in dieser Gruppe
+
+            # Referenzwerte für Anzeige
+            FirstSqlStatement = ($groupList | Select-Object -First 1).SqlStatement
+            FirstSqlPlan      = ($groupList | Select-Object -First 1).SqlPlan
+            FirstUser         = ($groupList | Select-Object -First 1).User
+            FirstRootTxID     = ($groupList | Select-Object -First 1).RootTxID
         }
     }
 
