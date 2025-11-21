@@ -8,8 +8,8 @@
     Pipeline entgegen. Es berechnet Hashes für SQL-Statements und Pläne,
     ermittelt die Root-Transaktions-ID und gruppiert die Einträge.
     
-    Es liefert aggregierte Statistiken sowie eine Liste der eindeutigen SQL-Statements
-    pro Gruppe zurück.
+    Es unterstützt spezielle Modi 'AdrSummary' und 'ProcessSummary', um 
+    Netzwerk- und Applikationsstatistiken zu erstellen.
 
 .PARAMETER InputObject
     Die [PSCustomObject]-Einträge, die von 'Show-TraceStructure.ps1'
@@ -21,16 +21,12 @@
     - 'PlanHash': Gruppiert identische Ausführungspläne.
     - 'RootTxID': Gruppiert nach Transaktions-Ketten.
     - 'User': Gruppiert nach dem Benutzer.
-    - 'ApplicationPath': Gruppiert nach dem Pfad der Anwendung.
+    - 'AdrSummary': Erstellt eine IP-basierte Statistik (Att, Det, Unique Sessions, etc.).
+    - 'ProcessSummary': Erstellt eine Applikations-basierte Statistik.
 
 .EXAMPLE
-    # Analysiert ein Log und gruppiert nach identischen SQL-Abfragen
-    .\Show-TraceStructure.ps1 -Path "trace.log" | .\Get-FbTraceAnalysis.ps1 -GroupBy SqlHash
-
-.EXAMPLE
-    # Findet die teuersten Transaktions-Ketten und zeigt deren SQLs an
-    $res = .\Show-TraceStructure.ps1 -Path "trace.log" | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID 
-    $res | Sort-Object TotalWrites -Descending | Select-Object -First 5 | Select-Object RootTxID, TotalWrites, SqlStatements
+    # Analysiert ein Log und erstellt eine Adress-Zusammenfassung
+    .\Show-TraceStructure.ps1 -Path "trace.log" | .\Get-FbTraceAnalysis.ps1 -GroupBy AdrSummary
 
 .OUTPUTS
     [System.Management.Automation.PSCustomObject[]]
@@ -42,13 +38,13 @@ param (
     [psobject]$InputObject,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("SqlHash", "PlanHash", "RootTxID", "User", "ApplicationPath")]
+    [ValidateSet("SqlHash", "PlanHash", "RootTxID", "User", "AdrSummary", "ProcessSummary")]
     [string]$GroupBy = "SqlHash"
 )
 
 # Pipeline-Verarbeitung
 begin {
-    # Helper-Funktion INNERHALB des begin-Blocks
+    # Helper-Funktion für Hashes
     function Get-StringHash($InputString) {
         if ([string]::IsNullOrEmpty($InputString)) { return $null }
         
@@ -65,103 +61,133 @@ begin {
 }
 
 process {
-    # Fügt jedes Objekt aus der Pipeline der Liste hinzu
     $allObjects.Add($InputObject)
 }
 
 end {
-    Write-Host "Alle $($allObjects.Count) Einträge empfangen. Reichere Daten an (Hashes)..."
+    Write-Host "Alle $($allObjects.Count) Einträge empfangen. Verarbeite Daten..."
     
-    # 1. Alle Objekte anreichern (In-Place Modifikation für Performance)
+    # 1. Vorbereitung: Hashes anreichern
     foreach ($obj in $allObjects) {
-        # Hashes berechnen
+        # Standard Hashes
         $sqlHash = Get-StringHash $obj.SqlStatement
         $planHash = Get-StringHash $obj.SqlPlan
 
-        # HINWEIS: RootTxID wird jetzt vom Parser (Show-TraceStructure.ps1) geliefert.
-        # Falls alte Parser-Version genutzt wird, Fallback:
+        # RootTxID Fallback
         if (-not $obj.psobject.Properties['RootTxID']) {
             $obj.psobject.Properties.Add([System.Management.Automation.PSNoteProperty]::new("RootTxID", "NoTx"))
         }
-
-        # Eigenschaften direkt hinzufügen (schneller als Add-Member)
+        
+        # Properties hinzufügen
         $props = $obj.psobject.Properties
-        if (-not $props['SqlHash']) {
-            $props.Add([System.Management.Automation.PSNoteProperty]::new("SqlHash", $sqlHash))
-        }
-        if (-not $props['PlanHash']) {
-            $props.Add([System.Management.Automation.PSNoteProperty]::new("PlanHash", $planHash))
-        }
+        if (-not $props['SqlHash']) { $props.Add([System.Management.Automation.PSNoteProperty]::new("SqlHash", $sqlHash)) }
+        if (-not $props['PlanHash']) { $props.Add([System.Management.Automation.PSNoteProperty]::new("PlanHash", $planHash)) }
     }
 
-    Write-Host "Daten angereichert. Gruppiere nach '$GroupBy'..."
+    # 2. Gruppierung festlegen
+    $groupProperty = $GroupBy
+    
+    # HIER ist die Vereinfachung: Wir nutzen direkt die existierende ClientIP Eigenschaft
+    if ($GroupBy -eq 'AdrSummary') { $groupProperty = 'ClientIP' }
+    if ($GroupBy -eq 'ProcessSummary') { $groupProperty = 'ApplicationPath' }
 
-    # 2. Filtern und Gruppieren
-    $groupedData = $allObjects | Where-Object { $_.$GroupBy } | Group-Object -Property $GroupBy
+    Write-Host "Gruppiere nach '$groupProperty'..."
 
-    # 3. Statistik-Objekte erstellen
+    # Daten filtern und gruppieren (Leere Werte rausfiltern, z.B. Einträge ohne IP)
+    $groupedData = $allObjects | Where-Object { $_.$groupProperty } | Group-Object -Property $groupProperty
+
+    # 3. Bericht erstellen
     $report = $groupedData | ForEach-Object {
-        
         $groupList = $_.Group
-        
-        # Aggregierte Werte für die Gruppe berechnen
+        $groupCount = $_.Count
+        $groupName = $_.Name
+
+        # Basis-Metriken
         $totalDuration = ($groupList | Measure-Object DurationMs -Sum).Sum
         $totalFetches = ($groupList | Measure-Object Fetches -Sum).Sum
         $totalWrites = ($groupList | Measure-Object Writes -Sum).Sum
         $totalReads = ($groupList | Measure-Object Reads -Sum).Sum 
-        
-        # Zeitspanne ermitteln (nur sinnvoll bei RootTxID, aber schadet sonst auch nicht)
-        # Wir sortieren kurz die Gruppe nach Zeit, um Start/Ende zu finden
-        # (Bei sehr großen Gruppen kann das Zeit kosten, ist aber für die Analyse wertvoll)
-        $startTime = $null
-        $endTime = $null
-        if ($groupList.Count -gt 0) {
-            # Wir nehmen an, die Liste ist grob sortiert durch das Einlesen, 
-            # aber sicherheitshalber nehmen wir Min/Max wenn nötig. 
-            # Da Trace-Logs chronologisch sind, sind First/Last meist korrekt.
-            $startTime = ($groupList | Select-Object -First 1).Timestamp
-            $endTime = ($groupList | Select-Object -Last 1).Timestamp
+        $totalMarks = ($groupList | Measure-Object Marks -Sum).Sum
+
+        # Spezial-Metriken für Summaries (Att, Det, U.S., U.P.)
+        $attCount = 0
+        $detCount = 0
+        $uniqueSessions = 0
+        $uniquePIDs = 0
+        $procInfo = $null
+
+        if ($GroupBy -eq 'AdrSummary' -or $GroupBy -eq 'ProcessSummary') {
+            # Attach / Detach zählen
+            $attCount = ($groupList | Where-Object { $_.Action -eq 'ATTACH_DATABASE' }).Count
+            $detCount = ($groupList | Where-Object { $_.Action -eq 'DETACH_DATABASE' }).Count
+            
+            # Unique Sessions (U.S.)
+            $uniqueSessions = ($groupList | Select-Object SessionID -Unique).Count
+            
+            # Unique Processes (U.P.) - Client PIDs
+            $uniquePIDs = ($groupList | Where-Object { $_.ApplicationPID } | Select-Object ApplicationPID -Unique).Count
+
+            # Proc-Liste (Nur für AdrSummary relevant: Welche Prozesse kamen von dieser IP?)
+            if ($GroupBy -eq 'AdrSummary') {
+                $procs = $groupList | Where-Object { $_.ApplicationPath } | Group-Object ApplicationPath
+                # Formatieren als String: "Anzahl: Name (PID_Beispiel), ..."
+                $procStrings = $procs | Sort-Object Count -Descending | ForEach-Object {
+                    # Wir holen uns den reinen Dateinamen für die Kürze
+                    $fName = [System.IO.Path]::GetFileName($_.Name)
+                    "$($_.Count): $fName"
+                }
+                # Die Top 5 Prozesse zusammenfügen
+                $procInfo = ($procStrings | Select-Object -First 5) -join ", "
+            }
         }
 
-        # Eindeutige SQL-Statements sammeln
-        # Das ist das Feature aus Get-FbTransactionGrouping.ps1
-        $uniqueSqls = $groupList.SqlStatement | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
-
-        [PSCustomObject]@{
-            GroupValue        = $_.Name
-            GroupBy           = $GroupBy
-            Count             = $_.Count
-            
-            # Summen
-            TotalDurationMs   = $totalDuration
-            TotalFetches      = $totalFetches
-            TotalReads        = $totalReads
-            TotalWrites       = $totalWrites
-            
-            # Durchschnitte
-            AvgDurationMs     = if ($_.Count -gt 0) { [Math]::Round($totalDuration / $_.Count, 2) } else { 0 }
-            AvgFetches        = if ($_.Count -gt 0) { [Math]::Round($totalFetches / $_.Count, 0) } else { 0 }
-            
-            # Zeit
-            StartTime         = $startTime
-            EndTime           = $endTime
-
-            # SQL-Details
-            UniqueSqlCount    = $uniqueSqls.Count
-            SqlStatements     = $uniqueSqls # Array aller eindeutigen Statements in dieser Gruppe
-
-            # Referenzwerte für Anzeige
-            FirstSqlStatement = ($groupList | Select-Object -First 1).SqlStatement
-            FirstSqlPlan      = ($groupList | Select-Object -First 1).SqlPlan
-            FirstUser         = ($groupList | Select-Object -First 1).User
-            FirstRootTxID     = ($groupList | Select-Object -First 1).RootTxID
+        # Ergebnis-Objekt bauen (dynamisch je nach Modus)
+        $outObj = [ordered]@{
+            No              = 0 # Platzhalter für Rank
+            GroupValue      = $groupName
+            Count           = $groupCount
+            TotalDurationMs = $totalDuration
+            TotalFetches    = $totalFetches
+            TotalReads      = $totalReads
+            TotalWrites     = $totalWrites
+            TotalMarks      = $totalMarks
         }
+
+        # Zusatzspalten für Summary-Tabellen
+        if ($GroupBy -eq 'AdrSummary' -or $GroupBy -eq 'ProcessSummary') {
+            $outObj.Att = $attCount
+            $outObj.Det = $detCount
+            $outObj.Conn = $uniqueSessions # Conn ist hier Unique Sessions
+            $outObj.US = $uniqueSessions
+            $outObj.UP = $uniquePIDs
+            
+            if ($procInfo) {
+                $outObj.Proc = $procInfo
+            }
+        }
+        else {
+            # Standard Spalten für SQL/Plan Analyse
+            $outObj.AvgDurationMs = if ($groupCount -gt 0) { [Math]::Round($totalDuration / $groupCount, 2) } else { 0 }
+            $outObj.FirstSqlStatement = ($groupList | Select-Object -First 1).SqlStatement
+            $outObj.FirstUser = ($groupList | Select-Object -First 1).User
+        }
+
+        [PSCustomObject]$outObj
     }
 
-    Write-Host "Analyse abgeschlossen. Gebe $($report.Count) Gruppen zurück."
+    # Sortierung und Ranking (No) hinzufügen
+    $sortedReport = $report | Sort-Object Count -Descending
     
-    # 4. Bericht ausgeben, sortiert nach Häufigkeit (Count)
-    $report | Sort-Object Count -Descending
+    # Index 'No' befüllen
+    $i = 1
+    foreach ($row in $sortedReport) {
+        $row.No = $i
+        $i++
+    }
+
+    Write-Host "Analyse abgeschlossen. Gebe $($sortedReport.Count) Gruppen zurück."
+    
+    return $sortedReport
 }
 
 # Um die 10 langsamsten *individuellen* Abfragen zu finden (wie in deinem RANK-Beispiel),
@@ -200,6 +226,13 @@ end {
 # @{N="TotalImpactByDuration";E={$_.Count * $_.AvgDurationMs}}, 
 # @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}},* | 
 # Export-Excel
+
+
+# Zeigt die Quelladressen Zusammenfassung an:
+# $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy AdrSummary | Format-Table -AutoSize
+
+# Zeigt die Processzusammenfassung an
+# $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy ProcessSummary | Format-Table -AutoSize
 
 
 # # 1. Parsen (falls noch nicht geschehen)
