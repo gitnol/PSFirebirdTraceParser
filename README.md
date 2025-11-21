@@ -1,171 +1,211 @@
 # Firebird Trace Log Parser & Analyzer
 
-Eine Sammlung von PowerShell-Tools zum Parsen, Analysieren und Auswerten von Firebird Trace Logs. Diese Skripte helfen dabei, Performance-Engpässe zu identifizieren, SQL-Abfragen zu gruppieren und Transaktionsketten zu verstehen.
+PowerShell-Tools zum **Parsen**, **Analysieren** und **Auswerten** von Firebird Trace Logs.
+Hilft, Performance-Engpässe, Transaktionsketten und ineffiziente SQLs schnell zu identifizieren.
 
 ## Inhaltsverzeichnis
 
 - [Firebird Trace Log Parser \& Analyzer](#firebird-trace-log-parser--analyzer)
   - [Inhaltsverzeichnis](#inhaltsverzeichnis)
   - [Enthaltene Skripte](#enthaltene-skripte)
+    - [**Show-TraceStructure.ps1**](#show-tracestructureps1)
+    - [**Get-FbTraceAnalysis.ps1**](#get-fbtraceanalysisps1)
+  - [Trace-Konfigurationsdateien und Batch-Tools](#trace-konfigurationsdateien-und-batch-tools)
+    - [**fbtrace30.conf**](#fbtrace30conf)
+    - [**trace\_start.bat**](#trace_startbat)
+    - [**trace\_stop.bat**](#trace_stopbat)
   - [Nutzung \& Workflow](#nutzung--workflow)
-    - [Schritt 1: Log-Datei parsen](#schritt-1-log-datei-parsen)
-    - [Schritt 2: Basis-Analyse (Individuelle Abfragen)](#schritt-2-basis-analyse-individuelle-abfragen)
-  - [Fortgeschrittene Analyse mit `Get-FbTraceAnalysis`](#fortgeschrittene-analyse-mit-get-fbtraceanalysis)
-    - [A. SQL-Statistiken (Grouping by SQL Hash)](#a-sql-statistiken-grouping-by-sql-hash)
-    - [B. "Impact"-Analyse](#b-impact-analyse)
-    - [C. Transaktions-Ketten Analyse (`RootTxID`)](#c-transaktions-ketten-analyse-roottxid)
+    - [**Schritt 1: Log-Datei parsen**](#schritt-1-log-datei-parsen)
+    - [**Schritt 2: Basis-Analyse**](#schritt-2-basis-analyse)
+  - [Fortgeschrittene Analyse](#fortgeschrittene-analyse)
+    - [A. **SQL-Statistiken (Grouping by SQL Hash)**](#a-sql-statistiken-grouping-by-sql-hash)
+    - [B. **Impact-Analyse**](#b-impact-analyse)
+    - [C. **Transaktions-Ketten Analyse (RootTxID)**](#c-transaktions-ketten-analyse-roottxid)
   - [Infrastruktur- \& Prozess-Zusammenfassungen](#infrastruktur---prozess-zusammenfassungen)
-    - [Adress-Zusammenfassung (Wer verbindet sich?)](#adress-zusammenfassung-wer-verbindet-sich)
-    - [Prozess-Zusammenfassung (Welche App macht was?)](#prozess-zusammenfassung-welche-app-macht-was)
-  - [Export (Excel)](#export-excel)
+    - [**Adress-Statistik (Wer verbindet sich?)**](#adress-statistik-wer-verbindet-sich)
+    - [**Prozess-Statistik (Welche App macht was?)**](#prozess-statistik-welche-app-macht-was)
+  - [Excel-Export](#excel-export)
   - [Voraussetzungen](#voraussetzungen)
 
 ---
 
 ## Enthaltene Skripte
 
-1.  **`Show-TraceStructure.ps1`** (Der Parser)
-    * Liest die rohe Text-Logdatei ein.
-    * Zerlegt sie in strukturierte PowerShell-Objekte (`PSCustomObject`).
-    * Extrahiert Metadaten (Timestamp, User, IP, App), SQL-Statements, Pläne und Performance-Metriken (Duration, Reads, Writes, Fetches).
+### **Show-TraceStructure.ps1**
 
-2.  **`Get-FbTraceAnalysis.ps1`** (Der Analysator)
-    * Nimmt die geparsten Objekte entgegen.
-    * Erstellt SHA256-Hashes von SQL-Statements und Plänen zur Identifizierung.
-    * Gruppiert Daten nach verschiedenen Kriterien (SQL, Plan, Transaktionskette, IP, Prozess).
-    * Berechnet aggregierte Statistiken (Summen, Durchschnitte).
+Parser für Firebird Trace Logs.
+
+* Liest Textdateien ein
+* Wandelt sie in strukturierte *PSCustomObjects* um
+* Extrahiert: Timestamp, User, IP, App, SQL, Execution-Plan
+* Berechnet: Duration, Reads, Writes, Fetches
+
+### **Get-FbTraceAnalysis.ps1**
+
+Erweitertes Analysewerkzeug.
+
+* Hashing von SQL und Plänen (SHA256)
+* Gruppierung nach: SQL, Plan, Transaktionskette, IP, Prozess
+* Aggregationen wie TotalDuration, AvgDuration, TotalWrites u.v.m.
+
+---
+
+## Trace-Konfigurationsdateien und Batch-Tools
+
+Diese Dateien befinden sich ebenfalls im Projektordner und werden zur Erzeugung der Firebird-Trace-Logs benötigt.
+
+### **fbtrace30.conf**
+
+Dies ist die Konfigurationsdatei für den Firebird Trace Manager (fbtracemgr).
+Sie steuert, welche Events Firebird protokolliert.
+
+Typische Inhalte (vereinfacht):
+
+* Aktivierung von SQL-Statements
+* Aktivierung von Transaktionen
+* Aktivierung von Timeout-Informationen
+* Kontrolle, welche Attachments geloggt werden
+* Festlegung der Ausgabedatei
+
+Sie wird benötigt, wenn `trace_start.bat` ausgeführt wird.
+
+### **trace_start.bat**
+
+Startet eine Trace-Session mit dem Firebird-Tool **fbtracemgr**.
+Üblicher Aufbau:
+
+* Verweist auf `fbtracemgr.exe`
+* Startet die Trace-Konfiguration aus `fbtrace30.conf`
+* Leitet die Ausgabe in eine Logdatei (z. B. `firebird_trace.log`)
+
+Sie muss **vor der Analyse** ausgeführt werden, um Logs zu erzeugen.
+
+### **trace_stop.bat**
+
+Beendet eine laufende Trace Session.
+Üblicher Aufbau:
+
+* Ruft `fbtracemgr.exe` mit der Option zum Stoppen der Session auf
+* Benötigt die Session-ID (steht im Firebird Log oder in der trace_start-Ausgabe)
+
+Wird verwendet, um das Logging sauber zu stoppen, ohne defekte Logdateien zu erzeugen.
 
 ---
 
 ## Nutzung & Workflow
 
-### Schritt 1: Log-Datei parsen
-
-Zuerst muss das Logfile eingelesen werden. Da dies bei großen Dateien (100MB+) einige Sekunden dauern kann, speichern wir das Ergebnis in einer Variablen (`$erg`).
+### **Schritt 1: Log-Datei parsen**
 
 ```powershell
-# Einlesen einer Log-Datei
 $erg = .\Show-TraceStructure.ps1 -Path "C:\Logs\firebird_trace.log"
-
-# Optional: Mit Debug-Informationen (Raw-Block)
-# $erg = .\Show-TraceStructure.ps1 -Path "C:\Logs\firebird_trace.log" -EnableDebug
-````
-
-### Schritt 2: Basis-Analyse (Individuelle Abfragen)
-
-Die einfachste Analyse erfolgt direkt auf den geparsten Daten, um einzelne Ausreißer zu finden.
-
-```powershell
-# Die 10 langsamsten individuellen Abfragen finden
-$erg | Sort-Object DurationMs -Descending | Select-Object -First 10 | Format-Table Timestamp, DurationMs, SqlStatement -AutoSize
 ```
 
------
-
-## Fortgeschrittene Analyse mit `Get-FbTraceAnalysis`
-
-Für tiefere Einblicke nutzen wir das Analyse-Skript, um Daten zu gruppieren.
-
-### A. SQL-Statistiken (Grouping by SQL Hash)
-
-Identifiziert Abfragen, die zwar einzeln schnell sein mögen, aber durch ihre Häufigkeit das System belasten.
+Optional mit Debug-Infos:
 
 ```powershell
-# Gruppieren nach identischem SQL-Statement
+$erg = .\Show-TraceStructure.ps1 -Path "C:\Logs\firebird_trace.log" -EnableDebug
+```
+
+---
+
+### **Schritt 2: Basis-Analyse**
+
+Top 10 langsamste Einzelabfragen:
+
+```powershell
+$erg |
+    Sort-Object DurationMs -Descending |
+    Select-Object -First 10 |
+    Format-Table Timestamp, DurationMs, SqlStatement -AutoSize
+```
+
+---
+
+## Fortgeschrittene Analyse
+
+### A. **SQL-Statistiken (Grouping by SQL Hash)**
+
+```powershell
 $sqlStats = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy SqlHash
-
-# 1. Die häufigsten Abfragen (Top 10 nach Anzahl)
-$sqlStats | Select-Object -First 10 | Format-Table Count, TotalDurationMs, AvgDurationMs, TotalFetches, FirstSqlStatement -Wrap
-
-# 2. Top 100 Abfragen mit gekürztem SQL-Text im GridView anzeigen
-#    Hinweis: Der SQL-Text wird hier auf 100 Zeichen gekürzt für bessere Lesbarkeit im Grid.
-$sqlStats | 
-    Where-Object { $_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne "" } | 
-    Sort-Object AvgDurationMs -Descending | 
-    Select-Object -First 100 -Property Count, TotalDurationMs, AvgDurationMs, TotalFetches, TotalWrites, @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}} | 
-    Out-GridView -Title "Top 100 Langsamste Queries (Avg)"
 ```
 
-### B. "Impact"-Analyse
-
-Oft sind nicht die langsamsten Abfragen das Problem, sondern die, die in Summe (Häufigkeit \* Dauer) die meiste Serverzeit fressen.
+Beispielauswertung:
 
 ```powershell
-# Zeigt die 100 Abfragen mit dem größten Gesamteinfluss (Total Impact)
-$sqlStats | 
-    Where-Object { $_.FirstSqlStatement -ne $null } | 
-    Sort-Object -Property @{E={$_.Count * $_.AvgDurationMs}} -Descending | 
-    Select-Object -First 100 -Property @{N="TotalImpactMs";E={$_.Count * $_.AvgDurationMs}}, Count, AvgDurationMs, @{N="SQL";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}} | 
+$sqlStats |
+    Select-Object -First 10 |
+    Format-Table Count, TotalDurationMs, AvgDurationMs, TotalFetches, FirstSqlStatement -Wrap
+```
+
+---
+
+### B. **Impact-Analyse**
+
+```powershell
+$sqlStats |
+    Where-Object { $_.FirstSqlStatement } |
+    Sort-Object -Property @{E = { $_.Count * $_.AvgDurationMs }} -Descending |
+    Select-Object -First 100 -Property `
+        @{N="TotalImpactMs";E={ $_.Count * $_.AvgDurationMs }},
+        Count, AvgDurationMs,
+        @{N="SQL";E={ $_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length)) }} |
     Out-GridView -Title "High Impact Queries"
 ```
 
-### C. Transaktions-Ketten Analyse (`RootTxID`)
+---
 
-Firebird schreibt Änderungen oft erst beim `COMMIT` auf die Festplatte. Diese Analyse ordnet die Kosten (Writes) der gesamten Transaktionskette zu und zeigt, welche SQL-Befehle darin enthalten waren.
+### C. **Transaktions-Ketten Analyse (RootTxID)**
 
 ```powershell
-# Gruppieren nach Transaktionsketten
 $chainStats = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID
-
-# Die Transaktionen mit den meisten Schreibzugriffen finden
-$expensiveChains = $chainStats | Sort-Object TotalWrites -Descending | Select-Object -First 10 
-
-# Übersicht ausgeben
-$expensiveChains | Format-Table RootTxID, TotalWrites, TotalDurationMs, UniqueSqlCount, FirstUser -AutoSize
-
-# Detail-Analyse: Welche SQLs haben die Writes in der teuersten Kette verursacht?
-$topChain = $expensiveChains | Select-Object -First 1
-Write-Host "Verantwortliche SQLs für $($topChain.TotalWrites) Writes in Tx $($topChain.RootTxID):"
-$topChain.SqlStatements
 ```
 
------
+Kostenintensivste Transaktionen:
+
+```powershell
+$expensiveChains =
+    $chainStats |
+    Sort-Object TotalWrites -Descending |
+    Select-Object -First 10
+
+$expensiveChains | Format-Table RootTxID, TotalWrites, TotalDurationMs, UniqueSqlCount, FirstUser -AutoSize
+```
+
+---
 
 ## Infrastruktur- & Prozess-Zusammenfassungen
 
-Diese speziellen Modi helfen, Netzwerk-Last und Applikations-Verhalten zu verstehen.
-
-### Adress-Zusammenfassung (Wer verbindet sich?)
-
-Zeigt Statistiken pro IP-Adresse an (Verbindungen, Dauer, Unique Sessions).
+### **Adress-Statistik (Wer verbindet sich?)**
 
 ```powershell
-# Netzwerk-Statistik erstellen
 $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy AdrSummary | Format-Table -AutoSize
 ```
 
-**Spalten-Legende:**
-
-  * `Att/Det`: Anzahl Attach/Detach Events.
-  * `Conn/US`: Unique Sessions (Anzahl eindeutiger Sitzungen von dieser IP).
-  * `UP`: Unique Processes (Anzahl eindeutiger PIDs auf Client-Seite).
-  * `Proc`: Liste der Programme, die von dieser IP ausgeführt wurden.
-
-### Prozess-Zusammenfassung (Welche App macht was?)
-
-Zeigt Statistiken pro Applikationspfad (z.B. `averp.exe` vs `jobthread.exe`).
+### **Prozess-Statistik (Welche App macht was?)**
 
 ```powershell
-# Applikations-Statistik erstellen
 $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy ProcessSummary | Format-Table -AutoSize
 ```
 
------
+---
 
-## Export (Excel)
-
-Falls das PowerShell-Modul `ImportExcel` installiert ist, lassen sich die Daten hervorragend weiterverarbeiten.
+## Excel-Export
 
 ```powershell
-# Beispiel: Export der High-Impact Queries nach Excel
-$sqlStats | 
-    Where-Object { $_.FirstSqlStatement } | 
-    Sort-Object -Property @{E={$_.Count * $_.AvgDurationMs}} -Descending | 
-    Select-Object -First 500 -Property @{N="Impact";E={$_.Count * $_.AvgDurationMs}}, Count, AvgDurationMs, TotalWrites, FirstSqlStatement | 
+$sqlStats |
+    Where-Object { $_.FirstSqlStatement } |
+    Sort-Object -Property @{E = { $_.Count * $_.AvgDurationMs }} -Descending |
+    Select-Object -First 500 -Property `
+        @{N="Impact";E={ $_.Count * $_.AvgDurationMs }},
+        Count, AvgDurationMs, TotalWrites, FirstSqlStatement |
     Export-Excel -Path "Trace_Analysis_Report.xlsx" -WorksheetName "HighImpactSQL" -AutoSize -AutoFilter
 ```
 
+---
+
 ## Voraussetzungen
 
-  * PowerShell 5.1 oder höher (PowerShell 7+ empfohlen für Performance).
-  * Firebird Trace Log Dateien (Textformat).
+* PowerShell 5.1 oder neuer
+* Firebird Trace Logdateien
+* Optional: *ImportExcel* PowerShell-Modul
+
