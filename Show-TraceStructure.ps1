@@ -38,10 +38,10 @@ Write-Host "--- Analyse gestartet ---"
 
 # 1. Regex-Definitionen
 # Trennzeichen: Ein Zeitstempel am Zeilenanfang.
-# (?m) = Multiline-Modus, ^ matcht Zeilenanfang
-# WICHTIGE ÄNDERUNG: Wir verwenden ein "Lookahead" (?=...), damit der Zeitstempel
-# Teil des Blocks bleibt und nicht entfernt wird.
-$delimiter = '(?m)(?=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{4,})'
+# (?m) = Multiline-Modus
+# KORREKTUR: ^ hinzugefügt, damit nur Zeitstempel am Zeilenanfang als Split gelten.
+# Verhindert falsches Splitten bei SQL-Parametern, die Zeitstempel enthalten.
+$delimiter = '(?m)(?=^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{4,})'
 
 # Kopfzeile: Timestamp (aus delimiter), Prozess/Session, Aktion
 # $1 ist der Timestamp aus dem Split-Delimiter
@@ -92,8 +92,9 @@ $regexPlan = [System.Text.RegularExpressions.Regex]::new(
 # Performance-Zeile: Dauer, [writes], [fetches], [marks]
 # Beispiel: 3 ms, 15 write(s), 2 fetch(es), 2 mark(s)
 # Beispiel: 242 ms, 2746 fetch(es)
+# KORREKTUR: 'read(s)' hinzugefügt, da dessen Fehlen das Matching der nachfolgenden Gruppen blockierte.
 $regexPerf = [System.Text.RegularExpressions.Regex]::new(
-    '^\s+(?<DurationMs>\d+)\s+ms(?:,\s+(?<Writes>\d+)\s+write\(s\))?(?:,\s+(?<Fetches>\d+)\s+fetch\(es\))?(?:,\s+(?<Marks>\d+)\s+mark\(s\))?',
+    '^\s+(?<DurationMs>\d+)\s+ms(?:,\s+(?<Reads>\d+)\s+read\(s\))?(?:,\s+(?<Writes>\d+)\s+write\(s\))?(?:,\s+(?<Fetches>\d+)\s+fetch\(es\))?(?:,\s+(?<Marks>\d+)\s+mark\(s\))?',
     [System.Text.RegularExpressions.RegexOptions]::Multiline
 )
 
@@ -146,10 +147,12 @@ $parsedEntries = foreach ($block in $logBlocks | Select-Object -Skip 1) {
         ApplicationPID  = $null
         TransactionID   = $null
         InitID          = $null
+        RootTxID        = $null
         Params          = $null
         SqlStatement    = $null
         SqlPlan         = $null # NEU
         DurationMs      = 0
+        Reads           = 0 # NEU: Wichtige Metrik
         Writes          = 0
         Fetches         = 0
         Marks           = 0
@@ -159,10 +162,6 @@ $parsedEntries = foreach ($block in $logBlocks | Select-Object -Skip 1) {
     if ($EnableDebug) { # Geändert von $Debug
         $entry['RawBlock'] = $block
     }
-
-    # $matches[0] enthält den Timestamp des *aktuellen* Blocks, da -split ihn abgetrennt hat
-    # ÄNDERUNG: Diese Zeile ist fehlerhaft und wird entfernt.
-    # $entry.Timestamp = $matches[$i]
 
     # Kopfzeile (Aktion, Session) parsen
     $matchHeader = $regexHeader.Match($block)
@@ -196,6 +195,16 @@ $parsedEntries = foreach ($block in $logBlocks | Select-Object -Skip 1) {
         $entry.TransactionID = $matchTra.Groups['TransactionID'].Value
         $entry.InitID = $matchTra.Groups['InitID'].Value
         $entry.Params = $matchTra.Groups['Params'].Value
+        
+        # RootTxID berechnen (Logik integriert)
+        $rootTxID = "NoTx"
+        if (-not [string]::IsNullOrWhiteSpace($entry.InitID)) {
+            $rootTxID = $entry.InitID
+        }
+        elseif (-not [string]::IsNullOrWhiteSpace($entry.TransactionID)) {
+            $rootTxID = $entry.TransactionID
+        }
+        $entry.RootTxID = $rootTxID
     }
     
     # SQL-Statement parsen
@@ -217,6 +226,9 @@ $parsedEntries = foreach ($block in $logBlocks | Select-Object -Skip 1) {
         $entry.DurationMs = [int]$matchPerf.Groups['DurationMs'].Value
         
         # Sicherstellen, dass die Gruppen existieren, bevor wir sie zuweisen
+        if ($matchPerf.Groups['Reads'].Success) {
+            $entry.Reads = [int]$matchPerf.Groups['Reads'].Value
+        }
         if ($matchPerf.Groups['Writes'].Success) {
             $entry.Writes = [int]$matchPerf.Groups['Writes'].Value
         }

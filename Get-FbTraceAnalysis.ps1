@@ -1,10 +1,3 @@
-# Dienstag, 18. November 2025 11:07:26
-# Starte Analyse. Sammle Einträge aus der Pipeline...
-# Alle 532623 Einträge empfangen. Berechne Hashes...
-# Hashes berechnet. Gruppiere Daten...
-# Analyse abgeschlossen. Gebe 2693 Gruppen zurück.
-# Dienstag, 18. November 2025 11:09:30
-
 <#
 .SYNOPSIS
     Analysiert eine Sammlung von geparsten Firebird-Trace-Objekten,
@@ -12,8 +5,8 @@
 
 .DESCRIPTION
     Dieses Skript nimmt die Ausgabe von 'Show-TraceStructure.ps1' über die
-    Pipeline entgegen. Es berechnet Hashes für SQL-Statements und Pläne
-    und gruppiert die Einträge, um aggregierte Statistiken zu erstellen.
+    Pipeline entgegen. Es berechnet Hashes für SQL-Statements und Pläne,
+    ermittelt die Root-Transaktions-ID und gruppiert die Einträge.
 
 .PARAMETER InputObject
     Die [PSCustomObject]-Einträge, die von 'Show-TraceStructure.ps1'
@@ -23,6 +16,7 @@
     Definiert, wonach gruppiert werden soll.
     - 'SqlHash': Gruppiert identische SQL-Statements (Standard).
     - 'PlanHash': Gruppiert identische Ausführungspläne.
+    - 'RootTxID': Gruppiert nach Transaktions-Ketten.
     - 'User': Gruppiert nach dem Benutzer.
     - 'ApplicationPath': Gruppiert nach dem Pfad der Anwendung.
 
@@ -31,9 +25,8 @@
     .\Show-TraceStructure.ps1 -Path "trace.log" | .\Get-FbTraceAnalysis.ps1 -GroupBy SqlHash
 
 .EXAMPLE
-    # Findet die häufigsten Ausführungspläne
-    $erg = .\Show-TraceStructure.ps1 -Path "trace.log"
-    $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy PlanHash | Sort-Object Count -Descending
+    # Findet die teuersten Transaktions-Ketten
+    .\Show-TraceStructure.ps1 -Path "trace.log" | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID | Sort-Object TotalDurationMs -Descending
 
 .OUTPUTS
     [System.Management.Automation.PSCustomObject[]]
@@ -45,25 +38,21 @@ param (
     [psobject]$InputObject,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("SqlHash", "PlanHash", "User", "ApplicationPath")]
+    # NEU: RootTxID hinzugefügt
+    [ValidateSet("SqlHash", "PlanHash", "RootTxID", "User", "ApplicationPath")]
     [string]$GroupBy = "SqlHash"
 )
 
 # Pipeline-Verarbeitung
 begin {
-    # KORREKTUR: Die Helper-Funktion muss INNERHALB des begin-Blocks definiert werden,
-    # da zwischen param() und begin {} kein Code stehen darf.
-    
-    # Interne Helper-Funktion, um einen SHA256-Hash von einem String zu erstellen
+    # Helper-Funktion INNERHALB des begin-Blocks
     function Get-StringHash($InputString) {
         if ([string]::IsNullOrEmpty($InputString)) { return $null }
         
-        # Using ist wichtig, damit die Ressourcen freigegeben werden
         $sha = [System.Security.Cryptography.SHA256]::Create()
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($InputString)
         $hashBytes = $sha.ComputeHash($bytes)
         
-        # Konvertiert das Byte-Array in einen hexadezimalen String
         return [System.BitConverter]::ToString($hashBytes).Replace('-', '').ToLowerInvariant()
     }
 
@@ -78,23 +67,33 @@ process {
 }
 
 end {
-    Write-Host "Alle $($allObjects.Count) Einträge empfangen. Berechne Hashes..."
+    Write-Host "Alle $($allObjects.Count) Einträge empfangen. Reichere Daten an (Hashes)..."
     
     # 1. Alle Objekte anreichern (In-Place Modifikation für Performance)
-    # Wir nutzen eine foreach-Schleife statt Pipeline, um Kopien zu vermeiden.
     foreach ($obj in $allObjects) {
         # Hashes berechnen
         $sqlHash = Get-StringHash $obj.SqlStatement
         $planHash = Get-StringHash $obj.SqlPlan
 
-        # Eigenschaften direkt hinzufügen (schneller als Add-Member oder Select-Object)
-        # Wir prüfen kurz, ob die Eigenschaft schon existiert (falls das Skript mehrfach läuft),
-        # bei frischen Objekten aus dem Parser ist das aber eigentlich nicht nötig.
-        $obj.psobject.Properties.Add([System.Management.Automation.PSNoteProperty]::new("SqlHash", $sqlHash))
-        $obj.psobject.Properties.Add([System.Management.Automation.PSNoteProperty]::new("PlanHash", $planHash))
+        # HINWEIS: RootTxID wird jetzt vom Parser (Show-TraceStructure.ps1) geliefert.
+        # Wir müssen sie nicht mehr berechnen, aber sicherstellen, dass sie für die Gruppierung existiert.
+        if (-not $obj.psobject.Properties['RootTxID']) {
+            # Fallback, falls alte Parser-Version genutzt wird (sollte nicht passieren)
+            $obj.psobject.Properties.Add([System.Management.Automation.PSNoteProperty]::new("RootTxID", "NoTx"))
+        }
+
+        # Eigenschaften direkt hinzufügen (schneller als Add-Member)
+        $props = $obj.psobject.Properties
+        # Prüfen, ob Property schon existiert, um Fehler bei erneutem Lauf zu vermeiden
+        if (-not $props['SqlHash']) {
+            $props.Add([System.Management.Automation.PSNoteProperty]::new("SqlHash", $sqlHash))
+        }
+        if (-not $props['PlanHash']) {
+            $props.Add([System.Management.Automation.PSNoteProperty]::new("PlanHash", $planHash))
+        }
     }
 
-    Write-Host "Hashes berechnet. Gruppiere Daten..."
+    Write-Host "Daten angereichert. Gruppiere nach '$GroupBy'..."
 
     # 2. Filtern und Gruppieren
     # Jetzt arbeiten wir direkt mit $allObjects weiter
@@ -107,6 +106,7 @@ end {
         $totalDuration = ($_.Group | Measure-Object DurationMs -Sum).Sum
         $totalFetches = ($_.Group | Measure-Object Fetches -Sum).Sum
         $totalWrites = ($_.Group | Measure-Object Writes -Sum).Sum
+        $totalReads = ($_.Group | Measure-Object Reads -Sum).Sum # NEU: Auch Reads aufsummieren
         
         [PSCustomObject]@{
             GroupValue        = $_.Name
@@ -114,15 +114,16 @@ end {
             Count             = $_.Count
             TotalDurationMs   = $totalDuration
             TotalFetches      = $totalFetches
+            TotalReads        = $totalReads # NEU
             TotalWrites       = $totalWrites
             AvgDurationMs     = if ($_.Count -gt 0) { [Math]::Round($totalDuration / $_.Count, 2) } else { 0 }
             AvgFetches        = if ($_.Count -gt 0) { [Math]::Round($totalFetches / $_.Count, 0) } else { 0 }
             
-            # Wir nehmen das erste Objekt der Gruppe als Referenz für die Textfelder
-            # (Nützlich, um das SQL-Statement oder den Plan-Text zu sehen)
+            # Referenzwerte für Textfelder
             FirstSqlStatement = ($_.Group | Select-Object -First 1).SqlStatement
             FirstSqlPlan      = ($_.Group | Select-Object -First 1).SqlPlan
             FirstUser         = ($_.Group | Select-Object -First 1).User
+            FirstRootTxID     = ($_.Group | Select-Object -First 1).RootTxID
         }
     }
 
@@ -135,20 +136,27 @@ end {
 # Um die 10 langsamsten *individuellen* Abfragen zu finden (wie in deinem RANK-Beispiel),
 # brauchst du das Skript nicht. Das machst du direkt mit der Ausgabe des Parsers:
 # $erg = .\Show-TraceStructure.ps1 -Path "C:\temp\20251113\trace_output_ib_aid_20251112\trace_output_ib_aid_20251112.log" 
+# Kleiner
+# $erg = .\Show-TraceStructure.ps1 -Path "C:\temp\20251113\trace_output_ib_aid_20251112\trace_output_ib_aid_20251112_120MB.log"
 # $erg | Sort-Object DurationMs -Descending | Select-Object -First 10
 
 
-# Führt die Analyse durch und speichert die nach SqlHash gruppierten Ergebnisse:
-# $sqlStats = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy SqlHash
+# # Führt die Analyse durch und speichert die nach SqlHash gruppierten Ergebnisse:
+# $sqlStatsSqlHash = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy SqlHash
+# $sqlStatsPlanHash = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy PlanHash
+# $sqlStatsRootTxID = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID
+# $sqlStatsUser = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy User
+# $sqlStatsAppPath = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy ApplicationPath
+
 
 # Zeigt die 10 häufigsten SQL-Abfragen an
-# $sqlStats | Select-Object -First 10 | Format-Table Count, AvgDurationMs, TotalFetches, FirstSqlStatement -Wrap
+# $sqlStatsSqlHash | Select-Object -First 10 | Format-Table Count, TotalDurationMs, AvgDurationMs, TotalFetches, AvgFetches, TotalWrites, FirstSqlStatement -Wrap
 
-# $sqlStats | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property Count, AvgDurationMs, TotalFetches, @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}  | Out-GridView
-# $sqlStats | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property *, @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}  | Out-GridView
+# $sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property Count, TotalDurationMs, AvgDurationMs, TotalFetches, AvgFetches, TotalWrites, @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}  | Out-GridView
+# $sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property *, @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}  | Out-GridView
 
 # Zeigt die 100 SQL-Abfragen mit dem größten Gesamteinfluss (Count * AvgDurationMs) an.
-# $sqlStats | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | 
+# $sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | 
 #     Sort-Object -Property @{E={$_.Count * $_.AvgDurationMs}} -Descending | 
 #     Select-Object -First 100 -Property Count, AvgDurationMs, 
 #         @{N="TotalImpact";E={$_.Count * $_.AvgDurationMs}}, 
@@ -157,9 +165,26 @@ end {
 #     Out-GridView
 
 # Exportiert die 100 SQL-Abfragen mit dem größten Gesamteinfluss (Count * AvgDurationMs) in eine Excel-Datei.
-# $sqlStats | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | 
+# $sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | 
 #     Sort-Object -Property @{E={$_.Count * $_.AvgDurationMs}} -Descending | 
 #     Select-Object -First 100 -Property *, 
 #         @{N="TotalImpact";E={$_.Count * $_.AvgDurationMs}}, 
 #         @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}} | 
 #     Export-Excel
+
+
+# # 1. Parsen (falls noch nicht geschehen)
+# # $erg = .\Show-TraceStructure.ps1 -Path "DeinLog.log"
+
+# # 2. Transaktions-Analyse durchführen
+# $chains = $erg | .\Get-FbTransactionGrouping.ps1
+
+# # 3. Die "teuersten" Ketten bzgl. Schreibzugriffen (Writes) ansehen
+# $chains | Select-Object RootTxID, User, TotalWrites, TotalDurationMs, UniqueSqlCount -First 10 | Format-Table
+
+# # 4. Detail-Analyse einer spezifischen Kette (z.B. die teuerste):
+# # Hier siehst du endlich, WELCHE SQLs zu den Writes geführt haben!
+# $topChain = $chains | Select-Object -First 1
+# $topChain.SqlStatements
+
+# Mit `$topChain.SqlStatements` bekommst du jetzt die Antwort auf deine Frage: "Welche SQL-Befehle haben diese Writes verursacht?" (auch wenn die Writes erst beim Commit geloggt wurden).
