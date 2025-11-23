@@ -66,7 +66,9 @@ process {
 
 end {
     Write-Host "Alle $($allObjects.Count) Einträge empfangen. Verarbeite Daten..."
-    
+
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
     # 1. Vorbereitung: Hashes anreichern
     foreach ($obj in $allObjects) {
         # Standard Hashes
@@ -222,6 +224,9 @@ end {
     }
 
     Write-Host "Analyse abgeschlossen. Gebe $($sortedReport.Count) Gruppen zurück."
+    $stopwatch.Stop()
+    $duration = $stopwatch.Elapsed
+    Write-Host "Dauer der Verarbeitung: $($duration.TotalSeconds.ToString("N2")) Sekunden."
     
     return $sortedReport
 }
