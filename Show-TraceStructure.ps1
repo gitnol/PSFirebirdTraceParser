@@ -104,7 +104,7 @@ Write-Host "Log-Datei aufgeteilt in $($totalBlocks) Blöcke."
 
 
 # 4. Verarbeitungs-Schleife
-Write-Host "`n--- Starte Verarbeitung aller Blöcke ---`n"
+Write-Host "--- Starte Verarbeitung aller Blöcke ---"
 
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $i = 0
@@ -234,7 +234,7 @@ Write-Progress -Activity "Log-Blöcke werden geparst" -Completed
 $stopwatch.Stop()
 $duration = $stopwatch.Elapsed
 
-Write-Host "`n--- Verarbeitung abgeschlossen ---"
+Write-Host "--- Verarbeitung abgeschlossen ---"
 Write-Host "Es wurden $i Log-Einträge geparst."
 Write-Host "Dauer der Schleifen-Verarbeitung: $($duration.TotalSeconds.ToString("N2")) Sekunden."
 
