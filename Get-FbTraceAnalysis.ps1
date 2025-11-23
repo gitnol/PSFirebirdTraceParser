@@ -282,13 +282,20 @@ end {
 # # erst beim Commit geloggt wurden.
 
 # # 1. Analyse
-# $txStats = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID
+# $sqlStatsRootTxID = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID
 
-# # 2. Die Transaktion mit den meisten Writes suchen
-# $heavyTx = $txStats | Sort-Object TotalWrites -Descending | Select-Object -First 1
+# # 2a. Die Transaktion mit den meisten Writes suchen
+# $heavyTx = $sqlStatsRootTxID | Sort-Object TotalWrites -Descending | Select-Object -First 1
+
+# # 2b. Alternativ: Die Longest Transaction (by Transaction Elements)
+# $longestTx = $sqlStatsRootTxID | Sort-Object Count -Descending | Select-Object -First 1
 
 # # 3. Die Sequenz ansehen (Was passierte nacheinander?)
 # $heavyTx.SqlSequence | Format-Table No, DurationMs, @{N='Sql';E={$_.Sql.Substring(0, [Math]::Min(80, $_.Sql.Length))}} -AutoSize
+# $longestTx.SqlSequence | Format-Table No, DurationMs, @{N='Sql';E={$_.Sql.Substring(0, [Math]::Min(80, $_.Sql.Length))}} -AutoSize
+
+# # Alles der SQLSequence inkl TimeStamp
+# $longestTx.SqlSequence | ogv
 
 # Damit siehst du sofort: "Ah, Eintrag Nr. 1 war ein Insert, Nr. 2 ein Update, und Nr. 3 hat 500ms gedauert."
 ##########################################################
