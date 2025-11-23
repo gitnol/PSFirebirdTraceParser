@@ -109,15 +109,35 @@ end {
         $totalReads = ($groupList | Measure-Object Reads -Sum).Sum 
         $totalMarks = ($groupList | Measure-Object Marks -Sum).Sum
 
-        # Spezial-Metriken für Summaries (Att, Det, U.S., U.P.)
+        # Spezial-Metriken für Summaries
         $attCount = 0
         $detCount = 0
         $uniqueSessions = 0
         $uniquePIDs = 0
         $procInfo = $null
+        $sqlSequence = $null
 
-        # Eindeutige SQL-Statements sammeln (dies machen wir jetzt IMMER, da wir es unten brauchen)
+        # Eindeutige SQL-Statements sammeln
         $uniqueSqls = $groupList.SqlStatement | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+
+        # NEU: Sequenz-Erstellung nur bei RootTxID (wo der Zeitablauf kritisch ist)
+        if ($GroupBy -eq 'RootTxID') {
+            # Chronologisch sortieren
+            $chronologicalOps = $groupList | Sort-Object Timestamp
+            
+            # Sequenz aufbauen (nur Einträge mit SQL)
+            $seqCounter = 1
+            $sqlSequence = foreach ($op in $chronologicalOps) {
+                if (-not [string]::IsNullOrWhiteSpace($op.SqlStatement)) {
+                    [PSCustomObject]@{
+                        No         = $seqCounter++
+                        Timestamp  = $op.Timestamp
+                        DurationMs = $op.DurationMs
+                        Sql        = $op.SqlStatement
+                    }
+                }
+            }
+        }
 
         if ($GroupBy -eq 'AdrSummary' -or $GroupBy -eq 'ProcessSummary') {
             # Attach / Detach zählen
@@ -130,7 +150,7 @@ end {
             # Unique Processes (U.P.) - Client PIDs
             $uniquePIDs = ($groupList | Where-Object { $_.ApplicationPID } | Select-Object ApplicationPID -Unique).Count
 
-            # Proc-Liste (Nur für AdrSummary relevant)
+            # Proc-Liste
             if ($GroupBy -eq 'AdrSummary') {
                 $procs = $groupList | Where-Object { $_.ApplicationPath } | Group-Object ApplicationPath
                 $procStrings = $procs | Sort-Object Count -Descending | ForEach-Object {
@@ -166,19 +186,24 @@ end {
             }
         }
         else {
-            # Standard Spalten für SQL/Plan/Tx Analyse
+            # Standard Spalten
             $outObj.AvgDurationMs = if ($groupCount -gt 0) { [Math]::Round($totalDuration / $groupCount, 2) } else { 0 }
             
-            # KORREKTUR: Wir nehmen das erste SQL aus der Liste der ECHTEN Statements,
-            # nicht den ersten Log-Eintrag (der oft START_TRANSACTION ohne SQL ist).
+            # Das erste echte SQL
             $outObj.FirstSqlStatement = $uniqueSqls | Select-Object -First 1
             
-            # Falls SqlHash oder PlanHash gruppiert wurde, ist das hier auch korrekt.
-            # Falls RootTxID gruppiert wurde, nehmen wir so das erste echte SQL der Kette.
+            # NEU: Die Sequenz-Liste
+            if ($sqlSequence) {
+                $outObj.SqlSequence = $sqlSequence
+                # SqlStatements lassen wir hier weg, da SqlSequence genauer ist
+            }
+            else {
+                # Fallback: Wenn keine Sequenz da ist (z.B. GroupBy User), zeigen wir die unique Liste
+                $outObj.SqlStatements = $uniqueSqls
+            }
             
-            # Diese Infos packen wir auch mit rein für Detailanalyse
+            # Anzahl ist immer interessant
             $outObj.UniqueSqlCount = $uniqueSqls.Count
-            $outObj.SqlStatements = $uniqueSqls
 
             $outObj.FirstSqlPlan = ($groupList | Select-Object -First 1).SqlPlan
             $outObj.FirstUser = ($groupList | Select-Object -First 1).User
@@ -245,7 +270,25 @@ end {
 # Zeigt die Processzusammenfassung an
 # $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy ProcessSummary | Format-Table -AutoSize
 
+##########################################################
+# # Beispiel: Transaktionsanalyse
+# # Angenommen, du möchtest herausfinden, welche SQL-Befehle in einer Transaktion
+# # die meisten Schreibzugriffe (Writes) verursacht haben, insbesondere wenn die Writes
+# # erst beim Commit geloggt wurden.
 
+# # 1. Analyse
+# $txStats = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID
+
+# # 2. Die Transaktion mit den meisten Writes suchen
+# $heavyTx = $txStats | Sort-Object TotalWrites -Descending | Select-Object -First 1
+
+# # 3. Die Sequenz ansehen (Was passierte nacheinander?)
+# $heavyTx.SqlSequence | Format-Table No, DurationMs, @{N='Sql';E={$_.Sql.Substring(0, [Math]::Min(80, $_.Sql.Length))}} -AutoSize
+
+# Damit siehst du sofort: "Ah, Eintrag Nr. 1 war ein Insert, Nr. 2 ein Update, und Nr. 3 hat 500ms gedauert."
+##########################################################
+
+##########################################################
 # # 1. Parsen (falls noch nicht geschehen)
 # # $erg = .\Show-TraceStructure.ps1 -Path "DeinLog.log"
 
@@ -261,3 +304,5 @@ end {
 # $topChain.SqlStatements
 
 # Mit `$topChain.SqlStatements` bekommst du jetzt die Antwort auf deine Frage: "Welche SQL-Befehle haben diese Writes verursacht?" (auch wenn die Writes erst beim Commit geloggt wurden).
+
+##########################################################
