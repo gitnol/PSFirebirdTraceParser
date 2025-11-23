@@ -87,13 +87,13 @@ end {
     # 2. Gruppierung festlegen
     $groupProperty = $GroupBy
     
-    # HIER ist die Vereinfachung: Wir nutzen direkt die existierende ClientIP Eigenschaft
+    # Vereinfachung: Wir nutzen direkt die existierende ClientIP Eigenschaft
     if ($GroupBy -eq 'AdrSummary') { $groupProperty = 'ClientIP' }
     if ($GroupBy -eq 'ProcessSummary') { $groupProperty = 'ApplicationPath' }
 
     Write-Host "Gruppiere nach '$groupProperty'..."
 
-    # Daten filtern und gruppieren (Leere Werte rausfiltern, z.B. Einträge ohne IP)
+    # Daten filtern und gruppieren
     $groupedData = $allObjects | Where-Object { $_.$groupProperty } | Group-Object -Property $groupProperty
 
     # 3. Bericht erstellen
@@ -116,6 +116,9 @@ end {
         $uniquePIDs = 0
         $procInfo = $null
 
+        # Eindeutige SQL-Statements sammeln (dies machen wir jetzt IMMER, da wir es unten brauchen)
+        $uniqueSqls = $groupList.SqlStatement | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+
         if ($GroupBy -eq 'AdrSummary' -or $GroupBy -eq 'ProcessSummary') {
             # Attach / Detach zählen
             $attCount = ($groupList | Where-Object { $_.Action -eq 'ATTACH_DATABASE' }).Count
@@ -127,23 +130,20 @@ end {
             # Unique Processes (U.P.) - Client PIDs
             $uniquePIDs = ($groupList | Where-Object { $_.ApplicationPID } | Select-Object ApplicationPID -Unique).Count
 
-            # Proc-Liste (Nur für AdrSummary relevant: Welche Prozesse kamen von dieser IP?)
+            # Proc-Liste (Nur für AdrSummary relevant)
             if ($GroupBy -eq 'AdrSummary') {
                 $procs = $groupList | Where-Object { $_.ApplicationPath } | Group-Object ApplicationPath
-                # Formatieren als String: "Anzahl: Name (PID_Beispiel), ..."
                 $procStrings = $procs | Sort-Object Count -Descending | ForEach-Object {
-                    # Wir holen uns den reinen Dateinamen für die Kürze
                     $fName = [System.IO.Path]::GetFileName($_.Name)
                     "$($_.Count): $fName"
                 }
-                # Die Top 5 Prozesse zusammenfügen
                 $procInfo = ($procStrings | Select-Object -First 5) -join ", "
             }
         }
 
-        # Ergebnis-Objekt bauen (dynamisch je nach Modus)
+        # Ergebnis-Objekt bauen
         $outObj = [ordered]@{
-            No              = 0 # Platzhalter für Rank
+            No              = 0
             GroupValue      = $groupName
             Count           = $groupCount
             TotalDurationMs = $totalDuration
@@ -157,7 +157,7 @@ end {
         if ($GroupBy -eq 'AdrSummary' -or $GroupBy -eq 'ProcessSummary') {
             $outObj.Att = $attCount
             $outObj.Det = $detCount
-            $outObj.Conn = $uniqueSessions # Conn ist hier Unique Sessions
+            $outObj.Conn = $uniqueSessions
             $outObj.US = $uniqueSessions
             $outObj.UP = $uniquePIDs
             
@@ -166,9 +166,21 @@ end {
             }
         }
         else {
-            # Standard Spalten für SQL/Plan Analyse
+            # Standard Spalten für SQL/Plan/Tx Analyse
             $outObj.AvgDurationMs = if ($groupCount -gt 0) { [Math]::Round($totalDuration / $groupCount, 2) } else { 0 }
-            $outObj.FirstSqlStatement = ($groupList | Select-Object -First 1).SqlStatement
+            
+            # KORREKTUR: Wir nehmen das erste SQL aus der Liste der ECHTEN Statements,
+            # nicht den ersten Log-Eintrag (der oft START_TRANSACTION ohne SQL ist).
+            $outObj.FirstSqlStatement = $uniqueSqls | Select-Object -First 1
+            
+            # Falls SqlHash oder PlanHash gruppiert wurde, ist das hier auch korrekt.
+            # Falls RootTxID gruppiert wurde, nehmen wir so das erste echte SQL der Kette.
+            
+            # Diese Infos packen wir auch mit rein für Detailanalyse
+            $outObj.UniqueSqlCount = $uniqueSqls.Count
+            $outObj.SqlStatements = $uniqueSqls
+
+            $outObj.FirstSqlPlan = ($groupList | Select-Object -First 1).SqlPlan
             $outObj.FirstUser = ($groupList | Select-Object -First 1).User
         }
 
@@ -178,7 +190,6 @@ end {
     # Sortierung und Ranking (No) hinzufügen
     $sortedReport = $report | Sort-Object Count -Descending
     
-    # Index 'No' befüllen
     $i = 1
     foreach ($row in $sortedReport) {
         $row.No = $i
