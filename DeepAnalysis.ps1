@@ -204,6 +204,17 @@ function Get-SqlAnalysis {
     }
 }
 
+
+# Erste 10000 SQL Statements aus der Analyse-Tabelle holen
+$analysebasis = $erg | Where-Object SqlStatement -ne $null | Select-Object -First 10000 | Select-Object User, SqlStatement, @{N = 'SQLObject'; E = { (Get-SqlObjectName($_.SqlStatement)).Object } }, @{N = 'SQLType'; E = { (Get-SqlObjectName($_.SqlStatement)).Type } }
+
+# Alle Ergebnisse holen
+# $analysebasis = $erg | Where-Object SqlStatement -ne $null | Select-Object User, SqlStatement, @{N = 'SQLObject'; E = { (Get-SqlObjectName($_.SqlStatement)).Object } }, @{N = 'SQLType'; E = { (Get-SqlObjectName($_.SqlStatement)).Type } }
+
+# # Beispiel: Alle LIKE-Bedingungen anzeigen
+# $analysewhere = $erg | Where-Object SqlStatement -like "*'%*" | Select User,SqlStatement, @{N='LikeConditions';E={Get-SqlLikeConditions($_.SqlStatement)}}
+# $analysewhere | ogv
+
 # # Erste 10000 SQL Statements aus der Analyse-Tabelle holen
 # $analyse_part = $erg | Where-Object { $null -ne $_.SqlStatement } | Select-Object -First 10000 | ForEach-Object {
     
@@ -233,9 +244,9 @@ $analyse_all = $erg | Where-Object { $null -ne $_.SqlStatement } | ForEach-Objec
     [PSCustomObject]@{
         User           = $_.User
         SqlStatement   = $_.SqlStatement
-        SQLObject      = $analysis.DbObjects.Object
-        SQLType        = $analysis.DbObjects.Type
-        LikeConditions = $analysis.LikeConditions
+        SQLObject      = $analysis.DbObjects.Object # -join ', '
+        SQLType        = $analysis.DbObjects.Type # -join ', '
+        LikeConditions = $analysis.LikeConditions # -join ', '
     }
 }
 
