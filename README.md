@@ -3,112 +3,196 @@
 PowerShell-Tools zum **Parsen**, **Analysieren** und **Auswerten** von Firebird Trace Logs.
 Hilft, Performance-Engpässe, Transaktionsketten und ineffiziente SQLs schnell zu identifizieren.
 
+---
+
 ## Inhaltsverzeichnis
 
 - [Firebird Trace Log Parser \& Analyzer](#firebird-trace-log-parser--analyzer)
   - [Inhaltsverzeichnis](#inhaltsverzeichnis)
   - [Enthaltene Skripte](#enthaltene-skripte)
-    - [**Show-TraceStructure.ps1**](#show-tracestructureps1)
-    - [**Get-FbTraceAnalysis.ps1**](#get-fbtraceanalysisps1)
-  - [Trace-Konfigurationsdateien und Batch-Tools](#trace-konfigurationsdateien-und-batch-tools)
-    - [**fbtrace30.conf**](#fbtrace30conf)
-    - [**trace\_start.bat**](#trace_startbat)
-    - [**trace\_stop.bat**](#trace_stopbat)
+    - [Show-TraceStructure.ps1](#show-tracestructureps1)
+    - [Get-FbTraceAnalysis.ps1](#get-fbtraceanalysisps1)
+  - [Konfiguration](#konfiguration)
+    - [config.json](#configjson)
+    - [fbtrace30.conf](#fbtrace30conf)
+  - [Trace-Session starten und stoppen](#trace-session-starten-und-stoppen)
+    - [trace\_start.ps1](#trace_startps1)
+    - [trace\_stop.ps1](#trace_stopps1)
   - [Nutzung \& Workflow](#nutzung--workflow)
-    - [**Schritt 1: Log-Datei parsen**](#schritt-1-log-datei-parsen)
-    - [**Schritt 2: Basis-Analyse**](#schritt-2-basis-analyse)
+    - [Schritt 1: Trace starten](#schritt-1-trace-starten)
+    - [Schritt 2: Log-Datei parsen](#schritt-2-log-datei-parsen)
+    - [Schritt 3: Basis-Analyse](#schritt-3-basis-analyse)
   - [Fortgeschrittene Analyse](#fortgeschrittene-analyse)
-    - [A. **SQL-Statistiken (Grouping by SQL Hash)**](#a-sql-statistiken-grouping-by-sql-hash)
-    - [B. **Impact-Analyse**](#b-impact-analyse)
-    - [C. **Transaktions-Ketten Analyse (RootTxID)**](#c-transaktions-ketten-analyse-roottxid)
+    - [A. SQL-Statistiken (Grouping by SQL Hash)](#a-sql-statistiken-grouping-by-sql-hash)
+    - [B. Impact-Analyse](#b-impact-analyse)
+    - [C. Transaktions-Ketten Analyse (RootTxID)](#c-transaktions-ketten-analyse-roottxid)
   - [Infrastruktur- \& Prozess-Zusammenfassungen](#infrastruktur---prozess-zusammenfassungen)
-    - [**Adress-Statistik (Wer verbindet sich?)**](#adress-statistik-wer-verbindet-sich)
-    - [**Prozess-Statistik (Welche App macht was?)**](#prozess-statistik-welche-app-macht-was)
   - [Excel-Export](#excel-export)
+  - [Dateistruktur](#dateistruktur)
   - [Voraussetzungen](#voraussetzungen)
 
 ---
 
 ## Enthaltene Skripte
 
-### **Show-TraceStructure.ps1**
+### Show-TraceStructure.ps1
 
 Parser für Firebird Trace Logs.
 
-* Liest Textdateien ein
-* Wandelt sie in strukturierte *PSCustomObjects* um
-* Extrahiert: Timestamp, User, IP, App, SQL, Execution-Plan
-* Berechnet: Duration, Reads, Writes, Fetches
+- Liest Textdateien ein
+- Wandelt sie in strukturierte _PSCustomObjects_ um
+- Extrahiert: Timestamp, User, IP, App, SQL, Execution-Plan
+- Berechnet: Duration, Reads, Writes, Fetches
 
-### **Get-FbTraceAnalysis.ps1**
+### Get-FbTraceAnalysis.ps1
 
 Erweitertes Analysewerkzeug.
 
-* Hashing von SQL und Plänen (SHA256)
-* Gruppierung nach: SQL, Plan, Transaktionskette, IP, Prozess
-* Aggregationen wie TotalDuration, AvgDuration, TotalWrites u.v.m.
+- Hashing von SQL und Plänen (SHA256)
+- Gruppierung nach: SQL, Plan, Transaktionskette, IP, Prozess
+- Aggregationen wie TotalDuration, AvgDuration, TotalWrites u.v.m.
 
 ---
 
-## Trace-Konfigurationsdateien und Batch-Tools
+## Konfiguration
 
-Diese Dateien befinden sich ebenfalls im Projektordner und werden zur Erzeugung der Firebird-Trace-Logs benötigt.
+### config.json
 
-### **fbtrace30.conf**
+Die Konfigurationsdatei enthält die Firebird-Zugangsdaten und Pfade. Sie wird von `trace_start.ps1` und `trace_stop.ps1` verwendet.
 
-Dies ist die Konfigurationsdatei für den Firebird Trace Manager (fbtracemgr).
-Sie steuert, welche Events Firebird protokolliert.
+**Einrichtung:**
 
-Typische Inhalte (vereinfacht):
+```powershell
+# Kopiere die Vorlage
+Copy-Item config.sample.json config.json
 
-* Aktivierung von SQL-Statements
-* Aktivierung von Transaktionen
-* Aktivierung von Timeout-Informationen
-* Kontrolle, welche Attachments geloggt werden
-* Festlegung der Ausgabedatei
+# Bearbeite config.json mit deinen Werten
+```
 
-Sie wird benötigt, wenn `trace_start.bat` ausgeführt wird.
+**Struktur:**
 
-### **trace_start.bat**
+```json
+{
+  "Firebird": {
+    "Username": "SYSDBA",
+    "Password": "masterkey",
+    "FirebirdPath": "C:\\Program Files\\Firebird\\Firebird_4_0_3",
+    "TraceConfigFilename": "fbtrace30.conf"
+  }
+}
+```
 
-Startet eine Trace-Session mit dem Firebird-Tool **fbtracemgr**.
-Üblicher Aufbau:
+| Parameter             | Beschreibung                                              |
+| :-------------------- | :-------------------------------------------------------- |
+| `Username`            | Firebird Benutzername (meist `SYSDBA`)                    |
+| `Password`            | Firebird Passwort                                         |
+| `FirebirdPath`        | Installationspfad von Firebird (enthält `fbtracemgr.exe`) |
+| `TraceConfigFilename` | Name der Trace-Konfigurationsdatei                        |
 
-* Verweist auf `fbtracemgr.exe`
-* Startet die Trace-Konfiguration aus `fbtrace30.conf`
-* Leitet die Ausgabe in eine Logdatei (z. B. `firebird_trace.log`)
+**Hinweis:** Die `config.json` wird durch `.gitignore` vom Repository ausgeschlossen, um Passwörter zu schützen.
 
-Sie muss **vor der Analyse** ausgeführt werden, um Logs zu erzeugen.
+### fbtrace30.conf
 
-### **trace_stop.bat**
+Konfigurationsdatei für den Firebird Trace Manager (`fbtracemgr`). Steuert, welche Events protokolliert werden.
 
-Beendet eine laufende Trace Session.
-Üblicher Aufbau:
+Typische Einstellungen:
 
-* Ruft `fbtracemgr.exe` mit der Option zum Stoppen der Session auf
-* Benötigt die Session-ID (steht im Firebird Log oder in der trace_start-Ausgabe)
+- Aktivierung von SQL-Statements
+- Aktivierung von Transaktionen
+- Aktivierung von Timeout-Informationen
+- Kontrolle, welche Attachments geloggt werden
 
-Wird verwendet, um das Logging sauber zu stoppen, ohne defekte Logdateien zu erzeugen.
+---
+
+## Trace-Session starten und stoppen
+
+### trace_start.ps1
+
+Startet eine Trace-Session mit dem Firebird-Tool `fbtracemgr`.
+
+**Funktionsweise:**
+
+1. Lädt Konfiguration aus `config.json`
+2. Startet `fbtracemgr.exe` mit der Trace-Konfiguration aus `fbtrace30.conf`
+3. Schreibt die Ausgabe in eine Logdatei mit Zeitstempel (z.B. `E:\trace_output_20251125_143000.log`)
+
+**Verwendung:**
+
+```powershell
+.\trace_start.ps1
+```
+
+**Ausgabe:**
+
+```
+Config Pfad: D:\Scripts\config.json
+20251125_143000
+Bitte ermittle die Trace ID aus dem Kopf der Log Datei unter E:\trace_output_20251125_143000.log
+Trace gestartet, Ausgabe in E:\trace_output_20251125_143000.log
+Trace stoppen mit D:\Scripts\trace_stop.ps1
+```
+
+### trace_stop.ps1
+
+Beendet eine laufende Trace-Session.
+
+**Funktionsweise:**
+
+1. Lädt Konfiguration aus `config.json`
+2. Sucht automatisch die neueste Logdatei in `E:\`
+3. Extrahiert die Trace-ID aus der ersten Zeile der Logdatei
+4. Stoppt die Trace-Session mit `fbtracemgr.exe`
+
+**Verwendung:**
+
+```powershell
+.\trace_stop.ps1
+```
+
+**Ausgabe:**
+
+```
+Config Pfad: D:\Scripts\config.json
+Datei: E:\trace_output_20251125_143000.log
+Trace-ID: 42
+Stoppe Trace...
+```
 
 ---
 
 ## Nutzung & Workflow
 
-### **Schritt 1: Log-Datei parsen**
+### Schritt 1: Trace starten
 
 ```powershell
-$erg = .\Show-TraceStructure.ps1 -Path "C:\Logs\firebird_trace.log"
+# Konfiguration vorbereiten (einmalig)
+Copy-Item config.sample.json config.json
+# config.json bearbeiten mit korrekten Pfaden und Passwort
+
+# Trace starten
+.\trace_start.ps1
+```
+
+Führe nun die Aktionen aus, die du analysieren möchtest.
+
+```powershell
+# Trace stoppen
+.\trace_stop.ps1
+```
+
+### Schritt 2: Log-Datei parsen
+
+```powershell
+$erg = .\Show-TraceStructure.ps1 -Path "E:\trace_output_20251125_143000.log"
 ```
 
 Optional mit Debug-Infos:
 
 ```powershell
-$erg = .\Show-TraceStructure.ps1 -Path "C:\Logs\firebird_trace.log" -EnableDebug
+$erg = .\Show-TraceStructure.ps1 -Path "E:\trace_output_20251125_143000.log" -EnableDebug
 ```
 
----
-
-### **Schritt 2: Basis-Analyse**
+### Schritt 3: Basis-Analyse
 
 Top 10 langsamste Einzelabfragen:
 
@@ -123,7 +207,7 @@ $erg |
 
 ## Fortgeschrittene Analyse
 
-### A. **SQL-Statistiken (Grouping by SQL Hash)**
+### A. SQL-Statistiken (Grouping by SQL Hash)
 
 ```powershell
 $sqlStats = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy SqlHash
@@ -137,9 +221,7 @@ $sqlStats |
     Format-Table Count, TotalDurationMs, AvgDurationMs, TotalFetches, FirstSqlStatement -Wrap
 ```
 
----
-
-### B. **Impact-Analyse**
+### B. Impact-Analyse
 
 ```powershell
 $sqlStats |
@@ -152,9 +234,7 @@ $sqlStats |
     Out-GridView -Title "High Impact Queries"
 ```
 
----
-
-### C. **Transaktions-Ketten Analyse (RootTxID)**
+### C. Transaktions-Ketten Analyse (RootTxID)
 
 ```powershell
 $chainStats = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID
@@ -175,13 +255,13 @@ $expensiveChains | Format-Table RootTxID, TotalWrites, TotalDurationMs, UniqueSq
 
 ## Infrastruktur- & Prozess-Zusammenfassungen
 
-### **Adress-Statistik (Wer verbindet sich?)**
+**Adress-Statistik (Wer verbindet sich?)**
 
 ```powershell
 $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy AdrSummary | Format-Table -AutoSize
 ```
 
-### **Prozess-Statistik (Welche App macht was?)**
+**Prozess-Statistik (Welche App macht was?)**
 
 ```powershell
 $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy ProcessSummary | Format-Table -AutoSize
@@ -203,9 +283,25 @@ $sqlStats |
 
 ---
 
+## Dateistruktur
+
+```
+FirebirdTraceAnalyzer/
+├── Show-TraceStructure.ps1      # Parser für Trace Logs
+├── Get-FbTraceAnalysis.ps1      # Analyse-Tool
+├── trace_start.ps1              # Startet Trace-Session
+├── trace_stop.ps1               # Stoppt Trace-Session
+├── fbtrace30.conf               # Trace-Konfiguration für Firebird
+├── config.json                  # Zugangsdaten (git-ignoriert)
+├── config.sample.json           # Konfigurationsvorlage
+└── .gitignore                   # Schützt config.json und Logs
+```
+
+---
+
 ## Voraussetzungen
 
-* PowerShell 5.1 oder neuer
-* Firebird Trace Logdateien
-* Optional: *ImportExcel* PowerShell-Modul
-
+- PowerShell 5.1 oder neuer
+- Firebird Installation mit `fbtracemgr.exe`
+- Zugriff auf die Firebird-Datenbank (SYSDBA oder entsprechende Rechte)
+- Optional: _ImportExcel_ PowerShell-Modul für Excel-Export
