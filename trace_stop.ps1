@@ -25,7 +25,7 @@ $LogFile = Get-ChildItem -Path "E:\*.log" | Sort-Object LastWriteTime -Descendin
 
 if (-not $LogFile) {
     Write-Host "Keine Logdatei gefunden" -ForegroundColor Red
-    exit 1
+    exit 3
 }
 
 Write-Host "Datei: $($LogFile.FullName)"
@@ -43,5 +43,5 @@ if ($FirstLine -match "Trace session ID (\d+) started") {
 else {
     Write-Host "Konnte Trace-ID nicht aus erster Zeile extrahieren:" -ForegroundColor Red
     Write-Host $FirstLine
-    exit 1
+    exit 4
 }

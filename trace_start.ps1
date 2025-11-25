@@ -6,14 +6,14 @@ $ConfigPath = Join-Path $ScriptDir "config.json"
 Write-Host("Config Pfad: $ConfigPath")
 if (-not (Test-Path $ConfigPath)) { 
     Write-Error "KRITISCH: config.json fehlt!"
-    exit 1 
+    exit 1
 }
 try {
     $Config = Get-Content -Path $ConfigPath -Raw | ConvertFrom-Json
 }
 catch {
     Write-Error "KRITISCH: config.json ist kein gültiges JSON."
-    exit 1
+    exit 2
 }
 
 $MyUser = $Config.Firebird.Username
