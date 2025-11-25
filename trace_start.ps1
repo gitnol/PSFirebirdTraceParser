@@ -1,10 +1,11 @@
 # siehe: https://ib-aid.com/articles/wie-analysiert-man-firebird-traces-mit-ibsurgeon-performance-analysis
 
 # Config laden
+$ScriptDir = $PSScriptRoot
 $ConfigPath = Join-Path $ScriptDir "config.json"
+Write-Host("Config Pfad: $ConfigPath")
 if (-not (Test-Path $ConfigPath)) { 
     Write-Error "KRITISCH: config.json fehlt!"
-    Stop-Transcript
     exit 1 
 }
 try {
@@ -12,7 +13,6 @@ try {
 }
 catch {
     Write-Error "KRITISCH: config.json ist kein gültiges JSON."
-    Stop-Transcript
     exit 1
 }
 
