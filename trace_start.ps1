@@ -20,7 +20,7 @@ $MyUser = $Config.Firebird.Username
 $MyPass = $Config.Firebird.Password
 $MyPfad = $Config.Firebird.FirebirdPath
 
-$TraceConfig = Join-Path $PSScriptRoot "fbtrace30.conf"
+$TraceConfig = Join-Path $PSScriptRoot $Config.Firebird.TraceConfigFilename
 
 # Zeitstempel erzeugen (YYYYMMDD_HHMMSS)
 $Stamp = Get-Date -Format "yyyyMMdd_HHmmss"
