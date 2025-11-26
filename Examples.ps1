@@ -4,7 +4,7 @@
 $erg = .\Show-TraceStructure.ps1 -Path "C:\temp\20251113\trace_output_ib_aid_20251112\trace_output_ib_aid_20251112.log" 
 # Kleiner
 $erg = .\Show-TraceStructure.ps1 -Path "C:\temp\20251113\trace_output_ib_aid_20251112\trace_output_ib_aid_20251112_120MB.log"
-$erg | Sort-Object DurationMs -Descending | Select-Object -First 10
+$erg | Sort-Object DurationMs -Descending | Select-Object -First 10 | Out-GridView
 
 
 # Führt die Analyse durch und speichert die nach SqlHash gruppierten Ergebnisse:
@@ -12,14 +12,21 @@ $sqlStatsSqlHash = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy SqlHash
 $sqlStatsPlanHash = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy PlanHash
 $sqlStatsRootTxID = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID
 $sqlStatsUser = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy User
-$sqlStatsAppPath = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy ApplicationPath
+$sqlStatsProcessSummary = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy ProcessSummary
+
 
 
 # Zeigt die 10 häufigsten SQL-Abfragen an
 $sqlStatsSqlHash | Select-Object -First 10 | Format-Table Count, TotalDurationMs, AvgDurationMs, TotalFetches, AvgFetches, TotalWrites, FirstSqlStatement -Wrap
 
-# $sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property Count, TotalDurationMs, AvgDurationMs, TotalFetches, AvgFetches, TotalWrites, @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}  | Out-GridView
-$sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property *, @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}  | Out-GridView
+# Zeigt die 100 langsamsten SQL-Abfragen an
+$sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property Count, 
+TotalDurationMs, AvgDurationMs, TotalFetches, AvgFetches, TotalWrites,
+@{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}, FirstSqlStatement  | Out-GridView
+
+# Die ersten 100 SQL-Abfragen sortiert nach AvgDurationMs absteigend
+$sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne ""} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property *, 
+@{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}  | Out-GridView
 
 # Alle nicht JOBS-User Anfragen mit mindestens 2 Ausführungen ... sortiert nach AvgDurationMs * Count = Gesamteinfluss
 $sqlStatsSqlHash | Where-Object {$_.FirstSqlStatement -ne $null -and $_.FirstSqlStatement.Trim() -ne "" -and $_.FirstUser -ne 'JOBS:NONE' -and $_.Count -ge 2} | Sort-Object -Property AvgDurationMs -Descending | Select-Object -First 100 -Property *,@{N="TotalImpactByDuration";E={$_.Count * $_.AvgDurationMs}},  @{N="SQLString100";E={$_.FirstSqlStatement.Substring(0, [Math]::Min(100, $_.FirstSqlStatement.Length))}}  | Out-GridView
@@ -79,13 +86,14 @@ $longestTx.SqlSequence | Out-GridView
 $sqlStatsRootTxID = $erg | .\Get-FbTraceAnalysis.ps1 -GroupBy RootTxID
 
 # 3. Die "teuersten" Ketten bzgl. Schreibzugriffen (Writes) ansehen
-$sqlStatsRootTxID | Select-Object RootTxID, User, TotalWrites, TotalDurationMs, UniqueSqlCount -First 10 | Format-Table
+#  GroupValue = RootTxID
+$sqlStatsRootTxID | Select-Object GroupValue, User, TotalWrites, TotalDurationMs, UniqueSqlCount -First 10 | Format-Table
 
 # 4. Detail-Analyse einer spezifischen Kette (z.B. die teuerste):
 # Hier siehst du endlich, WELCHE SQLs zu den Writes geführt haben!
 $topChain = $sqlStatsRootTxID | Select-Object -First 1
-$topChain.SqlStatements
+$topChain.SqlSequence
 
-# Mit `$topChain.SqlStatements` bekommst du jetzt die Antwort auf deine Frage: "Welche SQL-Befehle haben diese Writes verursacht?" (auch wenn die Writes erst beim Commit geloggt wurden).
+# Mit `$topChain.SqlSequence` bekommst du jetzt die Antwort auf deine Frage: "Welche SQL-Befehle haben diese Writes verursacht?" (auch wenn die Writes erst beim Commit geloggt wurden).
 
 #########################################################

@@ -206,32 +206,40 @@ function Get-SqlAnalysis {
 
 
 # Erste 10000 SQL Statements aus der Analyse-Tabelle holen
-$analysebasis = $erg | Where-Object SqlStatement -ne $null | Select-Object -First 10000 | Select-Object User, SqlStatement, @{N = 'SQLObject'; E = { (Get-SqlObjectName($_.SqlStatement)).Object } }, @{N = 'SQLType'; E = { (Get-SqlObjectName($_.SqlStatement)).Type } }
+$numberOfObjects = 10000
+$analysebasis = $erg | Where-Object SqlStatement -ne $null | Select-Object -First $numberOfObjects | Select-Object User, 
+SqlStatement, 
+@{N = 'SQLObject'; E = { (Get-SqlObjectName($_.SqlStatement)).Object } }, 
+@{N = 'SQLType'; E = { (Get-SqlObjectName($_.SqlStatement)).Type } }
 
 # Alle Ergebnisse holen
-# $analysebasis = $erg | Where-Object SqlStatement -ne $null | Select-Object User, SqlStatement, @{N = 'SQLObject'; E = { (Get-SqlObjectName($_.SqlStatement)).Object } }, @{N = 'SQLType'; E = { (Get-SqlObjectName($_.SqlStatement)).Type } }
+$analysebasis = $erg | Where-Object SqlStatement -ne $null | Select-Object User, 
+SqlStatement, 
+@{N = 'SQLObject'; E = { (Get-SqlObjectName($_.SqlStatement)).Object } }, 
+@{N = 'SQLType'; E = { (Get-SqlObjectName($_.SqlStatement)).Type } }
 
-# # Beispiel: Alle LIKE-Bedingungen anzeigen
-# $analysewhere = $erg | Where-Object SqlStatement -like "*'%*" | Select User,SqlStatement, @{N='LikeConditions';E={Get-SqlLikeConditions($_.SqlStatement)}}
-# $analysewhere | ogv
 
-# # Erste 10000 SQL Statements aus der Analyse-Tabelle holen
-# $analyse_part = $erg | Where-Object { $null -ne $_.SqlStatement } | Select-Object -First 10000 | ForEach-Object {
+# Beispiel: Alle LIKE-Bedingungen anzeigen
+$analysewhere = $erg | Where-Object SqlStatement -like "*'%*" | Select-Object User,SqlStatement, @{N='LikeConditions';E={Get-SqlLikeConditions($_.SqlStatement)}}
+$analysewhere | Out-GridView
+
+# Erste 10000 SQL Statements aus der Analyse-Tabelle holen
+$analyse_part = $erg | Where-Object { $null -ne $_.SqlStatement } | Select-Object -First 10000 | ForEach-Object {
     
-#     # 1. Analyse nur EINMAL ausführen (Performance-Vorteil)
-#     $analysis = Get-SqlAnalysis -Sql $_.SqlStatement
+    # 1. Analyse nur EINMAL ausführen (Performance-Vorteil)
+    $analysis = Get-SqlAnalysis -Sql $_.SqlStatement
 
-#     # 2. Das Objekt zusammenbauen
-#     # PowerShells "Member Enumeration" erlaubt es uns, $analysis.DbObjects.Object 
-#     # zu schreiben, um direkt das Array aller Tabellennamen zu erhalten.
-#     [PSCustomObject]@{
-#         User           = $_.User
-#         SqlStatement   = $_.SqlStatement
-#         SQLObject      = $analysis.DbObjects.Object
-#         SQLType        = $analysis.DbObjects.Type
-#         LikeConditions = $analysis.LikeConditions
-#     }
-# }
+    # 2. Das Objekt zusammenbauen
+    # PowerShells "Member Enumeration" erlaubt es uns, $analysis.DbObjects.Object 
+    # zu schreiben, um direkt das Array aller Tabellennamen zu erhalten.
+    [PSCustomObject]@{
+        User           = $_.User
+        SqlStatement   = $_.SqlStatement
+        SQLObject      = $analysis.DbObjects.Object
+        SQLType        = $analysis.DbObjects.Type
+        LikeConditions = $analysis.LikeConditions
+    }
+}
 
 # Gesamte Analyse (ohne Limitierung)
 $analyse_all = $erg | Where-Object { $null -ne $_.SqlStatement } | ForEach-Object {
@@ -250,9 +258,11 @@ $analyse_all = $erg | Where-Object { $null -ne $_.SqlStatement } | ForEach-Objec
     }
 }
 
+# Top SQL-Objekte
 $TopObjects = $analyse_all | Group-Object -Property SQLObject | Sort-Object Count -Descending
 $TopObjects | Out-GridView
 
+# Häufigste SQL-Objekte pro User
 $FlatPerUser = $analyse_all |
 Group-Object User |
 ForEach-Object {
