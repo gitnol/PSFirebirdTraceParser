@@ -1,4 +1,4 @@
-function Limit-FileSize {
+# function Limit-FileSize {
     <#
     .SYNOPSIS
         Kürzt eine Datei auf eine maximale Größe.
@@ -134,4 +134,4 @@ function Limit-FileSize {
     end {
         Write-Verbose "Vorgang abgeschlossen."
     }
-}
+# }
