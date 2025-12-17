@@ -3,3 +3,7 @@ config.json*
 config*.json
 Logs
 **/*.log
+trace_output*
+fileT*.html
+!fileText.html
+_archive
