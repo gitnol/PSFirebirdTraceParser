@@ -154,7 +154,6 @@ foreach ($block in $logBlocks) {
     }
 
     # --- Tx ---
-    # --- Tx ---
     $m = $rxTx.Match($block)
     if ($m.Success) {
         $entry.TransactionID = $m.Groups['TransactionID'].Value
