@@ -247,20 +247,20 @@ end {
     Write-Progress -Activity "Pseudonymizing Trace Data" -Completed
 
     if ($AnalyzeOnly) {
-        Write-Host "`n--- Trace Analysis Report ---" -ForegroundColor Cyan
+        Write-Host "--- Trace Analysis Report ---" -ForegroundColor Cyan
         
         # Helper to output tables
         $ShowStat = {
             param($Name, $Dict)
             if ($Dict.Count -gt 0) {
-                Write-Host "`n$($Name) ($($Dict.Count) unique patterns):" -ForegroundColor Yellow
+                Write-Host "$($Name) ($($Dict.Count) unique patterns):" -ForegroundColor Yellow
                 $Dict.GetEnumerator() | 
                 Sort-Object Value -Descending | 
                 Select-Object -First 50 @{N = 'Count'; E = { $_.Value } }, @{N = 'Content'; E = { $_.Name } } |
                 Format-Table -AutoSize
             }
             else {
-                Write-Host "`n$($Name): None found." -ForegroundColor Gray
+                Write-Host "$($Name): None found." -ForegroundColor Gray
             }
         }
 
@@ -268,6 +268,6 @@ end {
         & $ShowStat "Detected WHERE Clauses" $Stats.WhereClauses
         & $ShowStat "Detected HAVING Clauses" $Stats.HavingClauses
         
-        Write-Host "`nAnalysis Complete. Use this info to refine -SensitiveKeywords or -RedactLiterals." -ForegroundColor Green
+        Write-Host "Analysis Complete. Use this info to refine -SensitiveKeywords or -RedactLiterals." -ForegroundColor Green
     }
 }
