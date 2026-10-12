@@ -5,3 +5,21 @@ Logs
 **/*.log
 trace_output*
 _archive
+
+# --- docs_template-Baseline (docs/BOOTSTRAP.md Schritt 1) ---
+# Die Sample-Konfiguration ist versioniert, obwohl config*.json oben greift
+!/config.sample.json
+# PowerShell-Stack: lokale Konfiguration, Temp- und Secret-Dateien
+/config.ps1
+*.tmp
+*.secret
+*.dpapi
+# Schluessel und Zertifikate (alle Stacks)
+*.pfx
+*.pem
+*.key
+# Exporte aus Show-TraceStructure.ps1 enthalten SQL-Texte und Verbindungsdaten (docs/security/DATA_HANDLING.md)
+/*.csv
+# Oeffentliches Repo: interne Umgebungsdoku und Interna-Denylist (docs/CONVENTIONS_COMMON.md 3.1)
+/docs/local/
+/.internal-terms
