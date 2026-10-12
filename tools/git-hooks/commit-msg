@@ -1,0 +1,26 @@
+#!/bin/sh
+# Interna-Sperre fuer Commit-Messages (docs/CONVENTIONS_COMMON.md 3.1): Commit-Messages sind in
+# einem oeffentlichen Repository ebenfalls oeffentlich. Prueft die Message gegen .internal-terms.
+
+root=$(git rev-parse --show-toplevel) || exit 1
+list="$root/.internal-terms"
+
+if [ ! -f "$list" ]; then
+    echo "WARNUNG (Interna-Hook): $list fehlt - Pruefung der Commit-Message uebersprungen." >&2
+    exit 0
+fi
+
+terms=$(mktemp) || exit 1
+trap 'rm -f "$terms"' EXIT
+tr -d '\r' < "$list" | grep -v '^[[:space:]]*#' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; /^$/d' > "$terms"
+
+[ -s "$terms" ] || exit 0
+
+hits=$(grep -v '^#' "$1" | grep -inF -f "$terms")
+if [ -n "$hits" ]; then
+    echo "ABBRUCH (Interna-Hook): interne Begriffe in der Commit-Message:" >&2
+    echo "$hits" >&2
+    exit 1
+fi
+
+exit 0

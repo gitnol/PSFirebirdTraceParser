@@ -1,0 +1,57 @@
+#!/bin/sh
+# Interna-Sperre (docs/CONVENTIONS_COMMON.md 3.1): prueft Dateinamen und neu hinzugefuegte
+# Zeilen des Commits gegen die lokale, gitignorierte Denylist .internal-terms
+# (ein Begriff pro Zeile, Gross-/Kleinschreibung egal, Zeilen mit # sind Kommentare).
+# Danach laufen projekt-eigene Pruefungen aus tools/git-hooks/pre-commit.local (z. B. die Quality Gates
+# des Stacks), falls vorhanden: Mit gesetztem core.hooksPath ignoriert Git .git/hooks/ - eigene Hooks
+# gehoeren deshalb hierher.
+# Aktivieren pro Klon: git config core.hooksPath tools/git-hooks
+
+root=$(git rev-parse --show-toplevel) || exit 1
+
+interna_check() {
+    list="$root/.internal-terms"
+    if [ ! -f "$list" ]; then
+        echo "WARNUNG (Interna-Hook): $list fehlt - Pruefung uebersprungen." >&2
+        return 0
+    fi
+
+    terms=$(mktemp) || return 1
+    # Kommentare und Leerzeilen weg, Begriffe beidseitig trimmen (ein Leerzeichen am Ende verhinderte sonst jeden Treffer)
+    tr -d '\r' < "$list" | grep -v '^[[:space:]]*#' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; /^$/d' > "$terms"
+
+    if [ ! -s "$terms" ]; then
+        rm -f "$terms"
+        echo "WARNUNG (Interna-Hook): .internal-terms enthaelt keine Begriffe - Pruefung wirkungslos." >&2
+        return 0
+    fi
+
+    hits=$(
+        {
+            git diff --cached --name-only --diff-filter=ACMR
+            git diff --cached -U0 --diff-filter=ACMR | grep '^+' | grep -v '^+++'
+        } | grep -inF -f "$terms"
+    )
+    rm -f "$terms"
+
+    if [ -n "$hits" ]; then
+        echo "ABBRUCH (Interna-Hook): interne Begriffe im Commit gefunden:" >&2
+        echo "$hits" >&2
+        echo "Betroffene Inhalte nach docs/local/ verschieben oder durch Rollenbezeichnungen ersetzen." >&2
+        return 1
+    fi
+    return 0
+}
+
+interna_check || exit 1
+
+local_hook="$root/tools/git-hooks/pre-commit.local"
+if [ -f "$local_hook" ]; then
+    if [ -x "$local_hook" ]; then
+        "$local_hook" || { echo "ABBRUCH (pre-commit.local): Projekt-Pruefungen nicht gruen." >&2; exit 1; }
+    else
+        sh "$local_hook" || { echo "ABBRUCH (pre-commit.local): Projekt-Pruefungen nicht gruen." >&2; exit 1; }
+    fi
+fi
+
+exit 0
