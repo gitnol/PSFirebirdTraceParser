@@ -24,7 +24,7 @@ nicht rückholbarer Weitergabe personenbezogener Daten an Dritte (`docs/security
 
 | # | Titel | Datum | Commit |
 |---|-------|-------|--------|
-| I1 | docs_template-Baseline eingeführt (Bestandscode dokumentiert, kein Code geändert) | 2026-10-11 | Nachtrag per `docs: record I1 commit hash` |
+| I1 | docs_template-Baseline eingeführt (Bestandscode dokumentiert, kein Code geändert) | 2026-10-11 | 21e92bc |
 
 ---
 
