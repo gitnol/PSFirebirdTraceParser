@@ -79,6 +79,9 @@ Commit-Pflicht pro Inkrement: `docs/KICKOFF.md` Phase 3b. Stack-spezifisch nur:
     `Show-TraceStructure.ps1` hat ein BOM, ist aber ASCII.
   - **Testdateien mit Nicht-ASCII-Zeichen** (deutsche `It`-Texte) als UTF-8 **mit BOM** — sonst meldet
     PSScriptAnalyzer `PSUseBOMForUnicodeEncodedFile`. Details: `testing/UNIT_TESTS.md` 7.6.
+  - **Zeilenenden:** `.ps1`, `.psm1` und `.psd1` mit LF sind unkritisch (PowerShell liest beides), es gilt
+    `CONVENTIONS_COMMON.md` §2. Ausnahme: Authenticode-signierte Dateien — die Signatur gilt für die Bytes, sie
+    bleiben wie signiert (in `.gitattributes` als `binary`).
 
 ## 4. Prozessweite Side-Effects — Save/Restore-Pflicht
 

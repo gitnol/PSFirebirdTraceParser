@@ -52,7 +52,7 @@ Rolle: Du bist ein autonomer Entwickler-Agent für dieses Projekt.
    `PreToolUse`-Hook enthält, der vor `git commit` das Advocatus-Diaboli-Gate einblendet (Filter auf
    `git commit`). **Fehlt er → sofort einrichten** (Vorlage + Begründung: `docs/principles/ADVOCATUS_DIABOLI.md`).
    So greift das Gate aus Phase 3b automatisch. Nach dem Einrichten ist ein `/hooks`-Reload nötig.
-   **Andere Agenten** (ohne Claude-Code-Hooks): kein Hook — das Gate aus Phase 3b Punkt 5 vor jedem Commit von Hand ausführen.
+   **Andere Agenten** (ohne Claude-Code-Hooks): kein Hook — das Advocatus-Diaboli-Gate aus Phase 3b vor jedem Commit von Hand ausführen.
 
 ### Phase 1b: Git-Repository initialisieren (NUR beim allerersten Mal, wenn noch keine Commits existieren)
 
@@ -186,7 +186,7 @@ sparen. Ein-Befehl-Variante: `<Template-Root>/scripts/validate_project_docs.sh d
    (Skript liegt im Template-Repo, nicht im Projekt) → Exit 0 erforderlich. Rot bedeutet: Inkrement nicht abgeschlossen.
    **Template nicht erreichbar** (Skript fehlt oder bricht mit Exit 2 ab): die Checks Verletzung 1–4 aus
    `docs/REFLECTION.md` Schritt 0 von Hand ausführen, dazu `grep -rnE '\[[[:upper:]]{2,}' docs/` (offene
-   Platzhalter nach `CONVENTIONS_COMMON.md` §3, Treffer einzeln beurteilen) und `grep -rn '<!--[ ]AGENT-ANWEISUNG' docs/`;
+   Platzhalter nach `CONVENTIONS_COMMON.md` §3, Treffer einzeln beurteilen) und `grep -rn '<!--[[:space:]]AGENT-ANWEISUNG' docs/`;
    im Confidence-Block vermerken: „Struktur-Check manuell, ohne Template-Skript".
 7. **Git-Commit PFLICHT**, sofern Git verfügbar ist und der Prompter Commits nicht ausdrücklich untersagt hat: `<type>(<scope>): Beschreibung` (Typen und Scope-Regeln: `docs/CONVENTIONS_COMMON.md` §1)
    Ohne Commit oder dokumentierte Ausnahme ist das Inkrement nicht abgeschlossen.
