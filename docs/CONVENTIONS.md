@@ -95,8 +95,8 @@ Commit-Pflicht pro Inkrement: `docs/KICKOFF.md` Phase 3b. Stack-spezifisch nur:
   auslagern; ein Modul-Manifest (`.psd1`) nennt `FunctionsToExport` dann **explizit**, nie `'*'`. Die Liste steht
   **nur im Manifest** — kein zweites `Export-ModuleMember` mit eigener Liste in der `.psm1`: Wirksam ist die
   Schnittmenge beider, ein Name, der nur im Manifest steht, fehlt nach dem Import ohne Fehlermeldung (gemessen mit
-  PowerShell 7.6). Aufbau, Manifest, Modultests und Verteilung: `architecture/MODULE.md` — beim ersten Modul aus der
-  Stack-Vorlage anlegen (heute kein Modul im Repo).
+  PowerShell 7.6). Aufbau, Manifest, Modultests und Verteilung: `architecture/MODULE.md` (falls vorhanden; heute
+  kein Modul im Repo — beim ersten Modul aus der Stack-Vorlage anlegen).
 - **Encoding-Ausnahmen** (Vorrang vor `CONVENTIONS_COMMON.md` §2, sonst gilt UTF-8 ohne BOM):
   - **`.ps1`-Quellcode bleibt ASCII.** Ist Nicht-ASCII unvermeidbar (z. B. deutsche Meldungstexte), dann UTF-8
     **mit BOM** — Windows PowerShell 5.1 liest BOM-loses UTF-8 als ANSI und zeigt Umlaute falsch an.
