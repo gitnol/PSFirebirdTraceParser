@@ -111,6 +111,20 @@ Bedrohung 3 in `security/THREAT_MODEL.md`.
 - [ ] Aussage „line-by-line (low memory)" erst nach I6 wieder treffen, bis dahin korrigieren
 - [ ] README nennt „MIT License", eine `LICENSE`-Datei fehlt — Owner-Entscheidung einholen und Datei ergänzen
 
+### I8: Laufzeit- und Beispielstände aus dem Security-Sweep 2026-10-23 nachziehen
+
+Herkunft: `security/DEPENDENCY_AUDIT.md` → Kadenz-Sweep 2026-10-23.
+
+**Aufgaben:**
+
+- [ ] `config.sample.json`: `FirebirdPath` versionsneutral (Platzhalter statt `Firebird_4_0_3`), damit die Vorlage keinen verwundbaren Server-Stand (< 4.0.7 / 5.0.4) suggeriert; `operations/SETUP.md` Konfigurationstabelle angleichen
+- [ ] Prüfen und entscheiden (YAGNI): Trace-Skripte warnen unter PowerShell 7 bei einer Version unter 7.6.7 / 7.5.12 / 7.4.21 oder auf 7.4/7.5 nach dem Supportende 2026-11-10 — sonst als bewusst dokumentiertes Restrisiko in `security/DEPENDENCY_AUDIT.md`
+- [ ] MSRC Security Update Guide (Oktober 2026) auf Windows PowerShell 5.1 filtern und den Befund im Sweep-Protokoll nachtragen
+
+**Zusätzliche Kriterien:**
+
+- [ ] Kein Interna-Treffer im Diff (öffentliches Repo, `CONVENTIONS_COMMON.md` 3.1)
+
 ### Ohne Inkrement-Nummer (Owner-Aufgaben)
 
 - [ ] Branch-History nach `CONVENTIONS_COMMON.md` 3.1 prüfen; Befund und Optionen in `docs/local/ENVIRONMENT.md` (Entscheidung Repo-Owner: History-Bereinigung oder dokumentierte Akzeptanz)
