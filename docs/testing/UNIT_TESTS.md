@@ -87,7 +87,9 @@ Describe 'Pseudonymize-FirebirdTrace' {
 
     Context 'Fehlerfall' {
         It 'lehnt HashLength außerhalb 8..64 ab' {
-            { [pscustomobject]@{} | & $script:Sut -HashLength 65 } | Should -Throw
+            # 7.11: Parametername und Grenze stehen in der deutschen und der englischen ValidateRange-Meldung;
+            # ein Bindungsfehler (unbekannter Parameter) enthielte die Grenze nicht.
+            { [pscustomobject]@{} | & $script:Sut -HashLength 65 } | Should -Throw -ExpectedMessage '*HashLength*64*'
         }
     }
 }
@@ -224,14 +226,15 @@ bleibt und CI bricht. In Pester-Test-Dateien ist der saubere Weg, einen leeren
 `Param()`-Block am Datei-Anfang einzuziehen, an dem das Attribut hängt:
 
 ```powershell
-# Häufiger Bedarf in Tests: Dummy-SecureString, der den interaktiven
-# Get-Credential-Prompt unterdrückt. PSAvoidUsingConvertToSecureStringWithPlainText
-# würde sonst als Error feuern.
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingConvertToSecureStringWithPlainText", "")]
+# Häufiger Bedarf in Tests: Variablen aus BeforeAll, die erst in den It-Blöcken
+# gelesen werden. PSUseDeclaredVarsMoreThanAssignments würde sonst als Warning feuern.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseDeclaredVarsMoreThanAssignments", "")]
 Param()
 
 BeforeAll {
-    $secure = ConvertTo-SecureString 'pw' -AsPlainText -Force
+    # Dummy-Credential ohne Klartext: leerer SecureString genügt, um den Get-Credential-Prompt zu umgehen
+    # (ConvertTo-SecureString -AsPlainText würde PSAvoidUsingConvertToSecureStringWithPlainText auslösen).
+    $secure = [securestring]::new()
     $script:DummyCred = [pscredential]::new('dummy', $secure)
 }
 ```
@@ -268,6 +271,22 @@ und das Attribut **greift nicht** — die Finding bleibt, CI bricht.
 Die gleiche Falle gibt's bei `[Parameter(...)]`, `[ValidateSet(...)]` und allen
 anderen PowerShell-Attributen — sobald `$` in einem Double-Quote-Argument
 auftaucht, wird daraus eine Interpolation und das Attribut wird invalid.
+
+### 7.11 `Should -Throw` immer mit `-ExpectedMessage`
+
+Ein bloßes `Should -Throw` ist mit **jedem** Fehler grün — auch mit einem Parameterbindungsfehler, weil der
+Test einen Schalter verwendet, den die Funktion (noch) nicht hat. Umgekehrt nimmt eine Funktion **ohne**
+`[CmdletBinding()]` den unbekannten Schalter still in `$args` auf und liefert das alte Verhalten; ein Test, der
+nur „wirft nicht" prüft, merkt nichts. Deshalb: Fehlertests immer mit `-ExpectedMessage '*<Kern der Meldung>*'`,
+Funktionen immer mit `[CmdletBinding()]` (`CONVENTIONS.md` §2).
+
+### 7.12 `PSReviewUnusedParameter` übersieht Nutzung in verschachtelten Funktionen und Closures
+
+PSScriptAnalyzer meldet Script-/Funktionsparameter als unbenutzt, die erst in einer später im selben Skript
+definierten Funktion oder in einer `-TestCases`/`-ForEach`-Closure gelesen werden (Beispiel: ein `$TestFilter`,
+der 77-mal verwendet wurde). Vor dem Entfernen eines solchen Parameters die Verwendung im ganzen Skript suchen,
+nicht dem Finding folgen. Gibt es projektweit nur Fehlalarme, die Regel in `PSScriptAnalyzerSettings.psd1`
+ausnehmen statt jede Stelle einzeln zu unterdrücken.
 
 ---
 
@@ -346,3 +365,40 @@ Für Charakterisierungs- und Negativtests (sofort grün) ist die Mutationsprüfu
   `if ($true)`, löscht `Remove-Item` trotzdem nichts, weil es `-WhatIf` über `$WhatIfPreference` erbt. Den
   Mutanten als äquivalent ausweisen; nur wo .NET-Methoden statt Cmdlets schreiben, ist die eigene Abfrage
   per Test absicherbar.
+
+---
+
+## 9. Testgüte (Regel: `docs/principles/TEST_EFFECTIVENESS.md`)
+
+### 9.1 Mutationsprüfung
+
+- **Mit Werkzeug (optional):** PSMutant aus der PowerShell Gallery (ab 0.5.0; junges Werkzeug, Angaben bisher nur
+  vom Herausgeber). `Invoke-PSMutation -ConfigFile <json>` — Format laut `schemas/v1/config.schema.json` im Modul,
+  `Get-Help Invoke-PSMutation -Full`; mutiert eine temporäre Kopie, braucht Pester 5.2+. Vor dem ersten Vertrauen in
+  den Score kalibrieren (Prinzip: einen Test entfernen, der Score muss sinken) — eine frühere Version zählte bei zwei
+  installierten Pester-Versionen jeden Mutanten als erkannt.
+- **Ohne Werkzeug:** von Hand nach 8.6.
+
+### 9.2 Eigenschaftstests mit erzeugten Eingaben
+
+Für PowerShell gibt es kein ausgereiftes Werkzeug für Eigenschaftstests. Ersatz: erzeugte Fälle mit festem Seed über
+`-ForEach`. Die Fälle müssen in `BeforeDiscovery` entstehen: In `BeforeAll` gibt es sie beim Aufbau der Tests noch
+nicht, Pester legt dann **still null Tests** an und der Lauf ist grün (geprüft mit Pester 6.1).
+Es gibt keine automatische Verkleinerung — einen Fehlschlag von Hand auf den kleinsten Fall reduzieren und als
+festen Testfall übernehmen.
+
+```powershell
+BeforeDiscovery {
+    $rng    = [System.Random]::new(4711)   # fester Seed: Fehlschlag reproduzierbar
+    $faelle = foreach ($i in 1..200) {
+        $laenge = $rng.Next(0, 40)
+        @{ Text = -join @(for ($k = 0; $k -lt $laenge; $k++) { [char]$rng.Next(32, 0x250) }) }
+    }
+}
+
+Describe 'ConvertTo-Beleg / ConvertFrom-Beleg' {
+    It 'Round-Trip: <Text>' -ForEach $faelle {
+        ConvertFrom-Beleg (ConvertTo-Beleg $Text) | Should -BeExactly $Text
+    }
+}
+```

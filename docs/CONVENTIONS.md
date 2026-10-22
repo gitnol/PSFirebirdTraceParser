@@ -30,7 +30,9 @@ Commit-Pflicht pro Inkrement: `docs/KICKOFF.md` Phase 3b. Stack-spezifisch nur:
 
 ## 2. PowerShell Code-Richtlinien
 
-- **CmdletBinding + Param:** Jede Funktion und jedes Script mit `[CmdletBinding()]` und `param()` Block.
+- **CmdletBinding + Param:** Jede Funktion und jedes Script mit `[CmdletBinding()]` und `param()` Block. Ohne
+  `[CmdletBinding()]` landen unbekannte Parameter still in `$args` — ein Tippfehler oder ein noch nicht gebauter
+  Schalter wirkt dann wie ein erfolgreicher Aufruf (Gegenstück im Test: `testing/UNIT_TESTS.md` 7.11).
   *Bestand:* nur `Pseudonymize-FirebirdTrace.ps1` erfüllt das; `Show-TraceStructure.ps1` hat `param()` ohne
   `[CmdletBinding()]`, die Trace-Skripte haben keinen `param()`-Block (TODO I5/I6).
 - **Approved Verbs:** Nur [genehmigte PowerShell-Verben](https://docs.microsoft.com/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands) für Skript- und Funktionsnamen
@@ -38,6 +40,21 @@ Commit-Pflicht pro Inkrement: `docs/KICKOFF.md` Phase 3b. Stack-spezifisch nur:
   Umbenennung nur zusammen mit README und Hinweistexten (BACKLOG).
 - **Fehlerbehandlung:** `$ErrorActionPreference = 'Stop'` am Scriptbeginn. `try/catch` für alle externen Aufrufe
   (`fbtracemgr.exe`, Dateizugriffe). Kein leeres `catch {}` ohne Logging. *Bestand:* nirgends gesetzt (TODO I5).
+- **Strict Mode:** `Set-StrictMode -Version 3.0` direkt danach — im Script bzw. am Anfang einer künftigen `.psm1`
+  (gilt dann im Modul-Scope, nicht beim Aufrufer). Ohne Strict Mode liefern nicht initialisierte Variablen,
+  Tippfehler in Eigenschaftsnamen und Indizes außerhalb des Arrays still `$null`. Feste Version statt `Latest`: `Latest` wird mit neuen
+  PowerShell-Versionen strenger, ein Skript bricht dann ohne eigene Änderung. Optionale Eigenschaften gezielt prüfen
+  (`$obj.PSObject.Properties['Name']`), nicht den Strict Mode abschalten. *Bestand:* in keinem Skript gesetzt
+  (offen, Befund Template-Update v28).
+- **Typisierte Parameter und Rückgaben:** Jeder Parameter trägt einen Typ (`[string]`, `[int]`, `[switch]`,
+  `[System.IO.FileInfo]`, eigene Klasse); `[object]`/`[PSObject]` oder untypisiert nur mit Kommentar, warum (z. B.
+  `-InputObject` von `Pseudonymize-FirebirdTrace.ps1`: beliebige Parser-Objekte aus der Pipeline). Funktionen und
+  Skripte mit Rückgabewert deklarieren `[OutputType([Typ])]` — PowerShell prüft das nicht zur Laufzeit, es ist der
+  Vertrag für Leser, Tab-Vervollständigung und PSScriptAnalyzer (`PSUseOutputTypeCorrectly`). Strukturierte
+  Rückgaben als `[pscustomobject]` mit festen Feldern oder als Klasse, nicht als Hashtable mit wechselnden
+  Schlüsseln. *Bestand:* `[OutputType()]` fehlt überall (`Show-TraceStructure.ps1` nennt den Typ nur in `.OUTPUTS`);
+  in `Pseudonymize-FirebirdTrace.ps1` sind die Hilfsfunktion `Add-Stat` (`param($Type, $Value)`) und der
+  Skriptblock `$ShowStat` (`param($Name, $Dict)`) untypisiert (offen, Befund Template-Update v28).
 - **Exit-Codes nur in Skripten, die als Prozess aufgerufen werden** (`trace_start.ps1`, `trace_stop.ps1`); Pipeline-Skripte
   (`Show-TraceStructure.ps1`, `Pseudonymize-FirebirdTrace.ps1`) werfen Fehler statt `exit` (sonst beendet `exit` die
   aufrufende Sitzung beim Dot-Sourcing). Tabelle: `architecture/ERROR_HANDLING.md`.
@@ -64,6 +81,10 @@ Commit-Pflicht pro Inkrement: `docs/KICKOFF.md` Phase 3b. Stack-spezifisch nur:
   Assert-Precondition           # ✗ Rückgabe leckt in den Output-Stream der Funktion
   ```
   Tests, die nur „Output ist nicht null" prüfen, **maskieren** diesen Bug — exakt prüfen (`Count`, erwarteter Typ/Wert).
+- **Änderungserkennung auf Text ordinal vergleichen:** `-eq`/`-ne` auf Strings vergleichen linguistisch
+  (kulturabhängig) — `'…' -ne '...'` kann `$false` liefern, obwohl sich der Text geändert hat. Ein Skript, das nur
+  geänderte Dateien zurückschreibt, übersprang so still einen Teil der Dateien, ohne Fehlermeldung. Für „hat sich
+  der Inhalt geändert?" `[string]::Equals($a, $b, [System.StringComparison]::Ordinal)` verwenden.
 
 ## 3. Dateiorganisation
 
@@ -71,7 +92,11 @@ Commit-Pflicht pro Inkrement: `docs/KICKOFF.md` Phase 3b. Stack-spezifisch nur:
   `trace_start.ps1`, `trace_stop.ps1`); Skripte sind über die Pipeline kombinierbar.
 - **Funktionen:** im selben Skript bei < 300 Zeilen; darüber in `functions/` auslagern.
 - **Module:** Wird Logik von mehr als einem Skript genutzt (z. B. Konfig-Laden in beiden Trace-Skripten), als `.psm1`
-  auslagern; ein Modul-Manifest (`.psd1`) nennt `FunctionsToExport` dann **explizit**, nie `'*'`.
+  auslagern; ein Modul-Manifest (`.psd1`) nennt `FunctionsToExport` dann **explizit**, nie `'*'`. Die Liste steht
+  **nur im Manifest** — kein zweites `Export-ModuleMember` mit eigener Liste in der `.psm1`: Wirksam ist die
+  Schnittmenge beider, ein Name, der nur im Manifest steht, fehlt nach dem Import ohne Fehlermeldung (gemessen mit
+  PowerShell 7.6). Aufbau, Manifest, Modultests und Verteilung: `architecture/MODULE.md` — beim ersten Modul aus der
+  Stack-Vorlage anlegen (heute kein Modul im Repo).
 - **Encoding-Ausnahmen** (Vorrang vor `CONVENTIONS_COMMON.md` §2, sonst gilt UTF-8 ohne BOM):
   - **`.ps1`-Quellcode bleibt ASCII.** Ist Nicht-ASCII unvermeidbar (z. B. deutsche Meldungstexte), dann UTF-8
     **mit BOM** — Windows PowerShell 5.1 liest BOM-loses UTF-8 als ANSI und zeigt Umlaute falsch an.
