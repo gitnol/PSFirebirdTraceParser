@@ -14,7 +14,7 @@ dort kurze Beschreibung, hier der strukturierte Steckbrief.
 - Inkrement: I1
 - Scope: generisch-base
 - Backport-Ziel: `NEUES_PROJECT_INITIALISIEREN.md` Schritt 1 („Öffentliches Repository?") bzw. `base/CONVENTIONS_COMMON.md` 3.1
-- Status: offen
+- Status: backported v32@e8eaf0f
 
 Die Regel „vor dem ersten Push die Branch-History prüfen" greift nicht, wenn das Repository schon öffentlich ist; beim
 Init fanden sich Interna nur in **gelöschten** Kommentar-Beispielen älterer Commits, nicht im aktuellen Stand. Ein
