@@ -27,30 +27,6 @@ Bekannte Bugs ohne aktiven Fix: `KNOWN_ISSUES.md`.
 
 ## Aktuell (Hohe Priorität)
 
-### I2: Pseudonymisierung – Klartext-Lücken schließen (mit Pester-Grundgerüst)
-
-Hinweis 2026-11-07: Das Pester-Grundgerüst (`tests/`, `tests/RequiredModules.psd1`, Fixture `tests/fixtures/trace_fb5_windows.log`) entstand mit I9; hier nur noch die Tests für den Pseudonymisierer.
-
-Bedrohung 1 in `security/THREAT_MODEL.md`. Der Pseudonymisierer lässt Werte stehen, die Personen oder
-Geschäftsvorgänge identifizieren können; Ergebnisse werden laut README an Dritte weitergegeben.
-
-**Aufgaben:**
-
-- [ ] Test-Grundgerüst: `tests/RequiredModules.psd1` (Pester-Version pinnen, Auswahl 5.x vs. 6.x laut
-      `security/DEPENDENCY_AUDIT.md` begründen), `PSScriptAnalyzerSettings.psd1`, Gate-Befehle aus `CONVENTIONS.md` §9 lauffähig
-- [ ] Charakterisierungstests für `Pseudonymize-FirebirdTrace.ps1` (Ist-Verhalten: User, ClientIP, ApplicationPath,
-      ProtocolInfo, Params, String-Literale mit `-RedactLiterals`/`-SensitiveKeywords`, `-AnalyzeOnly`), Diskriminierung
-      per Mutationsprüfung (`testing/UNIT_TESTS.md` 8.6)
-- [ ] Rote Tests, dann Fix: numerische Literale in WHERE/HAVING werden bei `-RedactLiterals` pseudonymisiert
-- [ ] Rote Tests, dann Fix: `DatabasePath` wird pseudonymisiert (Datenbank-/Kundennamen, Serverpfade)
-- [ ] Rote Tests, dann Fix: Bulk-Redaktion bei `-SensitiveKeywords` erfasst **alle** WHERE/HAVING-Klauseln (heute nur die letzte)
-- [ ] Zuweisung an die automatische Variable `$matches` im `-AnalyzeOnly`-Zweig entfernen (KNOWN_ISSUES K6)
-- [ ] README.md/README.de.md: Liste der pseudonymisierten und **nicht** pseudonymisierten Felder ergänzen
-
-**Zusätzliche DoD** (nur, was über die Standard-DoD hinausgeht):
-
-- [ ] Kein Feld aus `features/PSEUDONYMIZATION.md` → „Feldabdeckung" steht mehr ohne Entscheidung (pseudonymisiert oder begründet im Klartext)
-
 ### I3: Pseudonymisierung – geheimer Schlüssel statt ungesalzenem SHA-256
 
 Bedrohung 2 in `security/THREAT_MODEL.md`: ungesalzene, gekürzte SHA-256-Werte sind für kleine Wertebereiche

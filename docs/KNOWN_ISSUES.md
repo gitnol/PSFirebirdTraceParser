@@ -19,7 +19,6 @@ Sicherheitsrelevante Schwächen stehen in `security/THREAT_MODEL.md` und `STATE.
 |---|---|---|---|---|---|
 | K4 | `trace_stop.ps1` wählt die neueste `*.log` unter `E:\`; Hinweistext in `trace_start.ps1` nennt `trace-stop.ps1` statt `trace_stop.ps1` | andere `.log`-Datei nach dem Start unter `E:\` ablegen, dann stoppen → Exit 4 | `fbtracemgr … -LIST` und `-STOP -ID <n>` von Hand (`operations/RUNBOOK.md`) | betrifft nur den Bedienkomfort | `I5` |
 | K5 | `trace_start.ps1`/`trace_stop.ps1` enthalten Umlaute ohne BOM → unter Windows PowerShell 5.1 falsch dargestellt | mit `powershell.exe` ausführen, `config.json` ungültig machen; PSScriptAnalyzer meldet `PSUseBOMForUnicodeEncodedFile` (bestätigt) | PowerShell 7 verwenden | kosmetisch | `I5` |
-| K6 | `Pseudonymize-FirebirdTrace.ps1` weist im `-AnalyzeOnly`-Zweig an `$matches` zu (automatische Variable) | `Invoke-ScriptAnalyzer` meldet `PSAvoidAssignmentToAutomaticVariable` (beim Init mit PSScriptAnalyzer 1.25.0 bestätigt) | keiner nötig | keine bekannte Fehlfunktion | `I2` |
 
 ---
 
@@ -30,6 +29,8 @@ Lessons Learned). Danach archivieren oder löschen.
 
 | # | Beschreibung | Behoben in | Commit |
 |---|---|---|---|
+| ~~K6~~ | Zuweisung an die automatische Variable `$matches` im `-AnalyzeOnly`-Zweig | `I2` (2026-11-07) | 02ba8c7 |
+| ~~K7~~ | `-AnalyzeOnly` schrieb seine Auswertungstabellen als Formatierungsobjekte in die Ausgabe (beim Charakterisierungstest gefunden) | `I2` (2026-11-07) | 02ba8c7 |
 | ~~K2~~ | Parser lud die ganze Datei in den Speicher und gab erst am Ende aus (78-MB-Datei: 1,5 GB Arbeitsspeicher) | `I6` (2026-11-07) | ae83580 |
 | ~~K1~~ | README nannte `IPAddress`/`Application` statt `ClientIP`/`ApplicationPath`, weitere Properties fehlten | `I7` (2026-11-07) | f3e476a |
 | ~~K3~~ | Verbindungsfelder blieben leer bei `<internal>`-Verbindungen (belegt: 12 von 298 im echten Firebird-5-Log), Rolle ≠ `NONE`, kleiner Endung, Protokoll ohne Port | `K3` (2026-11-07) | e82e31e |

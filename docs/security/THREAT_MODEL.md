@@ -27,13 +27,14 @@ nur die **letzte** WHERE/HAVING-Klausel (gieriges `.*` im Ersetzungs-Regex), Bed
 früheren UNION-Teilen bleiben sichtbar. Weitergegebene Daten sind nicht rückholbar.
 
 **Mitigation:**
-- I2: Lücken per Test schließen (numerische Literale, `DatabasePath`, alle Klauseln); Feldabdeckung in
-  `features/PSEUDONYMIZATION.md` als Vertrag führen.
+- Umgesetzt in I2 (2026-11-07): numerische Literale und Einzelzeichen mit `-RedactLiterals`, `DatabasePath` immer,
+  Bulk-Redaktion ab der ersten WHERE/HAVING-Klausel; Feldabdeckung als Vertrag in `features/PSEUDONYMIZATION.md`;
+  15 Tests, Mutationsprüfung 11/11.
 - Bis dahin: vor jeder Weitergabe `-AnalyzeOnly` laufen lassen und den Export stichprobenartig prüfen;
   Weitergabe nur nach Freigabe (`security/DATA_HANDLING.md` → Weitergabe).
 - README um eine Liste der **nicht** pseudonymisierten Felder ergänzen (I2).
 
-**Restrisiko:** Hoch – bis I2 umgesetzt ist; danach Mittel (Freitext in SQL bleibt schwer vollständig erkennbar).
+**Restrisiko:** Mittel – Freitext in SQL bleibt schwer vollständig erkennbar; ohne `-RedactLiterals` bleiben Literale Klartext.
 
 ---
 

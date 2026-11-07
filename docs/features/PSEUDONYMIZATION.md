@@ -28,30 +28,25 @@ Trace-Daten für externe Analysen weitergegeben werden können; `-AnalyzeOnly` z
 
 ---
 
-## Feldabdeckung (Ist, Init 2026-10-11)
+## Feldabdeckung (Vertrag, Stand I2 2026-11-07)
 
-| Property | Behandlung | Bewertung |
+Jedes Feld ist entschieden: pseudonymisiert oder begründet im Klartext. Neue Felder des Parsers müssen hier
+eingetragen werden, bevor sie ausgeliefert werden.
+
+| Property | Behandlung | Begründung / Restrisiko |
 |---|---|---|
-| `User` | SHA-256-Pseudonym (inkl. `:NONE`) | umkehrbar per Wörterbuch bekannter Benutzer (Bedrohung 2) |
-| `ClientIP` und IP in `ProtocolInfo` | SHA-256-Pseudonym | IPv4-Raum vollständig durchrechenbar (Bedrohung 2) |
-| `ApplicationPath` | SHA-256-Pseudonym | ok (Pfade enthalten oft Windows-Benutzernamen) |
-| `Params` | Werte in doppelten Anführungszeichen → Pseudonym | Werte ohne Anführungszeichen bleiben stehen — gegen echtes Trace-Format zu prüfen (I2) |
-| `SqlStatement` | String-Literale `'…'` nur bei `-RedactLiterals` bzw. Keyword-Treffer; bei Keyword-Treffer zusätzlich letzte WHERE/HAVING-Klausel → `<REDACTED_CLAUSE:…>` | **numerische Literale bleiben Klartext**; frühere WHERE-Klauseln (Unterabfragen, UNION) bleiben stehen (I2) |
-| `DatabasePath` | **unverändert** | Server-/Datenbank-/Kundennamen im Klartext (I2) |
-| `ClientPort`, `ProcessID`, `SessionID`, `AttachID`, `TransactionID`, `RootTxID`, `ApplicationPID` | unverändert | technische IDs; erlauben Verknüpfung, aber keine direkte Identifikation |
-| `SqlPlan`, `TableStats` | unverändert | Tabellen-/Indexnamen (Schema-Interna) im Klartext — Entscheidung in I2 |
-| `ErrorMessages` (seit I10) | nur mit `-RedactLiterals`: Schlüsselwerte `("SPALTE" = wert)` → `<HASH:…>`, String-Literale `'…'` → `'<HASH:…>'`; Constraint- und Tabellennamen bleiben | ohne Schalter Klartext; andere Wertformen in Fehlertexten nicht abgedeckt |
-| `ErrorSource`, `ErrorCodes` | unverändert | technisch, keine Personendaten |
-| `Timestamp`, `Action`, `TransactionOptions`, Zähler | unverändert | Analysezweck |
+| `User` | Pseudonym (inkl. Rolle) | identifiziert Personen |
+| `ClientIP` und IP in `ProtocolInfo` | Pseudonym; Protokoll und Port bleiben | identifiziert Rechner/Personen |
+| `ApplicationPath` | Pseudonym | Pfade enthalten oft Windows-Benutzernamen |
+| `DatabasePath` | Pseudonym (seit I2) | Server-, Ordner- und Kundennamen |
+| `Params` | Werte in `"…"` → Pseudonym, Typ bleibt | Firebird schreibt jeden Wert in Anführungszeichen (`param%d = %s, "%s"`, TracePluginImpl.cpp 5.0.4) |
+| `SqlStatement` | mit `-RedactLiterals`: alle nicht leeren Zeichenketten (auch Einzelzeichen, seit I2) und Zahlen (seit I2) → `<HASH:…>`; Ziffern in Bezeichnern bleiben; reine `%`-Muster bleiben. Mit `-SensitiveKeywords`: Literale mit Stichwort; steht das Stichwort außerhalb von Literalen, wird **alles ab der ersten** WHERE/HAVING-Klausel ersetzt (seit I2) | ohne Schalter Klartext — für Weitergabe immer `-RedactLiterals` |
+| `ErrorMessages` | mit `-RedactLiterals`: Schlüsselwerte `("SPALTE" = wert)` und Zeichenketten → Pseudonym; Constraint-/Tabellennamen bleiben | andere Wertformen in Fehlertexten nicht abgedeckt |
+| `SqlPlan`, `TableStats`, Tabellen-/Indexnamen | Klartext (Entscheidung I2) | Schema-Namen sind keine Personendaten, aber Geschäftsinterna; für die Analyse (Index-Empfehlungen) nötig. Wer sie verbergen muss: `-SensitiveKeywords` |
+| `ClientPort`, `ProcessID`, `SessionID`, `AttachID`, `TransactionID`, `RootTxID`, `ApplicationPID`, `ErrorSource`, `ErrorCodes` | Klartext | technische IDs/Codes; erlauben Verknüpfung innerhalb des Traces, keine direkte Identifikation |
+| `Timestamp`, `Action`, `TransactionOptions`, Zähler | Klartext | Analysezweck |
 
-Ohne Schalter werden String-Literale **nicht** pseudonymisiert — nur `User`, IP, `ApplicationPath` und `Params`.
-
-**Beim Init nachgeprüft** (2026-10-11, PowerShell 7.6, Aufruf mit einem fiktiven Objekt, kein echter Trace):
-`-RedactLiterals` ließ `WHERE ID = 4711` und `DatabasePath` im Klartext; `ClientIP` ergab exakt die ersten 12 Hex-Zeichen
-von SHA-256 des Klartexts (also per Vorausberechnung umkehrbar); das Eingabeobjekt blieb unverändert. Die
-Bulk-Redaktion greift nur, wenn das Schlüsselwort **nach** der Literal-Ersetzung noch im Statement steht (z. B. als
-Tabellenname) — steht es nur in einem Literal, wird nur das Literal ersetzt. Greift sie, ersetzt sie alles nach dem
-**letzten** `WHERE` (inklusive `ORDER BY`); frühere Bedingungen (`WHERE ID = 4711 UNION …`) bleiben stehen.
+Hash-Verfahren bis I3: ungesalzenes SHA-256, gekürzt — für kleine Wertebereiche umkehrbar (`security/THREAT_MODEL.md` Bedrohung 2).
 
 ---
 

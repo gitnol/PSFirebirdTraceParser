@@ -10,6 +10,31 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-07 I2 – Pseudonymisierung: Klartext-Lücken geschlossen
+
+**Trigger-Matrix:** Verhalten geändert → `features/PSEUDONYMIZATION.md` (Feldabdeckung als Vertrag), README (Felderliste);
+Bedrohung gemindert → `security/THREAT_MODEL.md` Bedrohung 1; Fehler behoben → `KNOWN_ISSUES.md` K6, K7 (neu, direkt behoben).
+
+### Fixed
+- `DatabasePath` wird pseudonymisiert (Server-, Ordner-, Kundennamen).
+- Mit `-RedactLiterals` werden auch Zahlen im SQL und Zeichenketten aus einem Zeichen pseudonymisiert; Ziffern in
+  Bezeichnern, Pseudonyme und reine `%`-Muster bleiben.
+- `-SensitiveKeywords` (Stichwort außerhalb von Literalen): alles ab der **ersten** WHERE/HAVING-Klausel wird ersetzt —
+  vorher blieb alles bis zur letzten Klausel sichtbar (z. B. äußere Bedingungen vor einer Unterabfrage).
+- `-AnalyzeOnly` schreibt die Auswertung nur noch auf die Konsole (vorher Formatierungsobjekte in der Ausgabe, K7).
+- Keine Zuweisung mehr an die automatische Variable `$matches` (K6).
+
+### Added
+- 16 Tests (11 Charakterisierung, 5 Lücken); 4 der Lücken-Tests und der `-AnalyzeOnly`-Test waren gegen den alten Stand rot.
+
+### Changed
+- `-RedactLiterals` gilt jetzt für alle nicht leeren Literale (vorher ab 2 Zeichen), Hilfetext angepasst.
+
+### Confidence / Ungeprüft
+- Mutationsprüfung: 11 Mutanten, zunächst einer überlebt (Längenregel) — mit der Entscheidung „auch Einzelzeichen"
+  und einem Test geschlossen.
+- Hash-Verfahren unverändert (SHA-256) — folgt in I3.
+
 ## 2026-11-07 I6 – Streaming statt ganze Datei im Speicher
 
 **Trigger-Matrix:** Verhalten geändert → README (beide Sprachen), `features/TRACE_PARSING.md` bleibt gültig (Felder unverändert); bekannter Fehler behoben → `KNOWN_ISSUES.md` K2; `TODO.md`, `STATE.md`.
