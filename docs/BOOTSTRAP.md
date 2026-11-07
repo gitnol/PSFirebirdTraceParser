@@ -53,6 +53,12 @@ plattformabhängig. Braucht das Projekt doch Teilstring-Muster, direkt darunter 
 (`!docs/**/*.md`) und die Prüfung oben nach jedem neuen Ordner wiederholen; einzelne `!`-Ausnahmen je Datei
 reichen nicht (die nächste neue Datei fällt wieder hinein).
 
+**Schutz prüfen, nicht annehmen:** Kommentare nur in eigener Zeile — Git liest `#` nur am Zeilenanfang als
+Kommentar; `config.yaml   # lokal` ist ein Muster, das keine Datei trifft. Nach jedem Muster für eine schutzbedürftige
+Datei `git check-ignore -v <pfad>` (keine Ausgabe = nicht ignoriert). Eine Datei, die schon versioniert ist, bleibt
+trotz Eintrag im Repo: im selben Commit `git rm --cached <datei>`; danach muss `git ls-files -ci --exclude-standard`
+leer sein. War sie schon gepusht, gilt ihr Inhalt als veröffentlicht.
+
 **`.gitattributes` (Pflicht):** mindestens `* text=auto eol=lf` — Text-Dateien landen mit LF im Repo
 (`CONVENTIONS_COMMON.md` §2), unabhängig von `core.autocrlf`; Hook-Skripte (`sh`) brechen sonst mit CRLF.
 Bringt ein Bestandsrepo eine eigene `.gitattributes` mit, die per `* text=auto` LF im Repo schon sicherstellt und

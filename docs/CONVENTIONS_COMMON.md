@@ -86,6 +86,12 @@ Commits) und **Add-Granularität** — nicht, *ob* committet wird.
   - **Literale in Großbuchstaben** mit eckigen Klammern, die im Text stehen bleiben sollen (z. B. Log-Präfixe),
     zeilenweise in `docs/.placeholder-ignore` eintragen; eine Zeile `pfad:literal` (Pfad relativ zu `docs/`)
     gilt nur für diese Datei — so bleibt dasselbe Literal anderswo als Ausfüllstelle erkennbar.
+- **Pflichtdatei ohne Bezug zum Projekt** (z. B. eine Overlay-Datei für eine Queue, die das Projekt nicht hat):
+  nicht mit Musterinhalt stehen lassen und nicht löschen (Pflichtdatei-Prüfung), sondern als **Stub** führen —
+  Titelzeile, darunter die Marke `<!-- docs_template:gilt-nicht -->` und ein Absatz „**Gilt nicht für dieses
+  Projekt** (Stand JJJJ-MM-TT): Grund in einem Satz mit Beleg. Neu prüfen, wenn: Auslöser." Gibt es im Projekt eine
+  Entsprechung, ersetzt ein Verweis darauf den Grund. Template-Updates füllen Stubs nicht wieder mit Musterinhalt
+  (Update-Anleitung, Kategorie C); `validate_project_docs.sh` listet sie als Hinweis, damit der Grund sichtbar bleibt.
 
 ### 3.1 Öffentliche Repositories — Interna trennen
 
@@ -116,6 +122,18 @@ stehen ohnehin nie im Repo; zusätzlich:
 - **Vor dem ersten Push eines Branches** die komplette Branch-History prüfen
   (`git log -p origin/<default>..HEAD`): Commits, die vor Einführung des Hooks entstanden sind,
   sind nicht geschützt. Noch nicht gepushte Interna-Commits lokal bereinigen (Squash) statt pushen.
+- **Auch was nicht im aktuellen Stand liegt:** Ist das Repository beim Init schon öffentlich, gehört ein Scan der
+  ganzen Historie gegen die Denylist dazu (`git log -p --all`) — gelöschte Inhalte bleiben abrufbar; Befund nach
+  `docs/local/`, die Bereinigung entscheidet der Owner (Eintrag in `TODO.md`). Release-Artefakte (Programme, Pakete,
+  Images) vor dem Veröffentlichen ebenso prüfen, Archive und komprimierte Teile entpackt — ein `grep` über die Datei
+  findet komprimierten Text nicht. Übernommener Fremd- oder dekompilierter Code wird vor dem ersten Commit auf
+  Personennamen und echte Testdaten durchgesehen.
+- **Screenshots** in öffentlicher Doku zeigen mehr als das Fenster: Pfade (Benutzername im Profilpfad), Titelleisten,
+  zuletzt geöffnete Dateien, Namen in Listen. Bilder mit Demo-Daten und einem Arbeitsordner mit kurzem, neutralem
+  Pfad außerhalb des Benutzerprofils erzeugen. Unter Windows 11 enthält die Aufnahme des Fensterrahmens die runden
+  Ecken und einen Randstreifen, in denen steht, was hinter dem Fenster liegt: eine einfarbige Fläche dahinter legen
+  (oder Ecken maskieren) und die Eckpixel prüfen — per Skript, wenn Bilder wiederholt entstehen. Jedes Bild vor dem
+  Commit ansehen; die Denylist findet Text in Bildern nicht.
 - **Typische Stellen für Interna** — dort besonders gegenlesen: `security/THREAT_MODEL.md`,
   `security/DEPENDENCY_AUDIT.md` (Befunde), `operations/RUNBOOK.md`, `operations/SETUP.md`,
   `operations/DEPLOYMENT.md`, Testergebnisse im `CHANGELOG.md`.
@@ -166,6 +184,24 @@ Schema-Prüfungen) laufen **im selben Gate-Lauf** mit — als Test in Gate 4 ode
 
 Nur Gate 4 allein zu prüfen ist eine häufige Fehlerquelle: Lint- und Typfehler werden
 vom Test-Runner nicht erkannt.
+
+**Gemeldet wird nur, was im Diff steht:** Ein Änderungsskript und `git add`/`git commit` stehen in einer `&&`-Kette
+— auf eigenen Zeilen nach dem Skript (auch nach einem Heredoc) läuft der Commit trotz Abbruch. Jede Ersetzung im
+Skript trifft genau einmal, sonst bricht es ab; gleichlautende Stellen mit verschiedener Bedeutung einzeln ändern,
+nicht alle auf einmal. Vor der Erfolgsmeldung `git status --short` und `git diff --stat` mit der eigenen Ankündigung
+vergleichen: Was nicht im Diff steht, wurde nicht geändert.
+
+**Exit-Code nie hinter einer Pipe auswerten:** `gate | tail -1 && git commit` committet trotz rotem Gate, weil die
+Shell den Exit-Code des letzten Pipe-Glieds prüft. Gates vor dem Commit ohne Pipe aufrufen (oder mit
+`set -o pipefail`), Ausgabe erst nach der Exit-Code-Prüfung kürzen. Am sichersten erzwingt ein pre-commit-Hook die
+Gates — dann hängt das Ergebnis nicht an der Schreibweise des einzelnen Aufrufs.
+
+**Live-Prüfungen mit Nutzerkonto:** Schritte, die ein echtes Konto oder gespeicherte Anmeldungen des Nutzers
+brauchen (Upload in einen Dienst, Browser-Cookies, Zugang zu Produktivsystemen), führt der Nutzer aus. Der Agent
+liefert Vorbereitung und Anleitung: Testdaten, einen Live-Test, der nur per Umgebungsvariable läuft, und die
+Schrittfolge in `docs/testing/INTEGRATION_TESTS.md`. Kennungen (Konto, Video-, Datensatz-IDs) kommen nur über
+Umgebungsvariablen, nie ins Repo. Das Inkrement nennt den ausstehenden Nutzerschritt als offenen Punkt im
+Abschluss-Confidence, statt ihn zu umgehen.
 
 ### Mapping pro Stack
 

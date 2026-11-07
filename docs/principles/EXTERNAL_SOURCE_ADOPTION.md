@@ -37,7 +37,7 @@ info:
     increment: "I<n>"
     source: "<beschreibung mit konvertions-werkzeug>"
     upstream_truth: "the <upstream artefact>"
-    verified_against_hardware: false   # explizit, nicht implizit
+    verified_against_live_system: false   # explizit, nicht implizit
 ```
 
 Klartext-Doku in `docs/architecture/<spec>_SCHEMA.md`: Status-Tabelle mit
@@ -52,11 +52,11 @@ mit Begründung:
 
 ```yaml
 properties:
-  is_management_vlan:
+  <feld>:
     type: boolean
-    # x-<projekt>-note (I<n>, <date>): added — present in v8 responses
-    # (verified via Tests/fixtures/...), absent in the externally-ingested
-    # v1 spec. Validator regresses against this.
+    # x-<projekt>-note (I<n>, <date>): added — present in v<n> responses
+    # (verified via <fixture-pfad>), absent in the externally-ingested
+    # spec. Validator regresses against this.
 ```
 
 Ohne diese Marker sind beim nächsten Source-Refresh die eigenen Anpassungen
@@ -74,11 +74,12 @@ müssen.
 Test-Fixtures (Recorded oder hand-gefertigt) werden bei jedem CI-Lauf gegen
 das Schema validiert. Pattern:
 
+Beispiel mit Pester (andere Stacks analog, z. B. parametrisierter pytest- oder xUnit-Test):
+
 ```powershell
-# Pester
 Describe 'External-source artefact vs project reality' -Tag 'Unit' {
     It "fixture <Name> validates against schema" -ForEach $cases {
-        $exit = & python Tools/Validate-Fixture.py --spec <spec> --fixture $Path
+        $exit = & python <validator> --spec <spec> --fixture $Path
         $exit | Should -Be 0
     }
 }
@@ -157,7 +158,7 @@ Diese drei Checks sind billig und decken die häufigsten stillen Bugs auf:
    oder von Dritten): selbst eine 7–8 Jahre alte Lib des gleichen
    Herstellers deckt häufig 1–3 Endpoints auf, die im aktuellen
    Referenz-PDF schlicht fehlen. Solche Funde landen als Backlog-Punkt
-   „Spec-Patch via `x-<projekt>-note` nach Hardware-Recording".
+   „Spec-Patch via `x-<projekt>-note` nach Aufzeichnung gegen das reale System".
 
 Wenn diese Checks erst nach Wochen zufällig auffallen, sind die jeweils
 zugehörigen lokalen Patches schwer rückverfolgbar. **Sofort nach jedem
@@ -165,9 +166,9 @@ Spec-Edit ausführen.**
 
 ## Verwandt
 
-- Beispiel-Anwendung (REST-API-Client-Projekt, Pfade im eigenen Projekt entsprechend ersetzen): unter
-  `docs/architecture/` die Dateien `openapi.yaml` und `REST_API_SCHEMA.md`, dazu `Tools/Validate-Fixture.py` und
-  `Tests/unit/FixturesAgainstSchema.Tests.ps1`.
+- Typische Ablage im eigenen Projekt: die Spec selbst (z. B. `openapi.yaml`) und `docs/architecture/<spec>_SCHEMA.md`
+  unter `docs/architecture/`, dazu ein Fixture-Validator (`<validator>`) und ein Unit-Test, der alle Fixtures
+  dagegen prüft — Namen und Pfade legt das Projekt fest.
 - Verbindet sich mit [[VERIFY_BEFORE_CITE]] (jede Behauptung in der externen
   Quelle wird gegen Realität geprüft) und [[FAIL_FAST]] (Drift bricht den
   CI-Lauf sofort).

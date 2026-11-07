@@ -28,6 +28,13 @@ Tests grün, hat der Mutant „überlebt": Es fehlt ein Test, oder ein Test prü
 - **Werkzeug kalibrieren:** Vor dem ersten Vertrauen in den Score einen Test vorübergehend entfernen — der Score
   muss sinken. Ein Werkzeug, das jeden Mutanten als erkannt zählt, liefert sonst einen Schein-Erfolg.
 - **Kennzahl:** Der Anteil erkannter Mutanten darf als Floor mit Sperrklinke geführt werden ([[ORACLE_AND_RATCHET]]).
+- **Sicher ausführen:** Ein Mutant kann hängen (eine Schleife, deren Ende er entfernt) — je Mutant eine Zeitgrenze,
+  ein Hänger zählt als erkannt. Wer Mutanten von Hand per Textersetzung einbaut, prüft *vor* dem Anlegen der
+  Sicherung, dass das Suchmuster genau einmal trifft (sonst Abbruch — ein nicht eingesetzter Mutant sieht aus wie ein
+  überlebender), und das zurückgeschriebene Original per Prüfsumme, sonst bleiben Sicherungen oder
+  Mutationen liegen. Mutanten, die eine Pfadprüfung entfernen, schreiben wirklich außerhalb des Test-Ordners —
+  danach dort aufräumen (unter Windows reservierte Namen wie `CON` beachten). Schleifen, deren Ende von Zufall oder
+  Umgebung abhängt, bekommen im Code eine Obergrenze; das hilft auch außerhalb der Mutationsprüfung.
 
 Belege: Die Erkennung von Mutanten korreliert mit der Erkennung echter Fehler, unabhängig von der Abdeckung
 (Just et al., FSE 2014: 357 echte Fehler in fünf Projekten). Abdeckung korreliert dagegen nur schwach bis mäßig
@@ -52,6 +59,32 @@ verkleinert es die Eingabe auf ein minimales Gegenbeispiel.
 Belege: QuickCheck (Claessen & Hughes, ICFP 2000) begründete die Methode; in der Industrie fanden aus Spezifikationen
 abgeleitete Eigenschaftstests über 200 Abweichungen in AUTOSAR-Software für Volvo Cars (Hughes 2016,
 Erfahrungsbericht, kein Experiment).
+
+## Deterministische Testdaten
+
+Zufällige Testdaten machen ein Gate zufällig rot — besonders Tests nahe an einer Kapazitäts- oder Toleranzgrenze,
+bei denen manche Eingaben knapp scheitern. Solche Tests nehmen feste Daten oder einen festen Seed; wer bewusst
+Zufall braucht, gibt den Seed bei einem Fehlschlag aus ([[CETERIS_PARIBUS]]). Ein einmaliger Fehlschlag wird
+gemessen (viele Läufe, Eingabe festhalten), nicht wiederholt, bis er grün ist: Eine Fehlerrate unter einem Prozent
+zeigen ein paar Wiederholungen nicht.
+
+## Beweist der Test etwas?
+
+Jeder dieser Fälle war ein grüner Test bei realem Fehler. Vor dem Commit je neuem Test prüfen:
+
+- **Orakel nicht aus dem Prüfling:** Gültige und erwartete Werte kommen aus dem Vertrag (Schema, Katalog,
+  Fachvorgabe), nie aus der Tabelle oder Funktion, die geprüft wird — sonst prüft der Test sich selbst.
+- **Durch den echten Erzeuger:** Stammt ein Wert aus einer eigenen Hilfsfunktion, läuft mindestens ein Test durch
+  diese Funktion, nicht nur durch den Konsumenten mit von Hand gebauten Daten.
+- **Nicht leer wahr:** Aussagen über eine abgeleitete Menge („jedes …", „keines …", „A == B") prüfen zuerst eine
+  Mindestgröße; gegen eine leere Menge sind sie immer erfüllt.
+- **Daten unterscheiden:** Das gesuchte Element liegt nicht an der natürlichen Position (das Maximum nicht zuletzt);
+  für eine Vorrangregel gibt es einen Fall, in dem beide Bedingungen zugleich gelten.
+- **Ausnahmen mit Inhalt:** Ein Test auf eine eigene Prüfung vergleicht Meldung oder Inhalt, nicht nur den Typ — fehlt
+  die Prüfung, wirft oft die Bibliothek denselben Typ.
+- **Erzeugtes mit dem Werkzeug der Zielsprache:** Erzeugter Code und Konfiguration (Skripte, CI-Workflows,
+  Regelwerke) werden mit deren Parser geprüft oder ausgeführt; Teilstrings und Golden Files belegen nicht, dass die
+  Datei gültig ist.
 
 ## Prüffrage
 

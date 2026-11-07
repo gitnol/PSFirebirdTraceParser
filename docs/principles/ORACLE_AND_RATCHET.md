@@ -60,6 +60,9 @@ gelten für alle drei — diese Datei ist ihr Besitzer, die Overlays verweisen h
 - **Diagnose statt Ja/Nein:** Ein Vergleichswerkzeug zeigt, *wo* und *wie stark*
   abgewichen wird (Feld, Zeile, Betrag, Pixel), nicht nur „ungleich". Ohne
   Diagnose rät der Agent.
+- **Gegenprobe im selben Test:** Prüft ein Test über ein externes Orakel (Bibliothek, Werkzeug, Dienst), zeigt
+  er im selben Lauf, dass das Orakel den Fehlerfall erkennt (positiver Kontrollfall), bevor er das Merkmal prüft.
+  Sonst bestätigt ein Orakel, das unter den Testbedingungen immer dasselbe liefert, das Merkmal grün.
 - **Schwache Orakel kalibrieren:** Ist nur ein Ersatz-Orakel verfügbar
   (Vorschau, Teilausgabe, Fremdwerkzeug), dokumentieren, was ein PASS und was
   ein FAIL beweist: Ein PASS gegen ein ungenaues Orakel ist Beleg, ein FAIL kann

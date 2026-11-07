@@ -92,10 +92,9 @@ Commit von Hand aus (`KICKOFF.md` Phase 3b, „Advocatus-Diaboli-Gate"). Matcher
         "hooks": [
           {
             "type": "command",
-            "shell": "powershell",
             "timeout": 15,
             "statusMessage": "Advocatus-Diaboli-Gate",
-            "command": "$j=[Console]::In.ReadToEnd()|ConvertFrom-Json; if($j.tool_input.command -match 'git commit'){'{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"Advocatus-Diaboli-Gate: vor dem Commit jede pruefbare Behauptung mit echtem Daten-/Code-Check belegen oder fallenlassen. Drei Fragen: (a) Hypothese als Befund getarnt? (b) Feature ohne End-to-End-Konsument? (c) ueber belegten Bedarf gebaut? Blockierende Befunde zuerst beheben.\"}}'}"
+            "command": "grep -q 'git commit' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"Advocatus-Diaboli-Gate: vor dem Commit jede pruefbare Behauptung mit echtem Daten-/Code-Check belegen oder fallenlassen. Drei Fragen: (a) Hypothese als Befund getarnt? (b) Feature ohne End-to-End-Konsument? (c) ueber belegten Bedarf gebaut? Blockierende Befunde zuerst beheben.\"}}' || true"
           }
         ]
       }
@@ -104,14 +103,16 @@ Commit von Hand aus (`KICKOFF.md` Phase 3b, „Advocatus-Diaboli-Gate"). Matcher
 }
 ```
 
-> Auf POSIX-only-Umgebungen den `shell`-Wert und den Matcher an die genutzten
-> Tool-Namen anpassen; der Filter `git commit` bleibt gleich. Nach dem Einrichten
-> ist ein `/hooks`-Reload (bzw. Session-Neustart) nötig, damit der Hook greift.
+> Ohne `shell`-Feld läuft der Befehl in der Bash von Claude Code (unter Windows Git Bash) — auf allen Plattformen
+> gleich. **Kein `"shell": "powershell"`:** Das startet Windows PowerShell 5.1 (`powershell.exe`); ist es per Richtlinie
+> gesperrt, läuft der Hook nie, und weil er nicht blockiert, fällt das nicht auf. Wer PowerShell braucht, ruft ein
+> Skript über `pwsh -NoProfile -NonInteractive -File "$CLAUDE_PROJECT_DIR/.claude/hooks/<skript>.ps1"` auf. Den
+> Hook nach dem Einrichten einmal Ende zu Ende prüfen: Beispiel-JSON mit `git commit` per Pipe in den Befehl, die
+> Ausgabe muss gültiges JSON sein (ohne Treffer: keine Ausgabe, Exit 0). Danach ist ein `/hooks`-Reload (bzw.
+> Session-Neustart) nötig, damit der Hook greift.
 
-> **Robustere Variante:** Inline-PowerShell mit verschachteltem JSON ist anfällig für
-> Quote-/Escaping-Fehler. Stabiler ist ein externes Skript
-> (`.claude/hooks/advocatus-diaboli-precommit.ps1`, auf POSIX `.sh`), das per `-File`
-> aufgerufen wird und den `additionalContext` als JSON ausgibt. Optionale **Stufe 2**
+> **Ausbau:** Für längere Hinweise ein externes Skript (`.claude/hooks/advocatus-diaboli-precommit.sh` bzw. `.ps1`
+> per `pwsh -File`), das den `additionalContext` als JSON ausgibt. Optionale **Stufe 2**
 > (harte Durchsetzung): ein separater Hook gibt `permissionDecision: "deny"` zurück,
 > wenn keine Gate-Report-Datei vorliegt — erst aktivieren, wenn die nicht-blockierende
 > Stufe stabil läuft, sonst entstehen unnötige Agent-Schleifen.
