@@ -10,6 +10,18 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-07 Roadmap – Inkremente aus dem Funktionsvergleich
+
+Kein Inkrement (KICKOFF Phase 1 Punkt 2a). Vergleich mit dem Open-Source-Projekt firebird-trace-analyzer (C#, nicht-kommerzielle Lizenz; nur Ideen übernommen).
+
+### Changed
+- `TODO.md`: neu I9 (Kopfzeile plattformneutral, hoch), I10 (Fehler-Ereignisse mit Codes, hoch), I11–I13 (Transaktionsoptionen/RecordsFetched/Tabellenstatistik, Verbindungen/Prozeduren/Trigger, Robustheit; mittel), I14 (CI, aus `BACKLOG.md`); Hinweis in I4 auf den Firebird-5-Entwurf der Trace-Skripte.
+- `STATE.md` „Offene Punkte“: I8 nachgetragen (fehlte), I9–I14 ergänzt.
+- `BACKLOG.md`: Idee SQL-Normalisierung; SSH-Abruf verworfen.
+
+### Confidence / Ungeprüft
+- Plattformformat der Kopfzeile (I9) ist eine Vermutung aus dem Vergleich der beiden Parser; noch nicht mit Logs belegt.
+
 ## 2026-10-11 I1 – docs_template-Baseline eingeführt
 
 Initialisiert mit docs_template v27@5ce0f84, Stack `powershell-automation`, keine Overlays. Bestandsrepo, kein Code geändert.

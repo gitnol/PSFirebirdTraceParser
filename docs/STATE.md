@@ -38,6 +38,13 @@ nicht rückholbarer Weitergabe personenbezogener Daten an Dritte (`docs/security
 | I5 | Trace-Skripte robust machen (Ausgabepfad, Session-ID, Fehlerbehandlung, Encoding) | Mittel |
 | I6 | Parser: Streaming statt Gesamtdatei im Speicher, Regex-Abdeckung | Mittel |
 | I7 | README-Drift beheben, Lizenzdatei klären | Niedrig |
+| I8 | Laufzeit- und Beispielstände aus dem Security-Sweep nachziehen | Niedrig |
+| I9 | Parser: Kopfzeile plattformneutral, Tests je Ereignistyp | Hoch |
+| I10 | Parser: Fehler-Ereignisse mit Fehlercodes (Sperrkonflikte, Deadlocks) | Hoch |
+| I11 | Parser: Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen | Mittel |
+| I12 | Parser: Verbindungen, Prozeduren und Trigger als Ereignisse | Mittel |
+| I13 | Parser: Robustheit und Diagnose | Mittel |
+| I14 | CI mit PSScriptAnalyzer und Pester | Mittel |
 
 ---
 

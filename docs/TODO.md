@@ -73,6 +73,41 @@ Bedrohung 3 in `security/THREAT_MODEL.md`.
 - [ ] Passwort nicht mehr im Klartext in `config.json` (`architecture/CREDENTIAL_STRATEGY.md`)
 - [ ] Dedizierten Trace-Benutzer mit Rolle `TRACE_ANY_ATTACHMENT` statt SYSDBA dokumentieren (`operations/SETUP.md`)
 - [ ] `config.sample.json` ohne bekanntes Standardpasswort (fiktiver Platzhalterwert, Hinweis auf Credential-Store)
+- [ ] Hinweis 2026-11-07: Eine für Firebird 5.0.4 überarbeitete Fassung von `trace_start.ps1`/`trace_stop.ps1` liegt als
+      Entwurf beim Owner vor (`-FETCH_PASSWORD`, `-TRUSTED`, `-ROLE`, `-NAME`; mit Ersatz-`fbtracemgr` getestet). Nach einem
+      erfolgreichen Lauf gegen einen echten Server hier übernehmen — deckt I4 und I5 weitgehend ab.
+
+### I9: Parser – Kopfzeile plattformneutral, Tests je Ereignistyp
+
+Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).
+Firebird schreibt die Prozessadresse in der Kopfzeile `(pid:adresse)` plattformabhängig. Der Parser erwartet
+`[0-9A-F]+` ohne `0x` (vermutlich Windows); das Vergleichsprojekt erwartet `0x` + Kleinbuchstaben (vermutlich Linux).
+Logs der jeweils anderen Plattform würden still als leer erkannt. Vermutung — mit echten Logs belegen.
+
+**Aufgaben:**
+
+- [ ] Kopfzeilenformat mit einem echten Firebird-5-Log (Windows) belegen; Linux-Format aus Quellcode bzw. Log belegen
+- [ ] Roter Test: Kopfzeile mit `0x7f…` (klein) und ohne `0x` (groß) — beide werden erkannt
+- [ ] Regex `rxHeader` anpassen (`(?:0x)?[0-9A-Fa-f]+`)
+- [ ] Synthetische Blöcke je Ereignistyp als Fixtures (gemeinsam mit I2/I6 nutzen, keine echten Daten)
+
+**Zusätzliche DoD:**
+
+- [ ] Kein Interna-Treffer im Diff (öffentliches Repo, `CONVENTIONS_COMMON.md` 3.1)
+
+### I10: Parser – Fehler-Ereignisse mit Fehlercodes
+
+Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).
+Die Trace-Konfiguration zeichnet mit `log_errors` und `include_gds_codes = "lock_conflict, deadlock"` Sperrkonflikte
+und Deadlocks auf; der Parser verwirft diese Blöcke bisher. Voraussetzung für eine Sperrkonflikt-Auswertung im Report.
+
+**Aufgaben:**
+
+- [ ] Rote Tests für `ERROR AT <Komponente>` und `FAILED EXECUTE_STATEMENT_FINISH` (synthetische Blöcke)
+- [ ] Felder `ErrorCodes` und `ErrorMessages` (Zeilen `335544336 : …`) ergänzen; `Action` behält den Ereignistyp
+- [ ] Bei `FAILED …` die übrigen Felder (SQL, Verbindung, Transaktion) wie beim normalen Statement füllen
+- [ ] Pseudonymisierer: Fehlertexte können Werte enthalten — mit `-RedactLiterals` mitbehandeln
+- [ ] README/`features/TRACE_PARSING.md`: neue Properties dokumentieren
 
 ---
 
@@ -98,6 +133,50 @@ Bedrohung 3 in `security/THREAT_MODEL.md`.
 - [ ] Verbindungs-Regex: Rolle ≠ `NONE`, Dateiendung case-insensitiv, weitere Protokolle (K3)
 - [ ] Statusausgaben über `Write-Verbose`/`Write-Information` statt `Write-Host`
 - [ ] Zähler (`Reads`, `Writes`, `Fetches`, `Marks`) als `[long]`; Verhalten bei Werten > Int32 testen
+
+### I11: Parser – Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen
+
+Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).
+
+**Aufgaben:**
+
+- [ ] Transaktionsoptionen in Felder zerlegen: Isolation (`READ_COMMITTED`, `CONCURRENCY`, `CONSISTENCY`), Lesemodus
+      (`READ_CONSISTENCY`, `REC_VERSION`, `NO_REC_VERSION`), Sperrmodus inkl. `LOCK_TIMEOUT`-Wert, Zugriff
+      (`READ_WRITE`/`READ_ONLY`); `TransactionOptions` als Text bleibt (Vertrag)
+- [ ] Neues Feld `RecordsFetched` aus `N records fetched` (getrennt von den Seiten-Fetches `Fetches`)
+- [ ] Tabellenstatistik zusätzlich als Liste von Objekten je Tabelle (Natural, Index, Update, Insert, Delete, Backout,
+      Purge, Expunge) über die Spaltenpositionen der Kopfzeile; `TableStats` als Text bleibt
+
+### I12: Parser – Verbindungen, Prozeduren und Trigger als Ereignisse
+
+Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).
+
+**Aufgaben:**
+
+- [ ] `ATTACH_DATABASE`/`DETACH_DATABASE` mit Verbindungsdaten ausgeben; Verbindungsdauer (Attach→Detach) berechnen
+- [ ] `EXECUTE_PROCEDURE_FINISH` und `EXECUTE_TRIGGER_FINISH` mit Namen (Trigger: Tabelle, Zeitpunkt, Aktion), Laufzeit, I/O
+- [ ] Format der Trigger-Zeile unterscheidet sich zwischen Firebird 4 (`\t%s (%s) `) und 5 (`%s (%s):`) — beide testen
+- [ ] Ausgabe so gestalten, dass bestehende Auswertungen (nur Statements) unverändert funktionieren (z. B. über `Action` filterbar)
+
+### I13: Parser – Robustheit und Diagnose
+
+Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).
+
+**Aufgaben:**
+
+- [ ] Warnungen mit Zeilennummer für Blöcke, die nicht zugeordnet werden können
+- [ ] Zusammenfassung am Ende: Anzahl Blöcke je `Action`, übersprungene/unbekannte Blöcke
+- [ ] Zeitlimit für Regex-Auswertung (Schutz vor sehr langen Blöcken), Obergrenze Zeilen je Block
+
+### I14: CI mit PSScriptAnalyzer und Pester
+
+Aus `BACKLOG.md` übernommen (2026-11-07), weil mit I2/I9 die ersten Tests entstehen.
+
+**Aufgaben:**
+
+- [ ] GitHub-Actions-Workflow: PSScriptAnalyzer (alle drei Schweregrade) und Pester unter PowerShell 7 bei Push und PR
+- [ ] Optional zweiter Lauf unter Windows PowerShell 5.1
+- [ ] Modulversionen pinnen (`tests/RequiredModules.psd1`)
 
 ---
 

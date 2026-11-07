@@ -16,7 +16,7 @@ Wenn ein Backlog-Punkt für ein Inkrement vorgesehen wird → Verschiebung von
 
 ## Ideen / Features
 
-- CI (z. B. GitHub Actions) mit PSScriptAnalyzer und Pester unter Windows PowerShell 5.1 und PowerShell 7 — sinnvoll, sobald I2 Tests liefert
+- SQL-Text normalisieren (Literale/Parameterwerte durch Platzhalter) als zusätzliches Feld `SqlPattern`, damit Auswertungen gleiche Abfragen zusammenfassen können — keiner der verglichenen Parser hat das (Vergleich 2026-11-07)
 - Pseudonymisierte Ausgabe im Trace-Rohformat (nicht nur Objekte/CSV) — für Analysedienste, die Original-Trace-Dateien erwarten; frühere Hilfsskripte dafür wurden entfernt
 - `Timestamp` als `[datetime]` (zusätzliche Property, um den Vertrag nicht zu brechen)
 - Trace-Konfiguration mit Datenbankfilter als zweite Vorlage (Datenminimierung, `security/DATA_HANDLING.md` §2)
