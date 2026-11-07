@@ -59,7 +59,14 @@ Kein `-WhatIf` (das Skript schreibt nichts). `[CmdletBinding()]` seit I6 → Sta
 | `ErrorSource` | string | `$null` | Komponente aus `ERROR AT <Komponente>` bzw. `WARNING AT …` (seit I10) |
 | `ErrorCodes` | string | `$null` | Fehlercodes der Zeilen `%9lu : <Text>`, mit `, ` verbunden (nur bei `ERROR`/`WARNING`) |
 | `ErrorMessages` | string | `$null` | Fehlertexte derselben Zeilen, mit ` \| ` verbunden; können Werte enthalten (`Problematic key value is (…)`) |
-| `DurationMs`, `Reads`, `Writes`, `Fetches`, `Marks` | int | `0` | Performance-Zeile `<n> ms, … read(s), … write(s), … fetch(es), … mark(s)` |
+| `DurationMs`, `Reads`, `Writes`, `Fetches`, `Marks` | int | `0` | Performance-Zeile `<n> ms, … read(s), … write(s), … fetch(es), … mark(s)` (auch bei `SWEEP_PROGRESS/FINISH/FAILED`) |
+| `ServiceName` | string | `$null` | seit I15: Dienstname in Anführungszeichen bei `START_SERVICE`/`QUERY_SERVICE`, z. B. `Backup Database`, `Incremental Backup Database`, `Restore Database`, `Validate Database` (Liste in Firebird `src/jrd/svc.cpp`) |
+| `ServiceID` | string | `$null` | seit I15: Adresse aus `(Service <Adresse>, …)` bei allen `*_SERVICE`-Ereignissen; Benutzer, Adresse und Programm der Dienstzeile stehen in `User`, `ProtocolInfo`/`ClientIP`/`ClientPort`, `ApplicationPath`/`ApplicationPID` |
+| `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext` | long | `$null` | seit I15: Block `Transaction counters:` bei `SWEEP_START` und `SWEEP_FINISH` (Oldest interesting/active/snapshot, Next transaction); bei `SWEEP_PROGRESS`/`SWEEP_FAILED` leer |
+
+Die Schalterzeile von `START_SERVICE` (z. B. `-VERBOSE <Datenbank> <Sicherungsdatei>`) wird bewusst **nicht** gelesen:
+sie enthält Dateipfade, für die es keine Pseudonymisierung gibt. Voraussetzung im Trace: `log_sweep = true` (Abschnitt
+`database`) bzw. `log_services = true` (Abschnitt `services`).
 
 Die Property-Namen sind Eingabe von `Pseudonymize-FirebirdTrace.ps1` und von Nutzer-Exporten — Änderungen nur
 gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1 behoben).

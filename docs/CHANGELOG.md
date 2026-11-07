@@ -10,6 +10,32 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 I15 – Sweep- und Service-Ereignisse lesen
+
+Commits `0492e4d` (Tests rot, Vertrag mit leeren Feldern), `bb82165` (Umsetzung). Zustimmung des Owners (2026-11-07)
+für genau diese zwei Erweiterungen; sonst keine Parser-Änderung.
+
+**Trigger-Matrix:** neue Felder im Ausgabe-Vertrag → `features/TRACE_PARSING.md`; Feldabdeckung → `features/PSEUDONYMIZATION.md`;
+`STATE.md`. Keine neue Abhängigkeit, kein neuer Parameter.
+
+### Added
+- `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext` aus dem Block `Transaction counters:` (`SWEEP_START`, `SWEEP_FINISH`);
+  Laufzeit, Zähler und Tabellenstatistik des Sweeps kommen über die bestehenden Felder.
+- `ServiceName` und `ServiceID` für `*_SERVICE`-Ereignisse; Benutzer, Adresse und Programm der Dienstzeile in den
+  bestehenden Verbindungsfeldern (damit pseudonymisiert). Schalterzeile mit Dateipfaden bewusst nicht gelesen.
+- Fixture `tests/fixtures/trace_fb5_sweep_service.log`, synthetisch nach `TracePluginImpl.cpp`, `tra.cpp`, `svc.cpp`
+  (Firebird v5.0-release), alle Werte ausgedacht.
+
+### Confidence / Ungeprüft
+- 13 neue Tests (davon 1 Pseudonymisierung), 66 grün; Mutationsprobe 6 Mutanten, alle erkannt (einer erst nach
+  unterschiedlichen Werten für OAT und OST im Fixture).
+- Format nur aus dem Quellcode, nicht an einem echten Trace geprüft: die vorhandenen echten Logs enthalten keine Sweep-
+  oder Service-Ereignisse (nur gezählt; dort war weder `log_sweep` noch `log_services` eingeschaltet).
+- `.gitignore` schließt `*.log` aus: das neue Fixture ist mit `git add -f` aufgenommen; Git normalisiert seine
+  Zeilenenden. Das ältere Fixture `trace_fb5_windows.log` ist **nicht** im Repo (Tests scheitern im frischen Klon) —
+  Owner-Entscheidung, nicht Teil dieser Zustimmung.
+- Interna-Prüfung nur von Hand (`.internal-terms` fehlt im Klon): keine internen Begriffe, Adressen aus 192.0.2.0/24.
+
 ## 2026-11-08 Reflexion nach I3
 
 Kein Inkrement (KICKOFF Phase 1c, `REFLECTION.md`). Erste Reflexion; begutachtet: I1, I9, I10, I7, K3, I6, I2, I3.

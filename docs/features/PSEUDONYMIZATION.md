@@ -45,6 +45,7 @@ eingetragen werden, bevor sie ausgeliefert werden.
 | `SqlStatement` | mit `-RedactLiterals`: alle nicht leeren Zeichenketten (auch Einzelzeichen, seit I2) und Zahlen (seit I2) → `<HASH:…>`; Ziffern in Bezeichnern bleiben; reine `%`-Muster bleiben. Mit `-SensitiveKeywords`: Literale mit Stichwort; steht das Stichwort außerhalb von Literalen, wird **alles ab der ersten** WHERE/HAVING-Klausel ersetzt (seit I2) | ohne Schalter Klartext — für Weitergabe immer `-RedactLiterals` |
 | `ErrorMessages` | mit `-RedactLiterals`: Schlüsselwerte `("SPALTE" = wert)` und Zeichenketten → Pseudonym; Constraint-/Tabellennamen bleiben | andere Wertformen in Fehlertexten nicht abgedeckt |
 | `SqlPlan`, `TableStats`, Tabellen-/Indexnamen | Klartext (Entscheidung I2) | Schema-Namen sind keine Personendaten, aber Geschäftsinterna; für die Analyse (Index-Empfehlungen) nötig. Wer sie verbergen muss: `-SensitiveKeywords` |
+| `ServiceName`, `ServiceID`, `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext` (seit I15) | Klartext | feste Dienstnamen von Firebird, technische Adresse und Transaktionszähler; Benutzer, IP und Programm der Dienstzeile laufen über die bestehenden Felder (Pseudonym). Die Schalterzeile mit Dateipfaden liest der Parser nicht |
 | `ClientPort`, `ProcessID`, `SessionID`, `AttachID`, `TransactionID`, `RootTxID`, `ApplicationPID`, `ErrorSource`, `ErrorCodes` | Klartext | technische IDs/Codes; erlauben Verknüpfung innerhalb des Traces, keine direkte Identifikation |
 | `Timestamp`, `Action`, `TransactionOptions`, Zähler | Klartext | Analysezweck |
 
