@@ -13,6 +13,8 @@
     - SqlStatement: Stops at separators (^^^^, PLAN, param, records)
     - SqlPlan: PLAN (...) lines; TableStats: table statistics block
     - ErrorSource/ErrorCodes/ErrorMessages: ERROR AT / WARNING AT events
+    - ServiceName/ServiceID: *_SERVICE events (log_services); user, address and program go to the usual fields
+    - SweepOIT/SweepOAT/SweepOST/SweepNext: transaction counters of SWEEP_START / SWEEP_FINISH (log_sweep)
 
     Status messages go to the verbose stream (-Verbose), not to the console.
 
@@ -93,6 +95,29 @@ $rxTableStats = [System.Text.RegularExpressions.Regex]::new(
 )
 # Fixed-Width data parsing logic is separate, but regex is needed for detection.
 
+# Service line (log_services): "service_mgr, (Service <address>, <user>, <protocol:address>[, <process>:<pid>])"
+# Firebird 5 TracePluginImpl::register_service; the address may be "internal" or a protocol without address.
+$rxService = [System.Text.RegularExpressions.Regex]::new(
+    '^\s+service_mgr,\s+\(Service\s+(?<ServiceID>(?:0x)?[0-9A-Fa-f]+),\s+(?<User>[^,]+),\s+(?<ProtocolInfo>(?<Protocol>[A-Za-z0-9]+):(?<IPAddress>[^/,)]+)(?:/(?<Port>\d+))?|[^,)]+)(?:,\s+(?<ApplicationPath>.+):(?<ApplicationPID>\d+))?\)\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+)
+# Service name in quotes, e.g. "Backup Database", "Incremental Backup Database". The switches line below it holds
+# file paths and is deliberately not read (it would need its own pseudonymization).
+$rxServiceName = [System.Text.RegularExpressions.Regex]::new(
+    '^\s+"(?<ServiceName>[^"
+]+)"\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+)
+
+# Sweep transaction counters (log_sweep; only SWEEP_START and SWEEP_FINISH print them)
+$rxSweep = [System.Text.RegularExpressions.Regex]::new(
+    '^\s*Oldest interesting\s+(?<OIT>\d+)\s*
+\s*Oldest active\s+(?<OAT>\d+)\s*
+\s*Oldest snapshot\s+(?<OST>\d+)\s*
+\s*Next transaction\s+(?<Next>\d+)',
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+)
+
 # SQL Params (param0 = ...)
 $rxParams = [System.Text.RegularExpressions.Regex]::new(
     '(?<Params>(?:^\s*param\d+\s*=\s*.+[\r\n]?)+)',
@@ -166,6 +191,35 @@ function ConvertFrom-TraceBlock {
     if ($m.Success) {
         $entry.ApplicationPath = $m.Groups['ApplicationPath'].Value
         $entry.ApplicationPID = $m.Groups['ApplicationPID'].Value
+    }
+
+    # --- Service (ATTACH/START/QUERY/DETACH_SERVICE): fills the same connection fields as the DB line ---
+    if ($entry.Action -and $entry.Action.EndsWith('_SERVICE')) {
+        $m = $rxService.Match($block)
+        if ($m.Success) {
+            $entry.ServiceID = $m.Groups['ServiceID'].Value
+            $entry.User = $m.Groups['User'].Value
+            $entry.ProtocolInfo = $m.Groups['ProtocolInfo'].Value
+            if ($m.Groups['IPAddress'].Success) { $entry.ClientIP = $m.Groups['IPAddress'].Value }
+            if ($m.Groups['Port'].Success) { $entry.ClientPort = $m.Groups['Port'].Value }
+            if ($m.Groups['ApplicationPath'].Success) {
+                $entry.ApplicationPath = $m.Groups['ApplicationPath'].Value
+                $entry.ApplicationPID = $m.Groups['ApplicationPID'].Value
+            }
+        }
+        $m = $rxServiceName.Match($block)
+        if ($m.Success) { $entry.ServiceName = $m.Groups['ServiceName'].Value }
+    }
+
+    # --- Sweep counters ---
+    if ($block.Contains('Transaction counters')) {
+        $m = $rxSweep.Match($block)
+        if ($m.Success) {
+            $entry.SweepOIT = [long]$m.Groups['OIT'].Value
+            $entry.SweepOAT = [long]$m.Groups['OAT'].Value
+            $entry.SweepOST = [long]$m.Groups['OST'].Value
+            $entry.SweepNext = [long]$m.Groups['Next'].Value
+        }
     }
 
     # --- Tx ---
