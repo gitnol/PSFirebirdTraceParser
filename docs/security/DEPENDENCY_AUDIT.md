@@ -67,9 +67,8 @@ Entwicklungsrechner PowerShell 7.6.9; `fbtracemgr` einer Firebird-Installation. 
 | Pester, PSScriptAnalyzer | Keine Security-Advisories (0 / 0); Pester 6.2.0 und PSScriptAnalyzer 1.25.0 weiterhin aktuell (`Find-Module`) | Betrifft uns nicht (noch nicht verbaut, I2) | `gh api repos/pester/Pester/security-advisories`, `…/PSScriptAnalyzer/security-advisories`, `Find-Module` |
 | Scanner PSScriptAnalyzer | Auf diesem Rechner nicht installiert (`Import-Module` schlägt fehl); keine Installation aus PSGallery ohne Freigabe | Lauf **nicht** erfolgt, kein Beleg für „keine Befunde" | — |
 
-Offen aus diesem Sweep: (1) `operations/SETUP.md` und `architecture/DEPENDENCIES.md`: Mindest-Patchstand 7.6.9 / 7.5.13 /
-7.4.22 nachziehen; (2) MSRC Security Update Guide für Windows PowerShell 5.1 direkt abfragen; (3) PSScriptAnalyzer-Lauf,
-sobald das Modul installiert ist (I2); (4) I8 aus dem letzten Sweep (Beispielkonfiguration versionsneutral) besteht weiter.
+Erledigt im selben Commit: Mindest-Patchstand 7.6.9 / 7.5.13 / 7.4.22 in `operations/SETUP.md`. Offen aus diesem Sweep: (1) MSRC Security Update Guide für Windows PowerShell 5.1 direkt abfragen; (2) PSScriptAnalyzer-Lauf,
+sobald das Modul installiert ist (I2); (3) I8 aus dem letzten Sweep (Beispielkonfiguration versionsneutral) besteht weiter.
 Kein Critical/High im Code dieses Projekts.
 
 ### 2026-10-23 – Kadenz-Sweep (vorgezogen, fällig 2026-10-25)
