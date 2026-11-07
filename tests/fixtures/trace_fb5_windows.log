@@ -1,0 +1,74 @@
+Trace session ID 7 started
+2026-11-07T10:00:00.0010 (4321:000001A2B3C4D5E0) ATTACH_DATABASE
+	C:\DATA\SAMPLE.FDB (ATT_12, APPUSER:NONE, UTF8, TCPv4:192.0.2.10/50123)
+	C:\Program Files\SampleApp\app.exe:5678
+
+2026-11-07T10:00:01.1230 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_12, APPUSER:NONE, UTF8, TCPv4:192.0.2.10/50123)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_345, INIT_340, CONCURRENCY | WAIT | READ_WRITE)
+
+Statement 987:
+-------------------------------------------------------------------------------
+SELECT ID, NAME FROM CUSTOMER WHERE ID = ?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PLAN (CUSTOMER INDEX (PK_CUSTOMER))
+param0 = integer, "42"
+
+1 records fetched
+     12 ms, 3 read(s), 45 fetch(es)
+
+Table                             Natural     Index    Update    Insert    Delete   Backout     Purge   Expunge
+***************************************************************************************************************
+CUSTOMER                                          1
+
+2026-11-07T10:01:02.5000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_13, REPORTUSER:NONE, UTF8, TCPv4:192.0.2.11/50200)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_350, READ_COMMITTED | READ_CONSISTENCY | NOWAIT | READ_ONLY)
+
+Statement 990:
+-------------------------------------------------------------------------------
+SELECT COUNT(*) FROM ORDERS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PLAN (ORDERS NATURAL)
+
+1 records fetched
+    850 ms, 1200 read(s), 2 write(s), 98000 fetch(es), 4 mark(s)
+
+Table                             Natural     Index    Update    Insert    Delete   Backout     Purge   Expunge
+***************************************************************************************************************
+ORDERS                              52000
+
+2026-11-07T10:01:03.7000 (4321:000001A2B3C4D5E0) ERROR AT JStatement::execute
+	C:\DATA\SAMPLE.FDB (ATT_13, REPORTUSER:NONE, UTF8, TCPv4:192.0.2.11/50200)
+	C:\Program Files\SampleApp\app.exe:5678
+335544336 : deadlock
+335544451 : update conflicts with concurrent update
+335544878 : concurrent transaction number is 349
+
+2026-11-07T10:01:03.7010 (4321:000001A2B3C4D5E0) FAILED EXECUTE_STATEMENT_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_13, REPORTUSER:NONE, UTF8, TCPv4:192.0.2.11/50200)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_351, CONCURRENCY | NOWAIT | READ_WRITE)
+
+Statement 991:
+-------------------------------------------------------------------------------
+UPDATE ORDERS SET STATUS = ? WHERE ID = ?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+param0 = integer, "2"
+param1 = integer, "77"
+
+0 records fetched
+      5 ms, 1 read(s), 12 fetch(es)
+
+2026-11-07T10:01:30.0000 (4321:000001A2B3C4D5E0) ERROR AT JStatement::execute
+	C:\DATA\SAMPLE.FDB (ATT_12, APPUSER:NONE, UTF8, TCPv4:192.0.2.10/50123)
+	C:\Program Files\SampleApp\app.exe:5678
+335544665 : violation of PRIMARY or UNIQUE KEY constraint "PK_CUSTOMER" on table "CUSTOMER"
+335545072 : Problematic key value is ("ID" = 42)
+
+2026-11-07T10:02:00.0000 (4321:000001A2B3C4D5E0) DETACH_DATABASE
+	C:\DATA\SAMPLE.FDB (ATT_13, REPORTUSER:NONE, UTF8, TCPv4:192.0.2.11/50200)
+	C:\Program Files\SampleApp\app.exe:5678
+

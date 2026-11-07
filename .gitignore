@@ -3,6 +3,8 @@ config.json*
 config*.json
 Logs
 **/*.log
+# Synthetische Test-Fixtures sind versioniert (sonst scheitern die Tests im frischen Klon)
+!tests/fixtures/*.log
 trace_output*
 _archive
 
