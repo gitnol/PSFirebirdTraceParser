@@ -1,0 +1,56 @@
+# CI: PSScriptAnalyzer and Pester on every push and pull request (docs/TODO.md I14 -> docs/CONVENTIONS.md section 9).
+# Same commands as locally: tools/Invoke-QualityGate.ps1. Module versions come from tests/RequiredModules.psd1.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pwsh7:
+    name: PowerShell 7 - Lint und Tests
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Module installieren (gepinnt)
+        shell: pwsh
+        run: |
+          $required = Import-PowerShellDataFile -Path ./tests/RequiredModules.psd1
+          foreach ($name in $required.Keys) {
+            Install-Module -Name $name -RequiredVersion $required[$name].RequiredVersion `
+              -Repository PSGallery -Scope CurrentUser -Force -SkipPublisherCheck
+          }
+
+      - name: Quality Gates
+        shell: pwsh
+        run: ./tools/Invoke-QualityGate.ps1 -Gate All
+
+  winps51:
+    name: Windows PowerShell 5.1 - Tests
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Module installieren (gepinnt)
+        shell: powershell
+        run: |
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          $required = Import-PowerShellDataFile -Path ./tests/RequiredModules.psd1
+          Install-Module -Name Pester -RequiredVersion $required['Pester'].RequiredVersion `
+            -Repository PSGallery -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Tests
+        shell: powershell
+        run: ./tools/Invoke-QualityGate.ps1 -Gate Test
