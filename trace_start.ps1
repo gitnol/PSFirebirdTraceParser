@@ -1,4 +1,7 @@
-# siehe: https://ib-aid.com/articles/wie-analysiert-man-firebird-traces-mit-ibsurgeon-performance-analysis
+﻿# siehe: https://ib-aid.com/articles/wie-analysiert-man-firebird-traces-mit-ibsurgeon-performance-analysis
+# Interactive console script: Write-Host is intended (until I5 replaces this script).
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification = 'interactive console script')]
+param()
 
 # Config laden
 $ScriptDir = $PSScriptRoot

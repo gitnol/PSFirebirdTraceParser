@@ -23,6 +23,8 @@
     Optional CSV (Pseudonym;Original) for the data controller to map results back to real values. Contains plaintext -
     keep it with the key, never share it.
 #>
+# HashLength is used inside the nested function in begin{}; PSScriptAnalyzer does not see that.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'HashLength', Justification = 'used in nested function')]
 [CmdletBinding()]
 param(
     [Parameter(ValueFromPipeline = $true)]
@@ -49,6 +51,36 @@ param(
 )
 
 begin {
+    function Show-AnalysisReport {
+        # -AnalyzeOnly prints an interactive console report (not pipeline output), so Write-Host is intended here.
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification = 'interactive -AnalyzeOnly report')]
+        [CmdletBinding()]
+        param([Parameter(Mandatory)] [hashtable]$Stats)
+
+        Write-Host "--- Trace Analysis Report ---" -ForegroundColor Cyan
+
+        # Helper to output tables
+        $ShowStat = {
+            param($Name, $Dict)
+            if ($Dict.Count -gt 0) {
+                Write-Host "$($Name) ($($Dict.Count) unique patterns):" -ForegroundColor Yellow
+                $Dict.GetEnumerator() |
+                Sort-Object Value -Descending |
+                Select-Object -First 50 @{N = 'Count'; E = { $_.Value } }, @{N = 'Content'; E = { $_.Name } } |
+                Format-Table -AutoSize | Out-Host
+            }
+            else {
+                Write-Host "$($Name): None found." -ForegroundColor Gray
+            }
+        }
+
+        & $ShowStat "Detected String Literals" $Stats.StringLiterals
+        & $ShowStat "Detected WHERE Clauses" $Stats.WhereClauses
+        & $ShowStat "Detected HAVING Clauses" $Stats.HavingClauses
+
+        Write-Host "Analysis Complete. Use this info to refine -SensitiveKeywords or -RedactLiterals." -ForegroundColor Green
+    }
+
     # --- Key for HMAC-SHA256 (I3, ADR-001). The key is never written to output, logs or the mapping file. ---
     function Protect-PrivateFile {
         param([string]$FilePath)
@@ -369,27 +401,6 @@ end {
     Write-Progress -Activity "Pseudonymizing Trace Data" -Completed
 
     if ($AnalyzeOnly) {
-        Write-Host "--- Trace Analysis Report ---" -ForegroundColor Cyan
-        
-        # Helper to output tables
-        $ShowStat = {
-            param($Name, $Dict)
-            if ($Dict.Count -gt 0) {
-                Write-Host "$($Name) ($($Dict.Count) unique patterns):" -ForegroundColor Yellow
-                $Dict.GetEnumerator() | 
-                Sort-Object Value -Descending | 
-                Select-Object -First 50 @{N = 'Count'; E = { $_.Value } }, @{N = 'Content'; E = { $_.Name } } |
-                Format-Table -AutoSize | Out-Host
-            }
-            else {
-                Write-Host "$($Name): None found." -ForegroundColor Gray
-            }
-        }
-
-        & $ShowStat "Detected String Literals" $Stats.StringLiterals
-        & $ShowStat "Detected WHERE Clauses" $Stats.WhereClauses
-        & $ShowStat "Detected HAVING Clauses" $Stats.HavingClauses
-        
-        Write-Host "Analysis Complete. Use this info to refine -SensitiveKeywords or -RedactLiterals." -ForegroundColor Green
+        Show-AnalysisReport -Stats $Stats
     }
 }
