@@ -94,16 +94,6 @@ Bedrohung 3 in `security/THREAT_MODEL.md`.
 - [ ] Encoding: Skripte ASCII bzw. UTF-8 mit BOM (K5); Ausgabe-Encoding der Trace-Datei unter Windows PowerShell 5.1 prüfen und festlegen
 - [ ] Unit-Tests mit gemocktem `fbtracemgr`-Wrapper (`testing/UNIT_TESTS.md` 8.5)
 
-### I6: Parser – Streaming und Regex-Abdeckung
-
-**Aufgaben:**
-
-- [ ] Synthetische Fixture-Trace (fiktive Daten) unter `tests/fixtures/` + Charakterisierungstests für `Show-TraceStructure.ps1`
-- [ ] Zeilenweises Lesen (StreamReader) und Ausgabe pro Block in die Pipeline statt `Get-Content -Raw` + `return $results` (K2)
-- [ ] Statusausgaben über `Write-Verbose`/`Write-Information` statt `Write-Host`
-- [ ] Zähler (`Reads`, `Writes`, `Fetches`, `Marks`) als `[long]`; Verhalten bei Werten > Int32 testen
-- [ ] README: Aussage „line-by-line (low memory)" stimmt erst nach dieser Umstellung (aus I7 übernommen)
-
 ### I11: Parser – Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen
 
 Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).

@@ -10,6 +10,31 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-07 I6 – Streaming statt ganze Datei im Speicher
+
+**Trigger-Matrix:** Verhalten geändert → README (beide Sprachen), `features/TRACE_PARSING.md` bleibt gültig (Felder unverändert); bekannter Fehler behoben → `KNOWN_ISSUES.md` K2; `TODO.md`, `STATE.md`.
+
+### Changed
+- `Show-TraceStructure.ps1` liest in 4-MB-Stücken, zerlegt jedes Stück mit einem Regex an den Ereignisgrenzen und gibt jedes
+  Ereignis sofort in die Pipeline (vorher: ganze Datei lesen, alle Objekte sammeln, am Ende zurückgeben).
+- Vorprüfung mit `Contains` vor den Regexen für SQL, Parameter, Plan, Tabellenstatistik und Laufzeit — Transaktions- und
+  Verbindungsereignisse (im echten Log 90 %) brauchen sie nicht.
+- Zähler (`DurationMs`, `Reads`, `Writes`, `Fetches`, `Marks`) als `[long]`; Werte über 2^31 brachen vorher mit Fehler ab.
+- Statusmeldungen über `Write-Verbose`/`Write-Progress` statt `Write-Host`; `[CmdletBinding()]` ergänzt.
+- Wagenrückläufe (`\r`) werden entfernt; die ungetrimmte Tabellenstatistik enthielt bei gemischten Zeilenenden vorher `\r`.
+
+### Added
+- 3 Tests (Zähler > 2^31 und keine Host-Ausgabe waren rot; Ausgabe einzeln in die Pipeline sichert ab), 1 Prüfung ohne `\r`.
+
+### Confidence / Ungeprüft
+- Messungen (PowerShell 7.6, gleicher Rechner, `| ForEach-Object` als Verbraucher):
+  - 78-MB-Datei, 175.000 Ereignisse (statementlastig, synthetisch): 58,3 s / 1.529 MB → 49,3 s / 321 MB.
+  - 33 MB, 89.400 Ereignisse (echtes Firebird-5-Log 300-fach vervielfacht, nur lokal, nur Zeit/Speicher gelesen):
+    24,9 s / 802 MB → 17,5 s / 302 MB.
+- Gleichheit alt/neu per Skript auf allen Ereignissen geprüft: identisch bis auf die beabsichtigt entfernten `\r` in der
+  Tabellenstatistik (10 Ereignisse im echten Log).
+- Ein zeilenweiser Zwischenstand war langsamer (79,7 s) und wurde verworfen.
+
 ## 2026-11-07 I7 – Lizenzdatei und README-Drift
 
 **Trigger-Matrix:** Bekannter Fehler behoben → `KNOWN_ISSUES.md` K1; README; `TODO.md` (Aufgabe „line-by-line" nach I6 verschoben).

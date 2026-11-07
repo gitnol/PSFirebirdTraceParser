@@ -3,8 +3,8 @@
 Zuletzt aktualisiert: 2026-11-07
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
-**Letztes abgeschlossenes Inkrement:** I7 – Lizenzdatei, README-Drift (2026-11-07)
-**Nächster Schritt:** I6 – Streaming statt Gesamtdatei im Speicher
+**Letztes abgeschlossenes Inkrement:** I6 – Streaming (2026-11-07)
+**Nächster Schritt:** I11 – Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen
 **Nächste Reflexion:** bei Abschluss von I3 (siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md` — `docs/`-Drift prüfen + Template-Backport prüfen; danach Marker um 3 erhöhen)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
@@ -12,7 +12,7 @@ Zuletzt aktualisiert: 2026-11-07
 
 ## Nächster Schritt
 
-K3 ist behoben (alle Verbindungsformen). Als Nächstes I6 (zeilenweises Lesen, K2). Im privaten Report-Projekt kann die Sperrkonflikt-Auswertung (dort I7) auf `ErrorCodes`/`ErrorMessages` aufsetzen. Empfohlenes Modell: Sonnet, mittlerer Effort.
+I6 ist umgesetzt (Streaming). Als Nächstes I11–I14 (mittlere Priorität). Offen hoch: I2/I3 (Pseudonymisierung, HMAC mit Kundenschlüssel) — Voraussetzung für einen Dienst mit pseudonymisierten Daten. Empfohlenes Modell: Sonnet, mittlerer Effort; für I3 höherer Effort.
 
 ---
 
@@ -24,6 +24,7 @@ K3 ist behoben (alle Verbindungsformen). Als Nächstes I6 (zeilenweises Lesen, K
 | I9 | Kopfzeile plattformneutral (Windows/Linux-Adressformat), Pester-Grundgerüst, 11 Parser-Tests | 2026-11-07 | ae01289 |
 | I10 | Fehler-Ereignisse: `ERROR AT`/`WARNING AT` mit Komponente, Codes, Texten; `FAILED …` vollständig; Pseudonymisierung der Fehlertexte | 2026-11-07 | 442d834 |
 | I7 | MIT-Lizenzdatei, README-Properties an den Code angeglichen (K1) | 2026-11-07 | f3e476a |
+| I6 | Streaming in 4-MB-Stücken, Ausgabe je Ereignis, Zähler als `[long]`, Vorprüfung je Regex, Statusmeldungen über `-Verbose` | 2026-11-07 | ae83580 |
 
 ---
 
@@ -35,7 +36,6 @@ K3 ist behoben (alle Verbindungsformen). Als Nächstes I6 (zeilenweises Lesen, K
 | I3 | Pseudonymisierung: geheimer Schlüssel (HMAC) statt ungesalzenem SHA-256 | Hoch |
 | I4 | Trace-Credentials: kein Passwort in Kommandozeile/Klartext-Konfiguration, kein SYSDBA | Hoch |
 | I5 | Trace-Skripte robust machen (Ausgabepfad, Session-ID, Fehlerbehandlung, Encoding) | Mittel |
-| I6 | Parser: Streaming statt Gesamtdatei im Speicher, Regex-Abdeckung | Mittel |
 | I8 | Laufzeit- und Beispielstände aus dem Security-Sweep nachziehen | Niedrig |
 | I11 | Parser: Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen | Mittel |
 | I12 | Parser: Verbindungen, Prozeduren und Trigger als Ereignisse | Mittel |
