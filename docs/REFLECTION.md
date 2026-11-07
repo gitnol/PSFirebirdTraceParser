@@ -13,8 +13,13 @@ zusammenfassen.
 
 1. `docs/` enthalten noch Hinweise auf inzwischen erledigte Inkremente
    („siehe I2", „(geplant: I3)", Backlog-Einträge, die bereits behoben sind).
-2. Im Projekt entstandene Patterns / Lessons sind noch nicht in `docs_template/`
-   zurückgespielt — die nächste Initialisierung erbt sie nicht.
+2. Im Projekt entstandene Patterns / Lessons stehen nicht sauber in `LESSONS_LEARNED.md` — die zentrale
+   Reflexion im Template-Repo (`ZENTRALE_REFLEXION.md` dort) findet sie dann nicht, und kein anderes Projekt erbt sie.
+
+**Rollen (Hub & Spoke, seit v36):** Das Projekt reflektiert lokal und hält Lehren fest; es schlägt **keine**
+Backports vor und schreibt nie ins Template. Das Template-Repo erntet die Lehren aller Projekte lesend und
+entscheidet projektübergreifend (Genericity-Test mit Belegen aus mehreren Projekten). Der Abschluss-Commit
+`docs(reflection): I#` (Schritt 4) ist die Meldung an das Template.
 
 ---
 
@@ -22,7 +27,7 @@ zusammenfassen.
 
 ### Selbstkritik — Advocatus Diaboli (läuft zuerst, vor allen strukturellen Checks)
 
-Bevor strukturelle Bereinigung und Backport-Entscheidungen stattfinden, **alle seit der letzten Reflexion
+Bevor strukturelle Bereinigung und das Festhalten der Lehren stattfinden, **alle seit der letzten Reflexion
 abgeschlossenen Inkremente** aus der Teufelsperspektive begutachten:
 
 > Analysiere die seit der letzten Reflexion abgeschlossenen Inkremente als Advocatus Diaboli:
@@ -30,19 +35,19 @@ abgeschlossenen Inkremente** aus der Teufelsperspektive begutachten:
 > 1. **Positiv** — was ist solide gelöst, richtig entschieden, erhaltenswert?
 > 2. **Negativ** — was ist über-engineert, zu früh abstrahiert oder weicht vom
 >    erklärten Ziel ab? Welche Entscheidung würde ein erfahrener Reviewer anfechten?
-> 3. **Backport-Filter** — welche LESSONS_LEARNED-Kandidaten sind noch zu jung
+> 3. **Lehren-Filter** — welche LESSONS_LEARNED-Kandidaten sind noch zu jung
 >    (ein Inkrement ≠ Pattern), zu projektspezifisch oder könnten in anderen
 >    Stacks schaden?
 >
-> Ergebnis: gefilterte Backport-Kandidatenliste — bereinigt um voreilige
+> Ergebnis: gefilterte Lehrenliste mit ehrlichem Scope — bereinigt um voreilige
 > Verallgemeinerungen und Over-Engineering-Artefakte.
 
 **Belegpflicht** wie im Prinzip `docs/principles/ADVOCATUS_DIABOLI.md`: Jede Aussage zu 1–3 mit Beleg
 (Datei/Zeile, Commit, Befehlsausgabe) — sonst ausdrücklich als Vermutung kennzeichnen. Ein erzählendes
 Urteil ohne Beleg ist eine Meinung, kein Check.
 
-Das Ergebnis fließt direkt in Schritt 3 (Template-Backport) ein: valide Lektionen
-auf die Kandidatenliste, entlarvter Blödsinn fliegt raus.
+Das Ergebnis fließt direkt in Schritt 3 (Lehren festhalten) ein: valide Lektionen
+nach `LESSONS_LEARNED.md`, entlarvter Blödsinn fliegt raus (`Status: verworfen (<grund>)`).
 
 ### 0. Sektions-Invariante prüfen — STATE.md und TODO.md (strukturell)
 
@@ -79,38 +84,47 @@ git/CHANGELOG belegt. Leere Sektionen nach dem Cleanup vollständig entfernen.
 Zeile gilt `I`). `validate_project_docs.sh` liest die Zeile; in den Befehlen unten `I` durch `(P-|H)` ersetzen.
 Nach dem Präfix folgen Zahl, optional Buchstabe und Unterpunkte (`P-04a`, `P-03.1.1`, `I49.2`).
 
+**Schreibweise:** Die Checks vertragen Hervorhebung vor der ID (`| **I12** |`, `### **I12**:`, `~~**I12**~~`) — ein
+Check, der nur `| I12 |` kennt, bleibt bei fett gesetzten IDs still grün, und fett gesetzt sind gerade die wichtigen
+Einträge. Wer einen Check ändert oder ergänzt, prüft ihn mit einem bekannt fehlerhaften Beispiel gegen (Schritt 4).
+
 **Strukturelle Checks (alle ausführen):**
 ```
-# Verletzung 1 – ~~I# irgendwo in docs/ → muss 0 Treffer ergeben
-grep -rnE "~~I[0-9]+" docs/
+# Verletzung 1 – ~~I# irgendwo in docs/ (auch ~~**I#**~~) → muss 0 Treffer ergeben;
+#   REFLECTION/KICKOFF definieren die Checks und zitieren die Muster; Verlaufsdateien (CHANGELOG samt Archiv,
+#   LESSONS_LEARNED) zitieren alte Schreibweisen als Beleg
+grep -rnE '~~[*_`]*I[0-9]+' docs/ --exclude=REFLECTION.md --exclude=KICKOFF.md \
+  --exclude=CHANGELOG.md --exclude=LESSONS_LEARNED.md --exclude-dir=changelog
 
 # Abgeschlossene Inkremente = STATE.md „Abgeschlossene Inkremente" plus rotiertes Archiv (Schritt 5a);
 #   Verletzung 2 und 4 lesen beides, sonst verlieren archivierte IDs die Abdeckung.
 abgeschlossen() {
-  awk '/^## / { sec = $0 } /^\| I[0-9]+/ && sec ~ /Abgeschlossene/' docs/STATE.md
-  cat docs/changelog/ARCHIVE-STATE*.md 2>/dev/null | grep -E '^\| I[0-9]+'
+  awk '/^## / { sec = $0 } /^\| +[*_`]*I[0-9]/ && sec ~ /Abgeschlossene/' docs/STATE.md
+  cat docs/changelog/ARCHIVE-STATE*.md 2>/dev/null | grep -E '^\| +[*_`]*I[0-9]'
 }
 
 # Verletzung 2 – dieselbe Inkrement-ID abgeschlossen UND in STATE.md „Offene Punkte"
 #   (sektionssensitiv: „Offene Punkte" enthält by design `| I# |`-Zeilen —
 #    ein simples grep "^\| I[0-9]+" würde diese fälschlich als Treffer melden).
-#   Muss 0 Zeilen ausgeben.
+#   idn() entfernt Hervorhebung und Doppelpunkt: **I12** → I12. Muss 0 Zeilen ausgeben.
 abgeschlossen | awk '
-  FILENAME == "-"     { done[$2] = 1; next }
+  function idn(s) { gsub(/^[*_`]+|[*_`:]+$/, "", s); return s }
+  FILENAME == "-"     { done[idn($2)] = 1; next }
   /^## /              { sec = $0 }
-  /^\| I[0-9]+/ && sec ~ /Offene/ && ($2 in done) {
-                        print "Verletzung 2: " $2 " steht abgeschlossen und in Offene Punkte" }
+  /^\| +[*_`]*I[0-9]/ && sec ~ /Offene/ && (idn($2) in done) {
+                        print "Verletzung 2: " idn($2) " steht abgeschlossen und in Offene Punkte" }
 ' - docs/STATE.md
 
 # Verletzung 3 – ~~I# als Abschnittsüberschrift in TODO.md → muss 0 Treffer ergeben
-grep -nE "^### ~~I[0-9]+" docs/TODO.md
+grep -nE '^### +[*_`]*~~[*_`]*I[0-9]+' docs/TODO.md
 
 # Verletzung 4 – I# abgeschlossen (STATE.md oder Archiv), aber noch als offener
 #   Abschnitt (### I#:) in TODO.md → muss 0 Zeilen ausgeben.
 abgeschlossen | awk '
-  FILENAME == "-"     { done[$2] = 1; next }
-  /^### I[0-9]/ {
-    id = $2; sub(/:$/, "", id)
+  function idn(s) { gsub(/^[*_`]+|[*_`:]+$/, "", s); return s }
+  FILENAME == "-"     { done[idn($2)] = 1; next }
+  /^### +[*_`]*I[0-9]/ {
+    id = idn($2)
     if (id in done) print "Verletzung 4: " id " abgeschlossen, aber noch offen in TODO.md"
   }
 ' - docs/TODO.md
@@ -137,11 +151,17 @@ Suche nach abgeschlossenen Inkrement-IDs, die in anderen Docs noch als offen
 formuliert sind:
 
 ```
-grep -rnE "siehe I[0-9]+|[Gg]eplant(:| in) I[0-9]+|wird in I[0-9]+ behoben|\(Hoch, I[0-9]+\)|TBD in I[0-9]+|\bab I[0-9]+|\bbis I[0-9]+|in I[0-9]+ (festlegen|festgelegt|befüllen|finalisieren|klären)" docs/
+grep -rnE "siehe I[0-9]+|[Gg]eplant(:| in) I[0-9]+|wird in I[0-9]+ behoben|\(Hoch, I[0-9]+\)|TBD in I[0-9]+|\bab I[0-9]+|\bbis I[0-9]+|in I[0-9]+ (festlegen|festgelegt|befüllen|finalisieren|klären)" docs/ \
+  --exclude=REFLECTION.md --exclude=KICKOFF.md --exclude=CHANGELOG.md --exclude=LESSONS_LEARNED.md --exclude-dir=changelog
 ```
 
 Relevant sind nur Treffer auf **bereits abgeschlossene** IDs (Verweise auf künftige Inkremente sind legitim);
-`validate_project_docs.sh` filtert das automatisch. Treffer auf „mitigiert in I#" / „abgeschlossen in I#"
+`validate_project_docs.sh` filtert das automatisch und erkennt auch fett gesetzte IDs (`siehe **I8**`). Ein Verweis
+mit Zusatz (`ab I4.2`, `siehe I6b`) zählt nur, wenn genau diese ID oder die ID ohne Zusatz abgeschlossen ist — nicht
+schon, weil `I4.1` fertig ist.
+Verlaufsdateien (`CHANGELOG.md` samt Archiv unter `changelog/`, `LESSONS_LEARNED.md`) sind ausgenommen: Sie
+zitieren alte Formulierungen als Beleg, und ein Check, der auf Zitate anschlägt, erzieht dazu, seine Treffer zu
+übergehen. `BACKLOG.md` bleibt drin — dort ist ein offener Verweis auf ein erledigtes Inkrement die gesuchte Drift. Treffer auf „mitigiert in I#" / „abgeschlossen in I#"
 umstellen oder ganz entfernen, wenn der Eintrag durch das Inkrement obsolet wurde (z.B. Backlog-Punkte).
 Formulierungen, deren Korrektur Wissen über den Code verlangt („TBD in I2" → was gilt jetzt?), gehören nach
 Schritt 4 auf die Liste für den Prompter.
@@ -152,7 +172,10 @@ geänderte Suchlogik) gezielt nach der **alten Formulierung** in `docs/` suchen 
 oder den alten Cmdlet-/Optionsnamen. Die Drift sitzt erfahrungsgemäß in Querschnitts-Docs, die ein Inkrement nur
 indirekt berührt (`architecture/ERROR_HANDLING.md`, `architecture/CONFIGURATION.md`, `operations/RUNBOOK.md`,
 Prinzipien), und besonders nach Inkrementen, die als Bugfix oder Refactoring durchgingen und deshalb keine Zeile
-der Trigger-Matrix auslösten.
+der Trigger-Matrix auslösten. Welche das waren, zeigt die Zeile „Trigger-Matrix:" der CHANGELOG-Einträge seit der
+vorherigen Reflexion (KICKOFF 3a): Einträge ohne diese Zeile und Einträge mit „keine Zeile ausgelöst", die laut
+Added/Changed/Fixed Verhalten geändert haben, zuerst prüfen. Vorbehalte deshalb mit Anker schreiben (Phasen-ID, Stichwort wie „noch nicht"),
+damit diese Suche sie findet.
 
 **Interna-Scan (öffentliche Repos, `CONVENTIONS_COMMON.md` 3.1):** öffentliche Dateien gegen die lokale
 Denylist prüfen — Treffer nach `docs/local/` verschieben bzw. durch Rollenbezeichnungen ersetzen:
@@ -170,6 +193,9 @@ Kürzel aus drei Buchstaben), stehen deshalb nicht darin — sie zusätzlich mit
 steht nur unter „Verworfen", nie als „erledigt in I#". `KNOWN_ISSUES.md` „Behobene Probleme" ist eine Spur bis zur
 nächsten Aufräum-Iteration und wird dann geleert (Historie steht in CHANGELOG und Git). `validate_project_docs.sh`
 meldet beides als Hinweis (`~~…~~` außerhalb „Verworfen"; mehr als 10 behobene Einträge) — jetzt aufräumen.
+**Fällige Wiedervorlagen** (Format im `BACKLOG.md`-Kopf; der Validator meldet sie) werden in dieser Reflexion
+entschieden: eingeplant, verworfen oder erledigt. Neu datiert wird nur mit Grund im Eintrag; was Code- oder
+Fachwissen braucht, kommt als Entscheidung auf die Liste für den Prompter (Schritt 4), nicht als neues Datum.
 
 **Refactoring-Kandidaten (Hotspots):** Dateien, die oft geändert werden **und** groß sind, tragen die meisten Fehler
 (relative Änderungsmenge sagt Fehlerdichte voraus, Nagappan & Ball, ICSE 2005; Hotspot-Analyse nach Tornhill).
@@ -195,7 +221,10 @@ offener Punkt nach `TODO.md`.
 ### 2. Cross-Refs konsistent
 
 Alle I-Nummern in `docs/` zeigen auf existierende Inkremente in `STATE.md` oder im Archiv
-`docs/changelog/ARCHIVE-STATE.md` (kein Renumbering-Loch).
+`docs/changelog/ARCHIVE-STATE.md` (kein Renumbering-Loch). `validate_project_docs.sh` meldet als Hinweis jede ID, die
+in keiner Zeile von `STATE.md` bzw. Archiv und in keiner `TODO.md`-Überschrift steht — etwa nach der Umnummerierung
+`I7` → `I6.1`/`I6.2` jeden verbliebenen Verweis auf `I7`. Der Oberbegriff einer Teilung (`I8` bei `I8a`/`I8b`) gilt
+als bekannt; offen formulierte Verweise darauf meldet der Health-Check.
 
 ### 2b. Roadmap-Konsolidierung
 
@@ -205,68 +234,25 @@ prüfen — inklusive Backlog-Punkten, die durch erledigte Inkremente inzwischen
 Ergebnis: priorisierte Liste der nächsten drei Inkremente mit Begründung je Bündelung/Umordnung;
 Übernahme in `TODO.md` als eigener `docs:`-Commit. Ablauf wie KICKOFF Phase 1 Punkt 2a.
 
-### 3. Template-Backport
+### 3. Lehren festhalten (kein Backport im Projekt)
 
-**Queue-Abbau:** Alle Einträge in `docs/LESSONS_LEARNED.md` mit
-`Scope: generisch-*` und `Status: offen` abarbeiten — Backport ins
-`Backport-Ziel` einspielen (Mechanik unten), dann `Status: backported vN@<commit>` setzen.
+Jede Lehre aus den begutachteten Inkrementen steht danach als `## L<N>:`-Eintrag in `docs/LESSONS_LEARNED.md`
+(Format dort) — mit ehrlichem `Scope`, `Backport-Ziel` als **Hinweis** für das Template und
+`Gesehen mit: vN` = Template-Stand aus dem `STATE.md`-Kopf „Initialisiert mit" (nur die Version, z. B. `v35`).
+Bestehende offene Einträge prüfen: noch zutreffend? Scope noch richtig? Sonst `verworfen (<grund>)` oder
+`projekt-intern` setzen.
 
-**Freigabe-Disziplin:** Ein Backport ist eine ausdrückliche Entscheidung des Prompters.
-Ohne Freigabe — insbesondere in **autonomen Läufen** — generische Lessons
-(`Scope: generisch-*`, `Status: offen`) **nur als Backport-Vorschlag melden, nie selbst
-ins Template committen oder taggen**. `Status: offen` bleibt unverändert, bis die Freigabe
-vorliegt; erst dann Backport einspielen und `Status: backported vN@<commit>` setzen.
+**Kein Backport aus dem Projekt:** Das Projekt schlägt keine Template-Änderung vor, committet nichts ins
+Template-Repo und setzt keinen Tag — auch nicht mit erreichbarem Template und auch nicht in autonomen Läufen.
+`Status: offen` bleibt stehen; ob und wohin eine Lehre ins Template wandert, entscheidet die zentrale Reflexion
+im Template-Repo (`ZENTRALE_REFLEXION.md` dort) zusammen mit den Lehren anderer Projekte — erst dort ist der
+Genericity-Test (≥ 2 Projekte, ≥ 2 Sprachfamilien, `evals/STRATEGY.md`) prüfbar. Den Status auf
+`backported vN@<commit>` setzt das Projekt beim nächsten Template-Update (`ALTES_PROJECT_AKTUALISIEREN.md`),
+sobald der `TEMPLATE_CHANGELOG.md` die Lehre als Herkunft nennt.
 
-Was wurde in den letzten Inkrementen gelernt, das ein generisches Pattern
-darstellt? Typische Kandidaten:
-- Neue Regel oder Anti-Pattern → `docs_template/stacks/<stack>/CONVENTIONS.md`
-- Fehlende Manifest-Einträge → `docs_template/MANIFEST.yaml`
-- Wiederkehrende Architektur-Erkenntnis → `docs_template/base/principles/`
-  (neues Prinzip: die 5-Stellen-Checkliste in `docs_template/README.md` →
-  „Template-Pflege" → „Neues Prinzip anlegen" befolgen — Datei + MANIFEST + INDEX +
-  README-Zähler + Changelog in **einem** Commit, sonst wird es nicht ausgeliefert)
-
-**Cross-Pollination-Check (nur Kandidaten melden, keine Auto-Edits):** Für jede Lehre,
-die nach `base/` wandert (Genericity-Test bestanden, Definition in `evals/STRATEGY.md`),
-einmal explizit fragen: *„Welche anderen Stacks haben für diese Lehre ein echtes,
-nicht erzwungenes Analogon?"* Diese Stacks als **Review-Vorschlag** auflisten — die
-idiomatisch korrekte Formulierung pro Sprache ist Tier-3-Arbeit (Mensch), **nicht**
-ein Copy-Paste der Ausgangs-Lehre.
-
-> **Warum nur Vorschlag:** Eine Python-Lesson erzeugt keinen guten C#-Rat per Kopie.
-> Wer die generische Lehre 1:1 in jeden Stack schreibt, baut genau die per-Stack-Idiom-
-> Duplikate, die das Tier-Modell verbietet (`evals/STRATEGY.md`, Tier 3). Der Backport
-> nach `base/` macht das Prinzip für **alle** Stacks verfügbar; die stack-spezifische
-> Ausformulierung passiert erst, wenn ein konkretes Projekt dort sie tatsächlich braucht.
-
-Den Vorschlag in Schritt 4 mit auf die priorisierte Liste nehmen (als
-`sinnvoll: <stack-x>, <stack-y> haben Analogon zu <Lehre> — idiomatisch prüfen`).
-
-> **Hinweis (Backport-Mechanik):** Das Template lebt als Git-Repo (Versionen = Git-Tags).
-> **Vor der ersten Änderung** prüfen, ob das lokale Template auf dem Stand seines Remotes ist — andere Projekte
-> spielen ebenfalls Backports ein; wer auf einem veralteten Stand ändert, merkt es erst beim abgelehnten Push und
-> arbeitet in vermeidbare Konflikte:
-> ```bash
-> <Template-Root>/scripts/check_template_current.sh   # git fetch + Vergleich mit dem Upstream
-> ```
-> Exit 0 (aktuell oder nur eigene lokale Commits) → weiter. Exit 1: `ZURUECK` → erst `git pull --ff-only`;
-> `AUSEINANDER` → erst zusammenführen — per **Merge**, sobald ein Projekt schon auf einen lokalen Commit verweist
-> (Stempel `vN@<commit>`), sonst wäre der Verweis nach einem Rebase ungültig; `GEÄNDERT` → fremde Änderungen klären.
-> Exit 2 (offline, ZIP-Export, kein Upstream) → im Bericht vermerken; Backports dann nur lokal und vor dem Push erneut
-> prüfen. Danach Backports einspielen und explizit stagen — **kein `git add -A`**, da im
-> Template-Repo Arbeitskopien, Editor-Artefakte oder Projekt-Exporte liegen können:
-> ```bash
-> git status --short          # Überblick, welche Dateien geändert wurden
-> git add stacks/[stack]/[datei].md base/[datei].md   # nur tatsächlich geänderte Template-Dateien
-> cat VERSION                 # steht schon auf N+1 (unreleased)? Dann nicht erneut erhöhen
-> echo "N" > VERSION          # nur bei der ersten Änderung nach dem letzten Tag hochziehen
-> git add VERSION TEMPLATE_CHANGELOG.md
-> git commit -m "feat(template): backport from [projekt] (I#-Reflexion)"   # bzw. fix/docs
-> ```
-> Versionspraxis: `VERSION` wird mit der **ersten** Änderung nach einem Tag auf die nächste Nummer gesetzt; alle
-> weiteren Änderungen bis zum Tag sammeln sich im Block `[vN] … (unreleased)` von `TEMPLATE_CHANGELOG.md`; der
-> Tag folgt erst nach dem Gate (Schritt 3b). Projekte notieren deshalb Version + Commit (`vN@<commit>`).
-> `git tag` wird erst in Schritt 3b gesetzt — **nicht** hier.
+Im Reflexionsbericht die generischen offenen Lehren nur **nennen** („für die zentrale Reflexion vorgemerkt:
+L4, L7"). Will der Prompter eine Lehre sofort im Template haben, ist das ein Auftrag für eine Session im
+Template-Repo (zentrale Reflexion mit dieser einen Lehre), nicht Teil dieser Reflexion.
 
 > **Projektspezifisch (PSFirebirdTraceParser):** Backports gehen in das docs_template-Repository des Maintainers; das
 > Projekt-Repo ist öffentlich, deshalb steht der lokale Pfad nur in `docs/local/ENVIRONMENT.md` (`CONVENTIONS_COMMON.md`
@@ -275,6 +261,9 @@ Den Vorschlag in Schritt 4 mit auf die priorisierte Liste nehmen (als
 > bestandenem Pre-Tag-Gate: `git -C <Template-Repo> tag vN` (Schritt 3b) — nie aus diesem Projekt heraus.
 
 ### 3b. Pre-Tag Gate — BLOCKER (**kein `git tag` ohne diesen PASS**)
+
+> **Gilt nur im Template-Repo** — für die Session, die nach der zentralen Reflexion (`ZENTRALE_REFLEXION.md` dort)
+> Änderungen einspielt und taggt. In einer Projekt-Reflexion entfällt dieser Schritt.
 
 Dieser Schritt ist ein harter Blocker. `git tag vN` darf **nur** ausgeführt werden,
 wenn die für den Änderungsumfang geforderten Prüfungen bestanden sind. **Kein
@@ -286,30 +275,30 @@ wenn die für den Änderungsumfang geforderten Prüfungen bestanden sind. **Kein
    <Template-Root>/scripts/smoke_stacks.sh        # dynamisch: init_docs.sh je Stack + Pflichtdatei-Check
    ```
    Beide Exit 0 erforderlich. Bei Fehler: Befund beheben, Commit ergänzen, erneut prüfen.
-   Der Smoke deckt die **Nicht-`python-cli`-Stacks** ab, die S1–S3 nicht berühren —
+   Der Smoke deckt die **Nicht-`python-cli`-Stacks** ab, die S1–S4 nicht berühren —
    deshalb ist er gerade für reine Stack-Änderungen (Tabelle unten) die tragende Prüfung.
 
 2. **Change-Surface bestimmen** — was wurde seit dem letzten Tag tatsächlich angefasst?
    ```bash
    git diff --name-only "$(git describe --tags --abbrev=0)"..HEAD
    ```
-   Die geänderten Pfade gegen die Tabelle halten. Das **Eval-Gate** ist *scoped*: S1–S3
+   Die geänderten Pfade gegen die Tabelle halten. Das **Eval-Gate** ist *scoped*: S1–S4
    nur laufen lassen, wenn die Änderung sie überhaupt berühren kann. Bei gemischtem
    Changeset gewinnt die **strengste zutreffende Zeile**. (Begründung der Tier-Logik
    hinter dieser Tabelle: `evals/STRATEGY.md`.)
 
    | Geänderte Pfade (seit letztem Tag) | Eval-Gate |
    |---|---|
-   | `base/**`, `scripts/**`, `evals/**`, `repo-root/**`, `SKILL.md`, `NEUES_PROJECT_INITIALISIEREN.md`, `ALTES_PROJECT_AKTUALISIEREN.md`, oder die Stack-/Overlay-**Listen** in `MANIFEST.yaml` | **S1–S3 = 2×3/3 PASS** (Prozess wird wirklich getestet — die Agenten lesen und befolgen diese Dateien; immer der volle Lauf, Teilläufe übersehen Wechselwirkungen) |
-   | `stacks/python-cli/**` | **S1–S3 = 2×3/3 PASS** — die Szenarien laden genau diesen Stack |
-   | **nur** `stacks/<x>/**` (x ≠ `python-cli`) und/oder `overlays/<y>/**` | **kein S1–S3** — kein Szenario lädt diesen Stack (null Signal); stattdessen Struktur-Validator (oben, inkl. `smoke_stacks.sh --stack <x>` für den geänderten Stack) + manuelles Inhalts-Review |
-   | nur `README.md`, `TEMPLATE_CHANGELOG.md` und/oder `handbuch/**` | **kein S1–S3** — Struktur-Validator (inkl. Check 8) genügt |
+   | `base/**`, `scripts/**`, `evals/**`, `repo-root/**`, `SKILL.md`, `NEUES_PROJECT_INITIALISIEREN.md`, `ALTES_PROJECT_AKTUALISIEREN.md`, oder die Stack-/Overlay-**Listen** in `MANIFEST.yaml` | **S1–S4 = 2×4/4 PASS** (Prozess wird wirklich getestet — die Agenten lesen und befolgen diese Dateien; immer der volle Lauf, Teilläufe übersehen Wechselwirkungen) |
+   | `stacks/python-cli/**` | **S1–S4 = 2×4/4 PASS** — die Szenarien laden genau diesen Stack |
+   | **nur** `stacks/<x>/**` (x ≠ `python-cli`) und/oder `overlays/<y>/**` | **kein S1–S4** — kein Szenario lädt diesen Stack (null Signal); stattdessen Struktur-Validator (oben, inkl. `smoke_stacks.sh --stack <x>` für den geänderten Stack) + manuelles Inhalts-Review |
+   | nur `README.md`, `TEMPLATE_CHANGELOG.md` und/oder `handbuch/**` | **kein S1–S4** — Struktur-Validator (inkl. Check 8) genügt |
 
-   > **Sicherheits-Invariante:** S1–S3 nutzen ausschließlich den `python-cli`-Stack
+   > **Sicherheits-Invariante:** S1–S4 nutzen ausschließlich den `python-cli`-Stack
    > (verifiziert in `evals/scenarios/*/SCENARIO.md` + `EXPECTED.md`). Solange das gilt,
    > kann eine Änderung an einem anderen Stack ihr Ergebnis nicht beeinflussen — das
    > Auslassen ist **sicher**, nicht nur billig. Wird je ein Szenario auf einen anderen
-   > Stack umgestellt (oder ein stack-spezifisches S4+ ergänzt), ist diese Tabelle
+   > Stack umgestellt (oder ein stack-spezifisches S5+ ergänzt), ist diese Tabelle
    > zwingend anzupassen.
 
 3. **Eval-Gate (nur ausführen, wenn die Tabelle in 2 es fordert):**
@@ -317,17 +306,18 @@ wenn die für den Änderungsumfang geforderten Prüfungen bestanden sind. **Kein
    evals/run_eval.sh S1   # → evals/score_eval.sh S1 <arbeitsdir>
    evals/run_eval.sh S2   # → evals/score_eval.sh S2 <arbeitsdir>
    evals/run_eval.sh S3   # → evals/score_eval.sh S3 <arbeitsdir>
+   evals/run_eval.sh S4   # → evals/score_eval.sh S4 <arbeitsdir>
    ```
    Ablauf in `evals/README.md`; ohne Aufsicht: `evals/run_headless.sh --model <id> --effort <stufe>`.
-   **Zwei Durchgänge mit jeweils 3/3 PASS erforderlich** (Agentenläufe streuen; ein PASS ist eine Stichprobe).
+   **Zwei Durchgänge mit jeweils 4/4 PASS erforderlich** (Agentenläufe streuen; ein PASS ist eine Stichprobe).
    Bei FAIL: **kein Tag** — Befund als Backlog-/Issue-Eintrag erfassen, Kandidat nachbessern.
    `evals/` lebt nur im Template-Repo — für einen Backport arbeitet man ohnehin dort.
 
 4. **Audit-Eintrag im `TEMPLATE_CHANGELOG.md` (immer, ehrlich):** festhalten, *welches*
    Gate gelaufen ist — damit nachvollziehbar bleibt, was tatsächlich geprüft wurde
    (Lehre aus dem veralteten `csharp-desktop`-„ENTWURF"-Kommentar in `MANIFEST.yaml`).
-   - Voller Lauf: `Eval: 2×3/3 PASS (S1 …, S2 …, S3 …, <modell>, Effort <stufe>)`
-   - Scoped: z. B. `Gate: validate_template.sh + Inhalts-Review (Stack-only: csharp-desktop), S1–S3 n/a (kein Prozess-/python-cli-Change)`
+   - Voller Lauf: `Eval: 2×4/4 PASS (S1 …, S2 …, S3 …, S4 …, <modell>, Effort <stufe>)`
+   - Scoped: z. B. `Gate: validate_template.sh + Inhalts-Review (Stack-only: csharp-desktop), S1–S4 n/a (kein Prozess-/python-cli-Change)`
 
 4a. **Handbuch nachziehen (Template-Repo):** `handbuch/` auf den Stand vN bringen — letzter Commit vor dem Tag,
    löst kein Eval aus (Tabelle in 2); Ablauf und Ablage der PDF-/PPTX-Fassung in `handbuch/README.md`.
@@ -350,19 +340,24 @@ wenn die für den Änderungsumfang geforderten Prüfungen bestanden sind. **Kein
 **Direkt umsetzen** (durch den Reflexions-Auftrag gedeckt, ohne Rückfrage): die mechanischen
 Korrekturen aus Schritt 0–2 — Sektions-Invariante, veraltete Verweise auf abgeschlossene
 Inkremente, Cross-Refs — und danach den Marker aus Schritt 5; offene Entscheidungspunkte halten
-den Marker nicht auf. Separater Commit `docs: I#-reflection refresh` (Projekt-Docs).
+den Marker nicht auf. Abschluss-Commit der Reflexion mit genau diesem Betreff (Projekt-Docs, samt
+`LESSONS_LEARNED.md` aus Schritt 3 und Marker):
+```bash
+git commit -m "docs(reflection): I6"   # I# = das zuletzt abgeschlossene Inkrement, das die Reflexion ausgelöst hat
+```
+Der Betreff ist die **Meldung an das Template-Repo**: Die zentrale Reflexion erkennt fällige Ernten an
+`docs(reflection):`-Commits. Einen anderen Betreff nicht verwenden; die Rotation (5a) bleibt ein eigener Commit.
 
 **Vorlegen und Entscheidung einholen:** was Code-Wissen, Inhalt oder Roadmap betrifft (z. B.
-widersprüchliche Angaben, die nur der Code klärt) sowie Template-Backports — als kurze,
-priorisierte Liste (`sinnvoll/wichtig/dringend`). Backport nach Freigabe:
-`<feat|fix|docs>(template): backport from <projekt> (I#-Reflexion)` (Template-Repo, dann Schritt 3b durchlaufen).
-In autonomen Läufen ohne erreichbaren Prompter: diese Liste nur **vorschlagen**, keinen
-Template-Commit/Tag setzen (siehe Freigabe-Disziplin in Schritt 3).
+widersprüchliche Angaben, die nur der Code klärt) — als kurze, priorisierte Liste (`sinnvoll/wichtig/dringend`).
+Template-Backports gehören nicht auf diese Liste (Schritt 3); in autonomen Läufen ohne erreichbaren Prompter die
+Liste nur **vorschlagen**.
 
 **Checks mit Fehlalarmen reparieren, nicht notieren:** Liefert ein Check dieser Reflexion (Grep, Validator,
 projekt-eigener Drift-Check) Treffer, die als „bekannter Fehlalarm" übergangen werden, wird er in derselben
 Reflexion repariert — z. B. Namenssuche statt Zeilenmuster — und mit einem provozierten echten Treffer
-gegengeprüft. Ein Check, dessen Treffer man routinemäßig übergeht, prüft nichts.
+gegengeprüft. Ein Check, dessen Treffer man routinemäßig übergeht, prüft nichts. Meldet der Validator danach
+keinen Hinweis mehr, im `STATE.md`-Kopf `**Validator:** --streng` setzen (KICKOFF 3b Punkt 6), damit es so bleibt.
 
 ### 5. Nach Abschluss der Reflexion
 
@@ -392,10 +387,11 @@ In `STATE.md` den „Nächste Reflexion bei I#"-Marker um 3 erhöhen (z.B. I6 �
 - `CHANGELOG.md` über ~500 Zeilen: ältere Einträge in eine datierte Archivdatei unter `docs/changelog/` verschieben
   (Name z. B. `ARCHIVE-I01-I20.md`); die aktive Datei behält die letzten Inkremente und einen Verweis aufs Archiv.
 - `LESSONS_LEARNED.md`: nur Einträge mit Endzustand (`backported …`, `verworfen …`, `projekt-intern`) archivieren —
-  Einträge mit `Status: offen` bleiben stehen, bis Schritt 3 sie abgebaut hat.
+  Einträge mit `Status: offen` bleiben stehen, bis das Template sie übernommen oder verworfen hat (Schritt 3).
 - Archivierte LESSONS-Einträge nach `docs/changelog/LESSONS_ARCHIVE.md` — der Validator behandelt nur `changelog/`
-  als Verlauf (tote Verweise in alten Einträgen sind dort Geschichte). Bereiche im Archivkopf mit Strich schreiben
-  („I01–I41"), nicht „bis I41" — der Health-Check liest „bis I#" als offenen Verweis.
+  als Verlauf (tote Verweise in alten Einträgen sind dort Geschichte). Verweise aufs Archiv außerhalb der
+  Verlaufsdateien (etwa in `STATE.md`) mit Strich schreiben („I01–I41"), nicht „bis I41" — der Health-Check liest
+  „bis I#" als offenen Verweis.
 - **Erst Interna bereinigen, dann rotieren:** Der Interna-Hook prüft hinzugefügte Zeilen und kann verschobenen Bestand
   nicht von neuem Text unterscheiden — enthält der alte Teil Denylist-Treffer, blockiert er den Rotations-Commit.
   `--no-verify` ist keine Option.

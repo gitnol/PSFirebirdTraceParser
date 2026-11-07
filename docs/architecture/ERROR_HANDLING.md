@@ -17,6 +17,15 @@ Es gibt keine eigenen Exception-Klassen. PowerShell-Regel für dieses Projekt:
 - **Externe Programme** (`fbtracemgr.exe`): `$LASTEXITCODE` nach jedem Aufruf prüfen und in eine Meldung mit
   Exit-Code übersetzen. *Bestand: wird nicht geprüft (TODO I5).*
 
+- **Nie über Meldungstexte verzweigen.** Eine Schicht ordnet Fehler einer anderen Schicht über **Typ** (Unterklasse)
+  oder **Code** (Enum, Feld) zu, nie über den Wortlaut (Textanfang, Teilzeichenkette, Vergleich mit festem Text) —
+  auch nicht bei Fehlern externer Programme, wenn diese einen Exit-Code oder Status liefern. Wortlaut ändert sich
+  durch Umformulieren oder Übersetzen; die Zuordnung fällt dann still auf den allgemeinen Fall, und Tests mit dem alten
+  Wortlaut bleiben grün. Bestehende Kopplungen per Suche finden (in Python z. B. `startswith(`, `in str(exc)`) und als
+  eigenen Schritt lösen — vor jeder Übersetzung oder Textüberarbeitung — mit einem Test, der absichtlich fremden
+  Wortlaut verwendet und trotzdem die richtige Zuordnung verlangt. Bleibt nur der Text (fremdes Programm ohne Code),
+  liegt der Vergleich an genau einer Stelle im Adapter, mit Test gegen die echte Ausgabe.
+
 ---
 
 ## Boundary vs. interne Fehler
@@ -89,6 +98,7 @@ Servers, sehr große Dateien, abgeschnittene Blöcke), außerdem Parameter und `
 - **Trace-Inhalte in Fehlermeldungen** (Bestand: `trace_stop.ps1` gibt die erste Zeile der Trace-Datei aus; das ist
   die Session-Kopfzeile ohne Nutzdaten — bei anderen Dateien könnte es mehr sein).
 - **Stilles Wegfangen** in der Mitte des Aufruf-Stacks — Fail-Fast wird ausgehebelt.
+- **Zuordnung über Meldungstext** (Vergleich mit dem Wortlaut einer Fehlermeldung) statt über Typ oder Code — siehe oben.
 
 ---
 

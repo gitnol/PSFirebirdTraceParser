@@ -207,9 +207,12 @@ Für PowerShell greifen zwei der vier Gates der Definition of Done. **Stand I1: 
 Settings-Datei und Tests entstehen in I2; bis dahin ist nur Gate 1 lokal ausführbar (ohne Settings-Datei).
 
 ```powershell
-Invoke-ScriptAnalyzer -Path . -Recurse -Severity Warning                   # Gate 1 — Linter (PSScriptAnalyzer)
+Invoke-ScriptAnalyzer -Path . -Recurse -Severity ParseError, Error, Warning   # Gate 1 — Linter (PSScriptAnalyzer)
 Invoke-Pester ./tests -ExcludeTag Integration -Output Detailed            # Gate 4 — Unit-Tests (Pester), ab I2
 ```
+
+`-Severity` ist ein Filter, keine Mindeststufe: `-Severity Warning` allein zeigt weder Syntaxfehler (`ParseError`)
+noch Regeln der Stufe `Error` — alle drei Stufen nennen.
 
 Ab I2 mit `-Settings ./PSScriptAnalyzerSettings.psd1`. Projekt-eigene pre-commit-Prüfungen gehören nach
 `tools/git-hooks/pre-commit.local` (der Interna-Hook ruft sie auf, `CONVENTIONS_COMMON.md` 3.1).

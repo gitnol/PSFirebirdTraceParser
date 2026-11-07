@@ -319,7 +319,8 @@ Exakt prüfen (`Count -eq 1`, erwarteter Typ/Wert), nicht „irgendetwas kam zur
 Reihenfolge nach `CONVENTIONS_COMMON.md` §5 (Gate 2 und 3 entfallen in diesem Stack), jede Stufe grün, bevor
 committet wird:
 
-1. **Gate 1 — Linter:** `Invoke-ScriptAnalyzer -Path <geänderte Dateien> -Severity Warning`.
+1. **Gate 1 — Linter:** `Invoke-ScriptAnalyzer -Path <geänderte Dateien> -Severity ParseError, Error, Warning`
+   (alle drei Stufen, sonst fallen Syntaxfehler durch — `CONVENTIONS.md` §9).
    Projektweit bewusst akzeptierte Findings (dokumentieren, z.B. Ressourcen-Plurale bei
    `PSUseSingularNouns`) sind kein Stopp; neue Findings zuerst beheben.
 2. **Gate 4 — Unit-Tests:** `Invoke-Pester tests/ -ExcludeTag Integration -Output Detailed` → 0 Failed (Integrationstests sind eigene Skripte oder tragen das Tag `Integration`).

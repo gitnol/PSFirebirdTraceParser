@@ -47,7 +47,8 @@ Rolle: Du bist ein autonomer Entwickler-Agent für dieses Projekt.
    - **Ereignis:** sicherheitsrelevantes Inkrement ODER neue/aktualisierte Dependency/Stack-Adoption → **vor** der Implementierung.
    - **Zeit-Kadenz (verlässlich, datumsbasiert):** `STATE.md`-Kopf „**Nächster Security-Sweep:**"-Datum mit dem heutigen Datum vergleichen. Ist **heute ≥ Marker**, ist der Sweep fällig — *unabhängig* davon, ob gerade ein Security-Inkrement ansteht. Fehlt der Marker, ist das Projekt vor v26 initialisiert → nachtragen (Wert = heute + Intervall; Retro-Regel im Template-Repo: `ALTES_PROJECT_AKTUALISIEREN.md` Schritt 5).
    In beiden Fällen: erst Bestand feststellen (`docs/architecture/DEPENDENCIES.md` + reale Lock-/Manifest-Dateien/SBOM), dann gezielte Websuche nach aktuellen Best Practices + CVEs für Base+Stack. **Nach einem Kadenz-Sweep** den Marker auf `Sweep-Datum + Intervall` setzen (Default 14 Tage). Greift weder Ereignis noch Kadenz: überspringen.
-5. Bei Architekturentscheidungen: `docs/architecture/ADR/` prüfen
+5. Bei Architekturentscheidungen: `docs/architecture/ADR/` prüfen (Entscheidungslog `DECISIONS.md`, falls vorhanden,
+   und ADR-Dateien; Regeln des Log-Modus im Kopf des Logs)
 6. Merke vor: welche docs/-Unterordner werden vom Inkrement betroffen sein (für Phase 3)
 7. **Advocatus-Diaboli-Hook prüfen (PFLICHT unter Claude Code):** Sicherstellen, dass `.claude/settings.json` einen
    `PreToolUse`-Hook enthält, der vor `git commit` das Advocatus-Diaboli-Gate einblendet (Filter auf
@@ -77,7 +78,8 @@ Wenn keiner der Punkte greift: Phase 1c überspringen, direkt zu Phase 2.
 
 **Bei Trigger:** den Reflexions-Check vollständig nach `docs/REFLECTION.md` abarbeiten
 — Advocatus-Diaboli-Selbstkritik, Struktur-Invariante (STATE.md/TODO.md),
-`docs/`-Health-Check, Cross-Refs, Roadmap-Konsolidierung, Template-Backport und Marker-Hochzählen. Der vollständige Ablauf inkl. der Grep-/
+`docs/`-Health-Check, Cross-Refs, Roadmap-Konsolidierung, Lehren festhalten (kein Backport aus dem Projekt),
+Abschluss-Commit `docs(reflection): I#` und Marker-Hochzählen. Der vollständige Ablauf inkl. der Grep-/
 awk-Checks steht dort; KICKOFF hält hier nur den Auslöser, um Kontext pro Session zu
 sparen. Ein-Befehl-Variante: `<Template-Root>/scripts/validate_project_docs.sh docs/` (Skript liegt im Template-Repo).
 
@@ -87,7 +89,7 @@ sparen. Ein-Befehl-Variante: `<Template-Root>/scripts/validate_project_docs.sh d
 1. Kurzer Plan im Chat (max. 3 Sätze). **Nur bei destruktiven, schwer rückgängig machbaren, kostenrelevanten oder scope-erweiternden Aktionen auf Bestätigung warten** (vollständige Liste → Grundregel 6). Sonst direkt gemäß `docs/TODO.md` umsetzen.
 2. **TDD-Startregel:** Vor jeder Implementierung Akzeptanzkriterien und Testfälle festlegen. Bei Code-Inkrementen zuerst einen fehlschlagenden Test oder eine explizit dokumentierte Test-Spezifikation erstellen.
    - **Erwartungswerte aus dem Orakel:** Gibt es einen Referenzmaßstab außerhalb des eigenen Codes (Bestandssystem, Original-Werkzeug, Fachvorgabe mit bekannten Ergebnissen), kommen die Erwartungswerte der Tests aus dessen Ausgabe — nicht aus eigener Annahme (`docs/principles/ORACLE_AND_RATCHET.md`).
-   - **Behaviorales Rot ist Pflicht (realen Runner-Output einfangen):** Ein neuer Test muss als *echter, ausgeführter* Lauf rot sein — und zwar wegen einer **scheiternden Assertion** (das Verhalten fehlt), nicht nur strukturell (fehlender Import / fehlendes Symbol / Kompilierfehler). Strukturelles Rot ist nur Zwischenstand; erst behaviorales Rot beweist, dass der Test *diskriminiert*. Den realen Output zitieren, nie „der Test sollte fehlschlagen" (= `docs/principles/ADVOCATUS_DIABOLI.md`, `docs/principles/VERIFY_BEFORE_CITE.md`).
+   - **Behaviorales Rot ist Pflicht (realen Runner-Output einfangen):** Ein neuer Test muss als *echter, ausgeführter* Lauf rot sein — und zwar wegen einer **scheiternden Assertion** (das Verhalten fehlt), nicht nur strukturell (fehlender Import / fehlendes Symbol / Kompilierfehler). Strukturelles Rot ist nur Zwischenstand; erst behaviorales Rot beweist, dass der Test *diskriminiert*. Den realen Output zitieren, nie „der Test sollte fehlschlagen" (= `docs/principles/ADVOCATUS_DIABOLI.md`, `docs/principles/VERIFY_BEFORE_CITE.md`). **Neue Funktion oder neues Modul:** Der test-Commit enthält einen Stub mit Vertrag — Signatur und eine leere, aber formrichtige Rückgabe (`{"status": None, "gruende": []}` statt `{}`) —, damit das Rot eine scheiternde Assertion ist und sich aus Git nachstellen lässt; das gilt auch, wenn ein Pre-Commit-Gate rote Tests ablehnt (Tests, die gegen den Stub noch nicht laufen können, markiert überspringen und im feat-Commit entmarkieren; kein `--no-verify`).
    - **Erster-Lauf-grün → STOPPEN:** Ist ein neuer Test beim ersten Lauf schon grün, ist er verdächtig (testet nichts ODER das Verhalten existiert bereits) → anhalten und untersuchen, nicht weiterbauen (kein Test-Gerüst ohne Diskriminierung, `docs/principles/YAGNI.md`).
    - **Charakterisierungstests → Mutationsprüfung statt Rot:** Tests, die *bestehendes* Verhalten festschreiben (Brownfield-Testharness), und Negativtests („meldet nichts …") sind zwangsläufig sofort grün. Ersatznachweis: pro Funktion einen gezielten Fehler einbauen und zeigen, dass mindestens ein Test rot wird. Sicher ausführen: Original **als Datei** sichern und nach jedem Mutanten per Vergleich zurückprüfen, Testrunner **pro Mutant im Kindprozess**, zuerst ein Kontrolllauf ohne Mutation (muss grün sein); „alle Tests rot" ist ein Befund über das Werkzeug. Mutanten ohne Verhaltensänderung als „äquivalent" ausweisen statt den Test zu verbiegen. Werkzeuggestützte Mutationsprüfung und Eigenschaftstests (wann, wofür): `docs/principles/TEST_EFFECTIVENESS.md`.
    - **Iterations-Log (eingefangene Realität, knapp)** pro TDD-Zyklus:
@@ -129,6 +131,10 @@ sparen. Ein-Befehl-Variante: `<Template-Root>/scripts/validate_project_docs.sh d
 
 #### 3a) Docs-Update nach Trigger-Matrix (IMMER prüfen)
 
+Das Ergebnis steht im CHANGELOG-Eintrag (3b Punkt 3) als Zeile **„Trigger-Matrix:"** — jede ausgelöste Zeile mit der
+daraufhin geänderten Datei, oder „keine Zeile ausgelöst" mit einem Satz Grund. Eine abgehakte DoD-Zeile sieht aus wie
+eine abgearbeitete; erst die Zeile im CHANGELOG macht nachprüfbar, ob die Matrix lief (Reflexion Schritt 1).
+
 | Änderung im Inkrement | Zu aktualisierende Datei |
 |-----------------------|--------------------------|
 | Neue Funktion / Klasse / Modul hinzugefügt | `docs/architecture/OVERVIEW.md` → Modul-Verantwortlichkeiten |
@@ -143,10 +149,13 @@ sparen. Ein-Befehl-Variante: `<Template-Root>/scripts/validate_project_docs.sh d
 | Neues Feature (Ausgabe, Modus, Export) | `docs/features/<feature>.md` |
 | Zustandsmodell ändert sich (Phasen, Loops) | `docs/architecture/OVERVIEW.md` → Mermaid `stateDiagram-v2` |
 | Bekannte Einschränkung entfällt / neu entsteht | `README.md` + `docs/features/<feature>.md` |
+| Fehler, Risiko oder Einschränkung beseitigt | alte Beschreibung in `docs/` und `README.md` suchen (Stichwort, Funktionsname, Formulierung) und jede Fundstelle umstellen — typisch `KNOWN_ISSUES.md`, `STATE.md` „Risiken & Blocker", `security/THREAT_MODEL.md` (`docs/principles/VERIFY_BEFORE_CITE.md` „Belege altern") |
+| Vertragsfeld gestrichen, Daten verschoben oder umgeformt | vorher alle Lesestellen und Läufe per Grep aufzählen, je Fundstelle die Erwartung danach im TODO-Eintrag nennen (`docs/principles/VERIFY_BEFORE_CITE.md` „Bestand zählen") |
 | Neuer Domänenbegriff im Code eingeführt | `docs/GLOSSARY.md` |
 | Bekannter Bug ohne sofortigen Fix | `docs/KNOWN_ISSUES.md` |
 | Neues Pattern aus Inkrement gelernt | `docs/CHANGELOG.md` „Lessons Learned" + `docs/LESSONS_LEARNED.md` Index |
 | Neue Idee / Refactoring, noch nicht priorisiert | `docs/BACKLOG.md` |
+| Architektur- oder Betriebsentscheidung getroffen oder revidiert | `docs/architecture/ADR/DECISIONS.md` (falls vorhanden): neue Zeile mit nächster Nummer, Status `gilt`; revidierte Zeile → `überholt durch #N`; große Entscheidung zusätzlich `ADR-<NNN>-<thema>.md` mit derselben Nummer. Ohne Log: ADR-Datei nach `docs/architecture/ADR/ADR-000-template.md` |
 | Kennzahl verbessert / neues Orakel / Floor geändert | `docs/STATE.md` → „Kennzahlen (gemessen)" (falls vorhanden) + Floor im Check-Code im selben Commit (`docs/principles/ORACLE_AND_RATCHET.md`) |
 | Risiko oder Blocker erkannt | `docs/STATE.md` → „Risiken & Blocker"-Tabelle |
 | Scope-Ausschluss bewusst gesetzt | `docs/architecture/OVERVIEW.md` → „Scope-Grenzen" |
@@ -164,7 +173,9 @@ sparen. Ein-Befehl-Variante: `<Template-Root>/scripts/validate_project_docs.sh d
 
 1. `docs/STATE.md`:
    - Text "Letztes abgeschlossenes Inkrement" aktualisieren
-   - **Inkrement in der Tabelle eintragen** (neue Zeile mit Commit-Hash) — nicht nur den Freitext
+   - **Inkrement in der Tabelle eintragen** (neue Zeile mit Commit-Hash) — nicht nur den Freitext. Je ID eine Zeile:
+     Gebündelte Inkremente bekommen je eine Zeile mit demselben Hash, die Bündelung steht im Titel und im
+     `CHANGELOG.md` — eine Zelle wie `I2+I3` erkennt der Health-Check nicht als abgeschlossen
    - "Nächster Schritt"-Abschnitt aktualisieren
 2. `docs/TODO.md` – TODO-Bereinigung, alle Schritte zwingend:
    - Den gesamten Abschnitt (`### I#: …` plus Inhalt) aus der offenen Sektion **entfernen** — keine Kurzzeile, keine
@@ -174,7 +185,8 @@ sparen. Ein-Befehl-Variante: `<Template-Root>/scripts/validate_project_docs.sh d
      Herkunft „Rest aus I#"); die abgeschlossene ID erscheint danach nirgends mehr als offen (auch nicht in `STATE.md`
      „Offene Punkte").
    (Kein `~~` für Inkrement-IDs — Abschluss wird durch STATE-Zeile + Datum + git/CHANGELOG belegt.)
-3. `docs/CHANGELOG.md`: Neuen Abschnitt mit Datum, Scope, geänderten Dateien hinzufügen
+3. `docs/CHANGELOG.md`: Neuen Abschnitt mit Datum, Scope, geänderten Dateien und der Zeile „Trigger-Matrix:" (3a)
+   hinzufügen
 4. **Confidence-Block** in den `docs/CHANGELOG.md`-Eintrag schreiben (`### Confidence / Ungeprüft`):
    (a) was wurde **nicht** getestet, (b) welche Annahmen wurden ungeprüft übernommen,
    (c) welche Dateien wurden geändert, ohne sie vollständig zu lesen.
@@ -193,6 +205,10 @@ sparen. Ein-Befehl-Variante: `<Template-Root>/scripts/validate_project_docs.sh d
    - Generische Erkenntnisse als „Lessons Learned"-Block im `CHANGELOG.md`-Eintrag + Steckbrief `## L<N>:` in `LESSONS_LEARNED.md` ablegen (Trigger-Matrix 3a).
 6. **Struktur-Check (direkt vor dem Commit, prüft die Updates aus 1–5):** `<Template-Root>/scripts/validate_project_docs.sh docs/ --stack <stack> --overlays <…>` (Werte aus dem `STATE.md`-Kopf „Stack / Overlays")
    (Skript liegt im Template-Repo, nicht im Projekt) → Exit 0 erforderlich. Rot bedeutet: Inkrement nicht abgeschlossen.
+   Health-Check und Hinweise setzen keinen Exitcode — außer im strengen Modus: Ist der Bestand hinweisfrei, im
+   `STATE.md`-Kopf die Zeile `**Validator:** --streng` ergänzen; das Skript liest sie selbst, jeder Aufruf (Agent,
+   Hook, CI) prüft dann streng (Ratsche, `docs/principles/ORACLE_AND_RATCHET.md`). Ein Hinweis ohne Folge wird
+   übergangen, sobald er zur Gewohnheit wird; ein projekt-eigener Prüfer für dieselben Fragen erübrigt sich damit.
    **Template nicht erreichbar** (Skript fehlt oder bricht mit Exit 2 ab): die Checks Verletzung 1–4 aus
    `docs/REFLECTION.md` Schritt 0 von Hand ausführen, dazu `grep -rnE '\[[[:upper:]]{2,}' docs/` (offene
    Platzhalter nach `CONVENTIONS_COMMON.md` §3, Treffer einzeln beurteilen) und `grep -rn '<!--[[:space:]]AGENT-ANWEISUNG' docs/`;
