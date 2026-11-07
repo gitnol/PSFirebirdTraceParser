@@ -65,7 +65,12 @@ Reads the file line-by-line (low memory) and splits entries based on Timestamps.
 *   `SqlStatement`: The full SQL query.
 *   `SqlPlan`: Execution Plan (e.g. `NATURAL`, `INDEX`).
 *   `Fetches`, `Reads`, `Writes`, `Marks`: I/O Statistics.
-*   `User`, `IPAddress`, `Application`: Connection details.
+*   `User` (`USER:ROLE`), `ClientIP`, `ClientPort`, `ProtocolInfo`, `DatabasePath`, `AttachID`: Connection details.
+*   `ApplicationPath`, `ApplicationPID`: Client application.
+*   `TransactionID`, `RootTxID`, `TransactionOptions`: Transaction (`RootTxID` = initial transaction, `NoTx` if none).
+*   `Params`: Statement parameters (`param0 = type, "value"`).
+*   `TableStats`: Per-table statistics block (`Natural`, `Index`, …), column alignment preserved.
+*   `Timestamp`, `ProcessID`, `SessionID`: Header of each trace event.
 *   `Action`: Event name, e.g. `EXECUTE_STATEMENT_FINISH`, `FAILED EXECUTE_STATEMENT_FINISH`, `ERROR`, `WARNING`.
 *   `ErrorSource`, `ErrorCodes`, `ErrorMessages`: For `ERROR AT …` / `WARNING AT …` events (e.g. deadlocks, lock conflicts).
 
@@ -96,4 +101,4 @@ This tool is open-source software and is **not** affiliated with, endorsed by, o
 
 ---
 
-*MIT License. Free to fork and build your own reports!*
+*MIT License (see [LICENSE](LICENSE)). Free to fork and build your own reports!*

@@ -65,7 +65,12 @@ Liest die Datei Zeile für Zeile (geringer Speicherbedarf) und trennt Einträge 
 *   `SqlStatement`: Die vollständige SQL-Abfrage.
 *   `SqlPlan`: Ausführungsplan (z.B. `NATURAL`, `INDEX`).
 *   `Fetches`, `Reads`, `Writes`, `Marks`: E/A-Statistiken.
-*   `User`, `IPAddress`, `Application`: Verbindungsdetails.
+*   `User` (`BENUTZER:ROLLE`), `ClientIP`, `ClientPort`, `ProtocolInfo`, `DatabasePath`, `AttachID`: Verbindungsdetails.
+*   `ApplicationPath`, `ApplicationPID`: Client-Anwendung.
+*   `TransactionID`, `RootTxID`, `TransactionOptions`: Transaktion (`RootTxID` = Ausgangstransaktion, `NoTx` wenn keine).
+*   `Params`: Statement-Parameter (`param0 = typ, "wert"`).
+*   `TableStats`: Tabellenstatistik je Tabelle (`Natural`, `Index`, …), Spaltenausrichtung bleibt erhalten.
+*   `Timestamp`, `ProcessID`, `SessionID`: Kopfzeile jedes Trace-Ereignisses.
 *   `Action`: Ereignisname, z. B. `EXECUTE_STATEMENT_FINISH`, `FAILED EXECUTE_STATEMENT_FINISH`, `ERROR`, `WARNING`.
 *   `ErrorSource`, `ErrorCodes`, `ErrorMessages`: Bei `ERROR AT …` / `WARNING AT …` (z. B. Deadlocks, Sperrkonflikte).
 
@@ -96,4 +101,4 @@ Dieses Tool ist Open-Source-Software und ist **nicht** mit der Firebird Foundati
 
 ---
 
-*MIT Lizenz. Frei zum Forken und Bauen eigener Reports!*
+*MIT Lizenz (siehe [LICENSE](LICENSE)). Frei zum Forken und Bauen eigener Reports!*
