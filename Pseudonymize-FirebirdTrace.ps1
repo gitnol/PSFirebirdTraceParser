@@ -238,6 +238,24 @@ process {
         }
     }
     
+    # 7. Error messages (ERROR AT / WARNING AT, I10). Constraint and table names stay readable (metadata);
+    #    values are hashed: key values like ("ID" = 42) and string literals like 'text'.
+    if ($RedactLiterals -and $item.PSObject.Properties['ErrorMessages'] -and $item.ErrorMessages) {
+        $item.ErrorMessages = [System.Text.RegularExpressions.Regex]::Replace($item.ErrorMessages,
+            '("[^"]+"\s*=\s*)(''(?:''''|[^''])*''|[^,)]+)', {
+                param($match)
+                $value = $match.Groups[2].Value.Trim()
+                return "$($match.Groups[1].Value)<HASH:$(Get-ShortHash $value)>"
+            })
+        $item.ErrorMessages = [System.Text.RegularExpressions.Regex]::Replace($item.ErrorMessages,
+            '''((?:''''|[^''])*)''', {
+                param($match)
+                $content = $match.Groups[1].Value
+                if (Test-ShouldRedact -Content $content) { return "'<HASH:$(Get-ShortHash $content)>'" }
+                return $match.Value
+            })
+    }
+
     # Output the copy
     $item
 }

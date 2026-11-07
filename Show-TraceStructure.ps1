@@ -51,7 +51,15 @@ Write-Host "Processing $($total) blocks..."
 # Firebird writes the address with printf("%p"), which is platform dependent:
 # Windows (MSVC) "000001A2B3C4D5E0", Linux (glibc) "0x7f3a1c2b4d10". Accept both.
 $rxHeader = [System.Text.RegularExpressions.Regex]::new(
-    '^(?<Timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{4,})\s+\((?<ProcessID>\d+):(?<SessionID>(?:0x)?[0-9A-Fa-f]+)\)\s+(?<Action>\S+)',
+    # Action keeps the full event name ("FAILED EXECUTE_STATEMENT_FINISH"); for "ERROR AT <component>" /
+    # "WARNING AT <component>" Action is ERROR/WARNING and the component goes to ErrorSource.
+    '^(?<Timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{4,})\s+\((?<ProcessID>\d+):(?<SessionID>(?:0x)?[0-9A-Fa-f]+)\)\s+(?<Action>(?:(?:FAILED|UNAUTHORIZED)\s+)?\S+)(?:\s+AT\s+(?<ErrorSource>\S+))?',
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+)
+
+# Error/warning lines: "%9lu : <text>" (Firebird TraceStatusVectorImpl::getText)
+$rxErrorLine = [System.Text.RegularExpressions.Regex]::new(
+    '^\s*(?<Code>\d{1,10})\s:\s(?<Message>.*?)\s*$',
     [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
 )
 
@@ -126,8 +134,9 @@ foreach ($block in $logBlocks) {
         SqlStatement = $null; SqlPlan = $null;
         TableStats = $null; # New field for Table Statistics
         DurationMs = 0; Reads = 0; Writes = 0; Fetches = 0; Marks = 0;
+        ErrorSource = $null; ErrorCodes = $null; ErrorMessages = $null; # ERROR AT / WARNING AT
     }
-    
+
     # --- Header ---
     $m = $rxHeader.Match($block)
     if ($m.Success) {
@@ -135,6 +144,21 @@ foreach ($block in $logBlocks) {
         $entry.Action = $m.Groups['Action'].Value
         $entry.ProcessID = $m.Groups['ProcessID'].Value
         $entry.SessionID = $m.Groups['SessionID'].Value
+        if ($m.Groups['ErrorSource'].Success) { $entry.ErrorSource = $m.Groups['ErrorSource'].Value }
+    }
+
+    # --- Error / warning lines (only for ERROR AT / WARNING AT blocks) ---
+    if ($entry.Action -eq 'ERROR' -or $entry.Action -eq 'WARNING') {
+        $codes = [System.Collections.Generic.List[string]]::new()
+        $messages = [System.Collections.Generic.List[string]]::new()
+        foreach ($em in $rxErrorLine.Matches($block)) {
+            $codes.Add($em.Groups['Code'].Value)
+            $messages.Add($em.Groups['Message'].Value)
+        }
+        if ($codes.Count -gt 0) {
+            $entry.ErrorCodes = $codes -join ', '
+            $entry.ErrorMessages = $messages -join ' | '
+        }
     }
 
     # --- DB ---

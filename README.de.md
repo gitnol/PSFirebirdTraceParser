@@ -66,6 +66,8 @@ Liest die Datei Zeile für Zeile (geringer Speicherbedarf) und trennt Einträge 
 *   `SqlPlan`: Ausführungsplan (z.B. `NATURAL`, `INDEX`).
 *   `Fetches`, `Reads`, `Writes`, `Marks`: E/A-Statistiken.
 *   `User`, `IPAddress`, `Application`: Verbindungsdetails.
+*   `Action`: Ereignisname, z. B. `EXECUTE_STATEMENT_FINISH`, `FAILED EXECUTE_STATEMENT_FINISH`, `ERROR`, `WARNING`.
+*   `ErrorSource`, `ErrorCodes`, `ErrorMessages`: Bei `ERROR AT …` / `WARNING AT …` (z. B. Deadlocks, Sperrkonflikte).
 
 ### Der Pseudonymisierer: `Pseudonymize-FirebirdTrace.ps1`
 Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
