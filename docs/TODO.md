@@ -29,6 +29,8 @@ Bekannte Bugs ohne aktiven Fix: `KNOWN_ISSUES.md`.
 
 ### I2: Pseudonymisierung – Klartext-Lücken schließen (mit Pester-Grundgerüst)
 
+Hinweis 2026-11-07: Das Pester-Grundgerüst (`tests/`, `tests/RequiredModules.psd1`, Fixture `tests/fixtures/trace_fb5_windows.log`) entstand mit I9; hier nur noch die Tests für den Pseudonymisierer.
+
 Bedrohung 1 in `security/THREAT_MODEL.md`. Der Pseudonymisierer lässt Werte stehen, die Personen oder
 Geschäftsvorgänge identifizieren können; Ergebnisse werden laut README an Dritte weitergegeben.
 
@@ -76,24 +78,6 @@ Bedrohung 3 in `security/THREAT_MODEL.md`.
 - [ ] Hinweis 2026-11-07: Eine für Firebird 5.0.4 überarbeitete Fassung von `trace_start.ps1`/`trace_stop.ps1` liegt als
       Entwurf beim Owner vor (`-FETCH_PASSWORD`, `-TRUSTED`, `-ROLE`, `-NAME`; mit Ersatz-`fbtracemgr` getestet). Nach einem
       erfolgreichen Lauf gegen einen echten Server hier übernehmen — deckt I4 und I5 weitgehend ab.
-
-### I9: Parser – Kopfzeile plattformneutral, Tests je Ereignistyp
-
-Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).
-Firebird schreibt die Prozessadresse in der Kopfzeile `(pid:adresse)` plattformabhängig. Der Parser erwartet
-`[0-9A-F]+` ohne `0x` (vermutlich Windows); das Vergleichsprojekt erwartet `0x` + Kleinbuchstaben (vermutlich Linux).
-Logs der jeweils anderen Plattform würden still als leer erkannt. Vermutung — mit echten Logs belegen.
-
-**Aufgaben:**
-
-- [ ] Kopfzeilenformat mit einem echten Firebird-5-Log (Windows) belegen; Linux-Format aus Quellcode bzw. Log belegen
-- [ ] Roter Test: Kopfzeile mit `0x7f…` (klein) und ohne `0x` (groß) — beide werden erkannt
-- [ ] Regex `rxHeader` anpassen (`(?:0x)?[0-9A-Fa-f]+`)
-- [ ] Synthetische Blöcke je Ereignistyp als Fixtures (gemeinsam mit I2/I6 nutzen, keine echten Daten)
-
-**Zusätzliche DoD:**
-
-- [ ] Kein Interna-Treffer im Diff (öffentliches Repo, `CONVENTIONS_COMMON.md` 3.1)
 
 ### I10: Parser – Fehler-Ereignisse mit Fehlercodes
 

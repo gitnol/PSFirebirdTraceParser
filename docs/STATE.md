@@ -3,8 +3,8 @@
 Zuletzt aktualisiert: 2026-11-07
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
-**Letztes abgeschlossenes Inkrement:** I1 – docs_template-Baseline eingeführt (2026-10-11)
-**Nächster Schritt:** I2 – Pseudonymisierung: Klartext-Lücken schließen (mit Pester-Grundgerüst)
+**Letztes abgeschlossenes Inkrement:** I9 – Kopfzeile plattformneutral, Parser-Tests (2026-11-07)
+**Nächster Schritt:** I10 – Fehler-Ereignisse mit Fehlercodes
 **Nächste Reflexion:** bei Abschluss von I3 (siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md` — `docs/`-Drift prüfen + Template-Backport prüfen; danach Marker um 3 erhöhen)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
@@ -12,11 +12,7 @@ Zuletzt aktualisiert: 2026-11-07
 
 ## Nächster Schritt
 
-I2 aus `docs/TODO.md`: Pester-Grundgerüst und PSScriptAnalyzer-Gate anlegen, den Ist-Stand von
-`Pseudonymize-FirebirdTrace.ps1` per Charakterisierungstests festschreiben und danach die Klartext-Lücken
-(numerische SQL-Literale, `DatabasePath`, nur letzte WHERE/HAVING-Klausel) mit behavioral roten Tests schließen.
-Begründung der Reihenfolge: Das Werkzeug verspricht „sicheres Teilen" von Trace-Daten; Lücken dort führen zu
-nicht rückholbarer Weitergabe personenbezogener Daten an Dritte (`docs/security/THREAT_MODEL.md` Bedrohung 1).
+I10 aus `docs/TODO.md`: Fehler-Ereignisse (`ERROR AT …`, `FAILED …`) mit Fehlercodes einlesen. Die Trace-Konfiguration zeichnet Sperrkonflikte und Deadlocks bereits auf; der Parser verwirft sie bisher. Danach K3 (`<internal>`-Verbindungen, mit echtem Log belegt) aus I6 vorziehen. Empfohlenes Modell: Sonnet, mittlerer Effort.
 
 ---
 
@@ -25,6 +21,7 @@ nicht rückholbarer Weitergabe personenbezogener Daten an Dritte (`docs/security
 | # | Titel | Datum | Commit |
 |---|-------|-------|--------|
 | I1 | docs_template-Baseline eingeführt (Bestandscode dokumentiert, kein Code geändert) | 2026-10-11 | 21e92bc |
+| I9 | Kopfzeile plattformneutral (Windows/Linux-Adressformat), Pester-Grundgerüst, 11 Parser-Tests | 2026-11-07 | ae01289 |
 
 ---
 
@@ -39,7 +36,6 @@ nicht rückholbarer Weitergabe personenbezogener Daten an Dritte (`docs/security
 | I6 | Parser: Streaming statt Gesamtdatei im Speicher, Regex-Abdeckung | Mittel |
 | I7 | README-Drift beheben, Lizenzdatei klären | Niedrig |
 | I8 | Laufzeit- und Beispielstände aus dem Security-Sweep nachziehen | Niedrig |
-| I9 | Parser: Kopfzeile plattformneutral, Tests je Ereignistyp | Hoch |
 | I10 | Parser: Fehler-Ereignisse mit Fehlercodes (Sperrkonflikte, Deadlocks) | Hoch |
 | I11 | Parser: Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen | Mittel |
 | I12 | Parser: Verbindungen, Prozeduren und Trigger als Ereignisse | Mittel |

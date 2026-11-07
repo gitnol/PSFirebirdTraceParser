@@ -10,6 +10,29 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-07 I9 – Kopfzeile plattformneutral, Parser-Tests
+
+**Trigger-Matrix:** Verhalten geändert → `features/TRACE_PARSING.md` (Kopfzeile); bekannter Fehler präzisiert → `KNOWN_ISSUES.md` K3; Testgerüst neu → `TODO.md` I2 (Hinweis); `STATE.md`.
+
+### Fixed
+- `Show-TraceStructure.ps1`: Die Kopfzeile `(pid:adresse)` wird jetzt in beiden Formaten erkannt, die Firebird je nach
+  Plattform schreibt (`printf("%p")`): Windows `000001A2B3C4D5E0`, Linux `0x7f3a1c2b4d10`. Vorher blieben bei
+  Linux-Logs Ereignis, Zeitstempel und Adresse in **allen** Einträgen leer (Test war rot: 6 von 6 ohne `Action`).
+
+### Added
+- Pester-Grundgerüst: `tests/Show-TraceStructure.Tests.ps1` (11 Tests: Kopfzeile, Verbindung, Transaktion inkl. INIT,
+  SQL/Plan/Parameter, Laufzeit/I/O, Tabellenstatistik, Linux-Kopfzeile, CRLF, fehlende Datei),
+  `tests/fixtures/trace_fb5_windows.log` (synthetisch, Format nach Firebird-5.0.4-Quellcode, Werte ausgedacht,
+  IPs aus 192.0.2.0/24), `tests/RequiredModules.psd1` (Pester 5.7.1, PSScriptAnalyzer 1.25.0).
+
+### Confidence / Ungeprüft
+- Windows-Format mit einem echten Firebird-5.0.4-Log belegt (298 Kopfzeilen, alle 16 Hex-Großbuchstaben ohne `0x`;
+  nur Zählwerte ausgewertet, keine Inhalte). Das Linux-Format stammt aus dem Verhalten von glibc `%p`, nicht aus
+  einem echten Linux-Log.
+- Mutationsprüfung: 6 absichtliche Fehler im Parser, alle von mindestens einem Test erkannt.
+- Echtes Log zusätzlich: alle 298 Einträge mit Ereignis, 10 Statements mit SQL/Laufzeit/Statistik; 12 Verbindungszeilen
+  mit `<internal>` bleiben leer (K3).
+
 ## 2026-11-07 Roadmap – Inkremente aus dem Funktionsvergleich
 
 Kein Inkrement (KICKOFF Phase 1 Punkt 2a). Vergleich mit dem Open-Source-Projekt firebird-trace-analyzer (C#, nicht-kommerzielle Lizenz; nur Ideen übernommen).
