@@ -1,7 +1,7 @@
 # Aktueller Projektstatus – PSFirebirdTraceParser
 
-Zuletzt aktualisiert: 2026-10-23
-**Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update)
+Zuletzt aktualisiert: 2026-11-07
+**Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
 **Letztes abgeschlossenes Inkrement:** I1 – docs_template-Baseline eingeführt (2026-10-11)
 **Nächster Schritt:** I2 – Pseudonymisierung: Klartext-Lücken schließen (mit Pester-Grundgerüst)
