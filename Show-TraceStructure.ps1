@@ -48,8 +48,10 @@ Write-Host "Processing $($total) blocks..."
 
 # 3. Regex Definitions
 # Header
+# Firebird writes the address with printf("%p"), which is platform dependent:
+# Windows (MSVC) "000001A2B3C4D5E0", Linux (glibc) "0x7f3a1c2b4d10". Accept both.
 $rxHeader = [System.Text.RegularExpressions.Regex]::new(
-    '^(?<Timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{4,})\s+\((?<ProcessID>\d+):(?<SessionID>[0-9A-F]+)\)\s+(?<Action>\S+)',
+    '^(?<Timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{4,})\s+\((?<ProcessID>\d+):(?<SessionID>(?:0x)?[0-9A-Fa-f]+)\)\s+(?<Action>\S+)',
     [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
 )
 
