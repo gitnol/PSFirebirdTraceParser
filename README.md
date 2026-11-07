@@ -86,7 +86,10 @@ Designed for DSGVO/GDPR compliance when sharing logs.
 **Parameters:**
 *   `-SensitiveKeywords "A", "B"`: List of words to always hash.
 *   `-RedactLiterals`: Forcefully hash **ALL** string literals (recommended for maximum safety).
-*   `-AnalyzeOnly`: Preview what would be redacted without changing data.
+*   `-AnalyzeOnly`: Preview what would be redacted without changing data (report goes to the console only).
+
+**Pseudonymized:** `User`, `ClientIP` (also in `ProtocolInfo`), `ApplicationPath`, `DatabasePath`, `Params` values; with `-RedactLiterals` also all string and numeric literals in `SqlStatement` and values in `ErrorMessages`.
+**Not pseudonymized:** `SqlPlan`, `TableStats` and table/index names (needed for analysis), technical IDs, timestamps, counters.
 
 > [!WARNING]
 > **Security Notice**: This tool uses **Pseudonymization** (Deterministic Hashing), not Anonymization. Dictionary attacks against known values are possible.

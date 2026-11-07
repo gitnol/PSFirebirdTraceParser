@@ -21,7 +21,7 @@ param(
     [Parameter(HelpMessage = "List of sensitive table names or keywords. If an SQL statement contains these, the WHERE/HAVING clause will be pseudonymized.")]
     [string[]]$SensitiveKeywords,
 
-    [Parameter(HelpMessage = "Hash/Pseudonymize ALL string literals >= 2 chars (ignoring %). Keywords are always redacted regardless of length.")]
+    [Parameter(HelpMessage = "Hash/Pseudonymize ALL string literals and numbers (literals consisting only of % stay). Keywords are always redacted.")]
     [switch]$RedactLiterals,
 
     [Parameter(HelpMessage = "Only analyze the trace data and output grouped statistics of potential sensitive data (WHERE/HAVING/Strings). Does NOT output trace records.")]
@@ -48,6 +48,9 @@ begin {
     # Operators: LIKE, NOT LIKE, STARTING WITH, CONTAINING, SIMILAR TO, IN, =, <>, !=, <=, >=, <, >
     $RxStringLiteral = [System.Text.RegularExpressions.Regex]::new('(?i)(\b(?:like|not\s+like|starting\s+with|containing|similar\s+to|in|=|<>|!=|<=|>=|<|>)\s*)?(''(?:''''|[^''])*'')', [System.Text.RegularExpressions.RegexOptions]::Compiled)
     
+    # Numeric literals outside of strings and quoted identifiers (I2): q/s are kept, n is pseudonymized
+    $RxNumberToken = [System.Text.RegularExpressions.Regex]::new('(?<q>"(?:""|[^"])*")|(?<s>''(?:''''|[^''])*'')|(?<p><HASH:[0-9a-f]+>)|(?<n>(?<![\w$.:])\d+(?:\.\d+)?(?![\w$]))', [System.Text.RegularExpressions.RegexOptions]::Compiled)
+
     # Where/Having Extraction
     $RxWhere = [System.Text.RegularExpressions.Regex]::new('(?is)\bwhere\b\s+(.*?)(\b(?:group\s+by|order\s+by|rows|plan|union)\b|$)', [System.Text.RegularExpressions.RegexOptions]::Compiled)
     $RxHaving = [System.Text.RegularExpressions.Regex]::new('(?is)\bhaving\b\s+(.*?)(\b(?:order\s+by|rows|plan|union)\b|$)', [System.Text.RegularExpressions.RegexOptions]::Compiled)
@@ -87,10 +90,10 @@ begin {
             }
         }
 
-        # 2. RedactLiterals Check (Constraint: Length >= 2 ignoring %)
+        # 2. RedactLiterals Check: every non-empty literal (ignoring %); single characters can be personal data (I2)
         if ($RedactLiterals) {
             $cleaned = $Content -replace '%', ''
-            if ($cleaned.Length -ge 2) {
+            if ($cleaned.Length -ge 1) {
                 return $true
             }
         }
@@ -111,8 +114,8 @@ process {
     if ($AnalyzeOnly) {
         if ($item.SqlStatement) {
             # 1. Capture Strings with Context
-            $matches = $RxStringLiteral.Matches($item.SqlStatement)
-            foreach ($m in $matches) {
+            $literalMatches = $RxStringLiteral.Matches($item.SqlStatement)
+            foreach ($m in $literalMatches) {
                 $operator = $m.Groups[1].Value
                 $literal = $m.Groups[2].Value
                 # literal includes quotes e.g. 'text'
@@ -169,6 +172,11 @@ process {
         $item.ApplicationPath = Get-ShortHash $item.ApplicationPath
     }
     
+    # 2b. DatabasePath (server, folder and customer names, I2)
+    if ($item.PSObject.Properties['DatabasePath'] -and $item.DatabasePath) {
+        $item.DatabasePath = Get-ShortHash $item.DatabasePath
+    }
+
     # 3. ClientIP
     if ($item.ClientIP) {
         $item.ClientIP = Get-ShortHash $item.ClientIP
@@ -215,6 +223,15 @@ process {
                 return $match.Value
             })
 
+        # A2. Numeric literals (I2) - only with -RedactLiterals; digits in identifiers and pseudonyms stay
+        if ($RedactLiterals) {
+            $item.SqlStatement = $RxNumberToken.Replace($item.SqlStatement, {
+                    param($match)
+                    if ($match.Groups['n'].Success) { return "<HASH:$(Get-ShortHash $match.Value)>" }
+                    return $match.Value
+                })
+        }
+
         # B. Bulk Clause Redaction (Safety Net - only if Keywords present)
         if ($SensitiveKeywords) {
             $isSensitive = $false
@@ -227,7 +244,7 @@ process {
             }
             
             if ($isSensitive) {
-                $item.SqlStatement = [System.Text.RegularExpressions.Regex]::Replace($item.SqlStatement, '(?is)(.*\b(?:where|having)\b)(.*)', {
+                $item.SqlStatement = [System.Text.RegularExpressions.Regex]::Replace($item.SqlStatement, '(?is)^(.*?\b(?:where|having)\b)(.*)$', {
                         param($match)
                         $prefix = $match.Groups[1].Value
                         $condition = $match.Groups[2].Value
@@ -275,7 +292,7 @@ end {
                 $Dict.GetEnumerator() | 
                 Sort-Object Value -Descending | 
                 Select-Object -First 50 @{N = 'Count'; E = { $_.Value } }, @{N = 'Content'; E = { $_.Name } } |
-                Format-Table -AutoSize
+                Format-Table -AutoSize | Out-Host
             }
             else {
                 Write-Host "$($Name): None found." -ForegroundColor Gray

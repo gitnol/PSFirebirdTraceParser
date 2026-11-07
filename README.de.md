@@ -88,6 +88,9 @@ Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
 *   `-RedactLiterals`: Zwingt das Hashen **ALLER** Zeichenfolgen (empfohlen für maximale Sicherheit).
 *   `-AnalyzeOnly`: Vorschau, was geschwärzt würde, ohne Daten zu ändern.
 
+**Pseudonymisiert:** `User`, `ClientIP` (auch in `ProtocolInfo`), `ApplicationPath`, `DatabasePath`, Werte in `Params`; mit `-RedactLiterals` zusätzlich alle Zeichenketten und Zahlen in `SqlStatement` und Werte in `ErrorMessages`.
+**Nicht pseudonymisiert:** `SqlPlan`, `TableStats` sowie Tabellen-/Indexnamen (für die Analyse nötig), technische IDs, Zeitstempel, Zähler.
+
 > [!WARNING]
 > **Sicherheitshinweis**: Dieses Tool nutzt **Pseudonymisierung** (Deterministisches Hashing), keine Anonymisierung. Wörterbuch-Attacken gegen bekannte Werte sind möglich.
 
