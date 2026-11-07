@@ -17,7 +17,6 @@ Sicherheitsrelevante Schwächen stehen in `security/THREAT_MODEL.md` und `STATE.
 
 | # | Beschreibung | Reproduktion | Workaround | Akzeptanzgrund | Geplant für |
 |---|---|---|---|---|---|
-| K1 | README nennt Ausgabe-Properties `IPAddress`/`Application`, der Code liefert `ClientIP`/`ApplicationPath`; weitere Properties (`Action`, `Params`, `TableStats`, `RootTxID` …) fehlen in der Liste; „line-by-line (low memory)" trifft nicht zu | README mit `.\Show-TraceStructure.ps1 -Path <datei> \| Get-Member` vergleichen | `Get-Member` bzw. `features/TRACE_PARSING.md` nutzen | reine Doku-Drift, kein Datenrisiko | `I7` |
 | K2 | Parser lädt die ganze Datei in den Speicher und gibt erst am Ende aus | großes Trace-Log parsen, Speicher beobachten | 64-Bit-PowerShell mit genug RAM; Datei an Zeitstempel-Zeilen teilen | Umbau braucht vorher Charakterisierungstests | `I6` |
 | K4 | `trace_stop.ps1` wählt die neueste `*.log` unter `E:\`; Hinweistext in `trace_start.ps1` nennt `trace-stop.ps1` statt `trace_stop.ps1` | andere `.log`-Datei nach dem Start unter `E:\` ablegen, dann stoppen → Exit 4 | `fbtracemgr … -LIST` und `-STOP -ID <n>` von Hand (`operations/RUNBOOK.md`) | betrifft nur den Bedienkomfort | `I5` |
 | K5 | `trace_start.ps1`/`trace_stop.ps1` enthalten Umlaute ohne BOM → unter Windows PowerShell 5.1 falsch dargestellt | mit `powershell.exe` ausführen, `config.json` ungültig machen; PSScriptAnalyzer meldet `PSUseBOMForUnicodeEncodedFile` (bestätigt) | PowerShell 7 verwenden | kosmetisch | `I5` |
@@ -32,6 +31,7 @@ Lessons Learned). Danach archivieren oder löschen.
 
 | # | Beschreibung | Behoben in | Commit |
 |---|---|---|---|
+| ~~K1~~ | README nannte `IPAddress`/`Application` statt `ClientIP`/`ApplicationPath`, weitere Properties fehlten | `I7` (2026-11-07) | f3e476a |
 | ~~K3~~ | Verbindungsfelder blieben leer bei `<internal>`-Verbindungen (belegt: 12 von 298 im echten Firebird-5-Log), Rolle ≠ `NONE`, kleiner Endung, Protokoll ohne Port | `K3` (2026-11-07) | e82e31e |
 | (noch keine Einträge) | | | |
 

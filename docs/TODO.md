@@ -102,6 +102,7 @@ Bedrohung 3 in `security/THREAT_MODEL.md`.
 - [ ] Zeilenweises Lesen (StreamReader) und Ausgabe pro Block in die Pipeline statt `Get-Content -Raw` + `return $results` (K2)
 - [ ] Statusausgaben über `Write-Verbose`/`Write-Information` statt `Write-Host`
 - [ ] Zähler (`Reads`, `Writes`, `Fetches`, `Marks`) als `[long]`; Verhalten bei Werten > Int32 testen
+- [ ] README: Aussage „line-by-line (low memory)" stimmt erst nach dieser Umstellung (aus I7 übernommen)
 
 ### I11: Parser – Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen
 
@@ -150,14 +151,6 @@ Aus `BACKLOG.md` übernommen (2026-11-07), weil mit I2/I9 die ersten Tests entst
 ---
 
 ## Niedrige Priorität
-
-### I7: README-Drift beheben, Lizenzdatei klären
-
-**Aufgaben:**
-
-- [ ] README.md/README.de.md: Ausgabe-Properties an den Code angleichen (`ClientIP`, `ApplicationPath`, `Action`, `Params`, `TableStats`, `RootTxID`) (K1)
-- [ ] Aussage „line-by-line (low memory)" erst nach I6 wieder treffen, bis dahin korrigieren
-- [ ] README nennt „MIT License", eine `LICENSE`-Datei fehlt — Owner-Entscheidung einholen und Datei ergänzen
 
 ### I8: Laufzeit- und Beispielstände aus dem Security-Sweep 2026-10-23 nachziehen
 

@@ -10,6 +10,18 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-07 I7 – Lizenzdatei und README-Drift
+
+**Trigger-Matrix:** Bekannter Fehler behoben → `KNOWN_ISSUES.md` K1; README; `TODO.md` (Aufgabe „line-by-line" nach I6 verschoben).
+
+### Added
+- `LICENSE`: MIT (Entscheidung des Eigentümers 2026-11-07, wie im README angekündigt).
+
+### Fixed
+- `README.md`/`README.de.md`: Ausgabe-Properties entsprechen dem Code (`ClientIP`, `ApplicationPath`, Verbindung,
+  Transaktion, `Params`, `TableStats`, Kopfzeile); Verweis auf `LICENSE`. Abgleich gegen die tatsächlich ausgegebenen
+  Properties (27) per Skript.
+
 ## 2026-11-07 K3 – Verbindungszeile in allen Formen (Teil von I6)
 
 Vorgezogen, weil mit einem echten Firebird-5.0.4-Log belegt (12 von 298 Verbindungszeilen ohne Daten).
