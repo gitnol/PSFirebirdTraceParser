@@ -100,6 +100,7 @@ Describe 'Show-TraceStructure: Windows-Zeilenenden (CRLF)' {
         $script:C[1].SqlPlan      | Should -Be 'PLAN (CUSTOMER INDEX (PK_CUSTOMER))'
         $script:C[2].DurationMs   | Should -Be 850
         $script:C[1].ApplicationPID | Should -Be '5678'
+        $script:C[2].TableStats   | Should -Not -Match "`r"   # seit I6: keine Wagenruecklaeufe in ungetrimmten Bloecken
     }
 }
 
@@ -145,6 +146,41 @@ Describe 'Show-TraceStructure: Verbindungszeile in allen Formen (K3)' {
         $e.ProtocolInfo | Should -Be 'XNET:WORKSTATION01'
         $e.ClientIP     | Should -Be 'WORKSTATION01'
         $e.ClientPort   | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Show-TraceStructure: grosse Werte und Ausgabe (I6)' {
+    It 'liest Zaehler ueber 2^31 ohne Fehler' {
+        $big = Join-Path $TestDrive 'big_counters.log'
+        @(
+            '2026-11-07T11:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH'
+            "`tC:\DATA\SAMPLE.FDB (ATT_12, APPUSER:NONE, UTF8, TCPv4:192.0.2.10/50123)"
+            "`t`t(TRA_1, CONCURRENCY | WAIT | READ_WRITE)"
+            ''
+            'Statement 1:'
+            ('-' * 79)
+            'SELECT COUNT(*) FROM HUGE'
+            ('^' * 79)
+            ' 3600000 ms, 2500000000 read(s), 2200000000 write(s), 9000000000 fetch(es), 3000000000 mark(s)'
+            ''
+        ) -join "`n" | Set-Content -Path $big -NoNewline -Encoding utf8
+        $e = @(Invoke-Parser $big)[0]
+        $e.DurationMs | Should -Be 3600000
+        $e.Reads      | Should -Be 2500000000
+        $e.Writes     | Should -Be 2200000000
+        $e.Fetches    | Should -Be 9000000000
+        $e.Marks      | Should -Be 3000000000
+    }
+
+    It 'gibt Eintraege einzeln in die Pipeline (nicht als eine Liste)' {
+        $r = & $script:Parser -Path $script:Fixture 6>$null | Select-Object -First 2
+        @($r).Count | Should -Be 2
+        $r[0].Action | Should -Be 'ATTACH_DATABASE'
+    }
+
+    It 'schreibt keine Statusmeldungen auf den Host-Kanal' {
+        $info = & $script:Parser -Path $script:Fixture 6>&1 | Where-Object { $_ -is [System.Management.Automation.InformationRecord] }
+        @($info).Count | Should -Be 0
     }
 }
 

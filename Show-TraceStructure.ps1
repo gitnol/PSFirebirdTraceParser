@@ -1,50 +1,38 @@
 ﻿<#
 .SYNOPSIS
-    High-Performance Firebird Trace Parser (Regex Block Mode)
-    Refined for correctness and robustness.
+    High-Performance Firebird Trace Parser (streaming, Regex Block Mode)
 
 .DESCRIPTION
-    Parses Firebird trace logs by splitting blocks based on Timestamp.
-    Uses robust Regex look-aheads to separate fields.
-    
+    Reads a Firebird trace log line by line, groups the lines of each event (a block starts with a
+    timestamp line) and writes one object per event to the pipeline as soon as the block is complete.
+    Memory use does not grow with the file size (I6).
+
     Field Mapping:
     - TransactionOptions: From TRA_ line (READ_COMMITTED...)
     - Params: From param0 = ... lines
     - SqlStatement: Stops at separators (^^^^, PLAN, param, records)
-    - SqlPlan: Includes PLAN (...) AND Table Stats logic.
+    - SqlPlan: PLAN (...) lines; TableStats: table statistics block
+    - ErrorSource/ErrorCodes/ErrorMessages: ERROR AT / WARNING AT events
+
+    Status messages go to the verbose stream (-Verbose), not to the console.
 
 .OUTPUTS
-    [System.Collections.Generic.List[PSObject]]
+    [PSCustomObject] - one per trace event, streamed
 #>
+[CmdletBinding()]
 param (
     [Parameter(Mandatory = $true, Position = 0)]
     [string]$Path
 )
 
-Write-Host "--- Fast Analysis Started (Legacy Mode) ---"
-Write-Host "Reading (Memory): $Path ..."
-
-if (-not (Test-Path $Path)) {
+if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
     Write-Error "File not found: $Path"
     return
 }
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
+Write-Verbose "Streaming analysis started: $Path"
 
-# 1. Read Raw Content (Fastest single-threaded read)
-$fileContent = Get-Content -Path $Path -Raw
-Write-Host "File read in $($sw.Elapsed.TotalSeconds.ToString("N2"))s. Splitting..."
-
-# 2. Split into Blocks
-# Delimiter: Date at start of line
-$delimiter = '(?m)(?=^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{4,})'
-$logBlocks = $fileContent -split $delimiter | Where-Object { 
-    -not [string]::IsNullOrWhiteSpace($_) -and 
-    ($_ -match '^\d{4}-\d{2}-\d{2}T')
-}
-
-$total = $logBlocks.Count
-Write-Host "Processing $($total) blocks..."
 
 # 3. Regex Definitions
 # Header
@@ -118,13 +106,9 @@ $rxPerf = [System.Text.RegularExpressions.Regex]::new(
 )
 
 
-# 4. Processing Loop
-$results = [System.Collections.Generic.List[PSObject]]::new($total)
-$i = 0
-
-foreach ($block in $logBlocks) {
-    $i++
-    if ($i % 5000 -eq 0) { Write-Progress -Activity "Parsing Fast..." -Status "$i / $total" -PercentComplete (($i / $total) * 100) }
+# 4. Block parsing (one trace event -> one object)
+function ConvertFrom-TraceBlock {
+    param([string]$block)
 
     # Init Object
     $entry = [ordered]@{
@@ -136,7 +120,7 @@ foreach ($block in $logBlocks) {
         Params = $null; # SQL Params
         SqlStatement = $null; SqlPlan = $null;
         TableStats = $null; # New field for Table Statistics
-        DurationMs = 0; Reads = 0; Writes = 0; Fetches = 0; Marks = 0;
+        DurationMs = [long]0; Reads = [long]0; Writes = [long]0; Fetches = [long]0; Marks = [long]0;
         ErrorSource = $null; ErrorCodes = $null; ErrorMessages = $null; # ERROR AT / WARNING AT
     }
 
@@ -194,47 +178,80 @@ foreach ($block in $logBlocks) {
     }
 
     # --- SQL ---
-    $m = $rxSql.Match($block)
+    # Cheap pre-checks: most events (transactions, attach/detach) have no statement part
+    $hasStatement = $block.Contains('Statement ')
+    $m = if ($hasStatement) { $rxSql.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
     if ($m.Success) {
         # Trim whitespace AND separator lines like --- if they slipped in
         $entry.SqlStatement = $m.Groups['SqlStatement'].Value.Trim()
     }
 
     # --- Params ---
-    $m = $rxParams.Match($block)
+    $m = if ($block.Contains('param')) { $rxParams.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
     if ($m.Success) {
         $entry.Params = $m.Groups['Params'].Value.Trim()
     }
 
     # --- Plan ---
-    $m = $rxPlan.Match($block)
+    $m = if ($block.Contains('PLAN')) { $rxPlan.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
     if ($m.Success) {
         $entry.SqlPlan = $m.Groups['SqlPlan'].Value.Trim()
     }
     
     # --- Table Stats (Separate Column) ---
-    $m = $rxTableStats.Match($block)
+    $m = if ($block.Contains('Natural')) { $rxTableStats.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
     if ($m.Success) {
         $entry.TableStats = $m.Groups['TableStats'].Value # NO TRIM to preserve column alignment
     }
 
     # --- Perf ---
-    $m = $rxPerf.Match($block)
+    $m = if ($block.Contains(' ms')) { $rxPerf.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
     if ($m.Success) {
-        $entry.DurationMs = [int]$m.Groups['DurationMs'].Value
-        if ($m.Groups['Reads'].Success) { $entry.Reads = [int]$m.Groups['Reads'].Value }
-        if ($m.Groups['Writes'].Success) { $entry.Writes = [int]$m.Groups['Writes'].Value }
-        if ($m.Groups['Fetches'].Success) { $entry.Fetches = [int]$m.Groups['Fetches'].Value }
-        if ($m.Groups['Marks'].Success) { $entry.Marks = [int]$m.Groups['Marks'].Value }
+        $entry.DurationMs = [long]$m.Groups['DurationMs'].Value
+        if ($m.Groups['Reads'].Success) { $entry.Reads = [long]$m.Groups['Reads'].Value }
+        if ($m.Groups['Writes'].Success) { $entry.Writes = [long]$m.Groups['Writes'].Value }
+        if ($m.Groups['Fetches'].Success) { $entry.Fetches = [long]$m.Groups['Fetches'].Value }
+        if ($m.Groups['Marks'].Success) { $entry.Marks = [long]$m.Groups['Marks'].Value }
     }
 
-    $results.Add([PSCustomObject]$entry)
+    [PSCustomObject]$entry
+}
+
+# 5. Streaming loop: read the file in chunks of 4 MB, split each chunk at block starts with one regex call
+#    (fast .NET split instead of a PowerShell loop per line), keep the unfinished last block for the next chunk.
+#    Memory stays bounded by the chunk size plus the largest single block.
+$rxBlockStartMulti = [System.Text.RegularExpressions.Regex]::new(
+    '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{4,}',
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+)
+$reader = [System.IO.StreamReader]::new((Resolve-Path -LiteralPath $Path).ProviderPath, [System.Text.Encoding]::UTF8, $true, 1MB)
+$chunk = [char[]]::new(4MB)
+$carry = ''
+$count = 0
+$length = [Math]::Max(1, $reader.BaseStream.Length)
+try {
+    while (($read = $reader.Read($chunk, 0, $chunk.Length)) -gt 0) {
+        # Trace files mix CRLF and LF; blocks are processed with LF only
+        $text = $carry + ([string]::new($chunk, 0, $read)).Replace("`r", '')
+        $starts = $rxBlockStartMulti.Matches($text)
+        if ($starts.Count -eq 0) { $carry = $text; continue }
+        # Everything before the first block start (e.g. 'Trace session ID n started') is skipped
+        for ($i = 0; $i -lt $starts.Count - 1; $i++) {
+            ConvertFrom-TraceBlock $text.Substring($starts[$i].Index, $starts[$i + 1].Index - $starts[$i].Index)
+            $count++
+        }
+        $carry = $text.Substring($starts[$starts.Count - 1].Index)
+        Write-Progress -Activity 'Parsing Firebird trace' -Status "$count events" -PercentComplete ([Math]::Min(100, 100 * $reader.BaseStream.Position / $length))
+    }
+    if ($rxBlockStartMulti.Match($carry).Index -eq 0 -and $rxBlockStartMulti.IsMatch($carry)) {
+        ConvertFrom-TraceBlock $carry
+        $count++
+    }
+}
+finally {
+    $reader.Dispose()
+    Write-Progress -Activity 'Parsing Firebird trace' -Completed
 }
 
 $sw.Stop()
-Write-Progress -Activity "Parsing Fast..." -Completed
-Write-Host "--- Processing Complete ---"
-Write-Host "Parsed $($results.Count) records."
-Write-Host "Duration: $($sw.Elapsed.TotalSeconds.ToString("N2")) seconds."
-
-return $results
+Write-Verbose "Parsed $count events in $($sw.Elapsed.TotalSeconds.ToString('N2')) seconds."

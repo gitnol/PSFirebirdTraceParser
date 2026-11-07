@@ -57,7 +57,7 @@ Export-Csv "safe_trace.csv"
 ## 🛠 Nutzungsdetails
 
 ### Der Parser: `Show-TraceStructure.ps1`
-Liest die Datei Zeile für Zeile (geringer Speicherbedarf) und trennt Einträge basierend auf Zeitstempeln.
+Liest die Datei in 4-MB-Stücken (Speicherbedarf begrenzt, unabhängig von der Dateigröße) und gibt jedes Trace-Ereignis sofort als Objekt in die Pipeline. Statusmeldungen: `-Verbose`.
 
 **Eigenschaften der Ausgabe-Objekte:**
 *   `Timestamp`: Zeitstempel des Events.
