@@ -64,8 +64,11 @@ $rxErrorLine = [System.Text.RegularExpressions.Regex]::new(
 )
 
 # DB (Include IP/Port)
+# Connection line: "<db path> (ATT_n, USER:ROLE, charset, <protocol info>)"
+# Protocol info: "TCPv4:192.0.2.10/50123", "TCPv6:2001:db8::10/50123", "XNET:HOST" (no port) or "<internal>".
+# Any database file name/extension and any role (K3).
 $rxDb = [System.Text.RegularExpressions.Regex]::new(
-    '^\s+(?<DatabasePath>.+?\.FDB)\s+\(ATT_(?<AttachID>\d+),\s+(?<User>.+?:NONE),\s+(?<Encoding>[^,]+),\s+(?<ProtocolInfo>(?<Protocol>TCPv[46]):(?<IPAddress>[^/]+)/(?<Port>\d+))\)',
+    '^\s+(?<DatabasePath>\S.*?)\s+\(ATT_(?<AttachID>\d+),\s+(?<User>[^,]+),\s+(?<Encoding>[^,]+),\s+(?<ProtocolInfo>(?<Protocol>[A-Za-z0-9]+):(?<IPAddress>[^/)]+)(?:/(?<Port>\d+))?|<[^>]+>)\)',
     [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
 )
 

@@ -103,6 +103,51 @@ Describe 'Show-TraceStructure: Windows-Zeilenenden (CRLF)' {
     }
 }
 
+Describe 'Show-TraceStructure: Verbindungszeile in allen Formen (K3)' {
+    BeforeAll {
+        function Get-Conn([string]$ConnLine) {
+            $p = Join-Path $TestDrive ("conn_{0}.log" -f [guid]::NewGuid().ToString('N'))
+            @(
+                '2026-11-07T11:00:00.0000 (4321:000001A2B3C4D5E0) ATTACH_DATABASE'
+                "`t$ConnLine"
+                ''
+            ) -join "`n" | Set-Content -Path $p -NoNewline -Encoding utf8
+            @(Invoke-Parser $p)[0]
+        }
+    }
+
+    It 'liest interne Verbindungen (Protokoll internal, z. B. Sicherheitsdatenbank)' {
+        # Form aus einem echten Firebird-5.0.4-Log (Werte ersetzt)
+        $e = Get-Conn 'C:\Program Files\Firebird\Firebird_5_0\SECURITY5.FDB (ATT_100, SYSDBA:NONE, NONE, <internal>)'
+        $e.DatabasePath | Should -Be 'C:\Program Files\Firebird\Firebird_5_0\SECURITY5.FDB'
+        $e.AttachID     | Should -Be '100'
+        $e.User         | Should -Be 'SYSDBA:NONE'
+        $e.ProtocolInfo | Should -Be '<internal>'
+        $e.ClientIP     | Should -BeNullOrEmpty
+    }
+
+    It 'liest Benutzer mit Rolle ungleich NONE' {
+        $e = Get-Conn 'C:\DATA\SAMPLE.FDB (ATT_5, TRACEUSER:TRACER, UTF8, TCPv4:192.0.2.10/50123)'
+        $e.User     | Should -Be 'TRACEUSER:TRACER'
+        $e.ClientIP | Should -Be '192.0.2.10'
+    }
+
+    It 'liest Datenbankpfade mit kleiner Endung und Linux-Pfad' {
+        $e = Get-Conn '/var/lib/firebird/data/sample.fdb (ATT_6, APPUSER:NONE, UTF8, TCPv6:2001:db8::10/50123)'
+        $e.DatabasePath | Should -Be '/var/lib/firebird/data/sample.fdb'
+        $e.ClientIP     | Should -Be '2001:db8::10'
+        $e.ClientPort   | Should -Be '50123'
+    }
+
+    It 'liest lokale Protokolle ohne Port' {
+        $e = Get-Conn 'C:\DATA\SAMPLE.FDB (ATT_7, APPUSER:NONE, UTF8, XNET:WORKSTATION01)'
+        $e.AttachID     | Should -Be '7'
+        $e.ProtocolInfo | Should -Be 'XNET:WORKSTATION01'
+        $e.ClientIP     | Should -Be 'WORKSTATION01'
+        $e.ClientPort   | Should -BeNullOrEmpty
+    }
+}
+
 Describe 'Show-TraceStructure: Datei fehlt' {
     It 'meldet einen Fehler und liefert nichts' {
         $r = & $script:Parser -Path (Join-Path $TestDrive 'gibt-es-nicht.log') 6>$null 2>$null
