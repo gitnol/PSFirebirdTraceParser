@@ -11,7 +11,17 @@
     List of specific literal values to always hash.
 
 .PARAMETER RedactLiterals
-    Switch to forcefully hash ALL string literals.
+    Switch to forcefully hash ALL string and numeric literals.
+
+.PARAMETER KeyFile
+    File with the secret key (Base64, at least 32 bytes) for HMAC-SHA256 pseudonyms. Created with a random key if it
+    does not exist. Keep it like a password and never share it: with the key, pseudonyms can be checked against guesses.
+    Same key = same pseudonyms across runs (trends, before/after comparisons). Without -KeyFile a random key is used
+    for this run only (pseudonyms not comparable between runs). See docs/architecture/ADR/ADR-001-pseudonymisierung-hmac.md
+
+.PARAMETER MappingFile
+    Optional CSV (Pseudonym;Original) for the data controller to map results back to real values. Contains plaintext -
+    keep it with the key, never share it.
 #>
 [CmdletBinding()]
 param(
@@ -29,11 +39,73 @@ param(
 
     [Parameter(HelpMessage = "Length of the generated hash string.")]
     [ValidateRange(8, 64)]
-    [int]$HashLength = 12
+    [int]$HashLength = 12,
+
+    [Parameter(HelpMessage = "Secret key file (Base64, >= 32 bytes) for HMAC pseudonyms; created if missing. Never share it.")]
+    [string]$KeyFile,
+
+    [Parameter(HelpMessage = "Optional CSV mapping Pseudonym;Original for the data controller. Contains plaintext - never share it.")]
+    [string]$MappingFile
 )
 
 begin {
-    $Algorithm = [System.Security.Cryptography.SHA256]::Create()
+    # --- Key for HMAC-SHA256 (I3, ADR-001). The key is never written to output, logs or the mapping file. ---
+    function Protect-PrivateFile {
+        param([string]$FilePath)
+        # Only the current user may read the file (key / mapping contain secrets)
+        try {
+            if ($PSVersionTable.PSEdition -eq 'Desktop' -or $IsWindows) {
+                $acl = Get-Acl -LiteralPath $FilePath
+                $acl.SetAccessRuleProtection($true, $false)
+                foreach ($rule in @($acl.Access)) { [void]$acl.RemoveAccessRule($rule) }
+                $me = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+                $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($me, 'FullControl', 'Allow'))
+                Set-Acl -LiteralPath $FilePath -AclObject $acl
+            }
+            else {
+                [System.IO.File]::SetUnixFileMode($FilePath, [System.IO.UnixFileMode]'UserRead, UserWrite')
+            }
+        }
+        catch {
+            Write-Warning "Could not restrict access to '$FilePath': $($_.Exception.Message). Restrict it manually."
+        }
+    }
+
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    if ($KeyFile) {
+        if (-not (Test-Path -LiteralPath $KeyFile)) {
+            $newKey = [byte[]]::new(32)
+            $rng.GetBytes($newKey)
+            $dir = Split-Path -Parent $KeyFile
+            if ($dir -and -not (Test-Path -LiteralPath $dir)) { $null = New-Item -ItemType Directory -Path $dir }
+            [System.IO.File]::WriteAllText($KeyFile, [Convert]::ToBase64String($newKey))
+            [Array]::Clear($newKey, 0, $newKey.Length)
+            Protect-PrivateFile $KeyFile
+            Write-Warning "New pseudonymization key created: $KeyFile. Keep it safe and never share it. Use the same key for comparable runs."
+        }
+        try {
+            $keyBytes = [Convert]::FromBase64String(([System.IO.File]::ReadAllText($KeyFile)).Trim())
+        }
+        catch {
+            throw "Key file '$KeyFile' is not valid Base64."
+        }
+        if ($keyBytes.Length -lt 32) {
+            throw "Key file '$KeyFile' must contain at least 32 bytes (Base64); found $($keyBytes.Length)."
+        }
+    }
+    else {
+        $keyBytes = [byte[]]::new(32)
+        $rng.GetBytes($keyBytes)
+        Write-Warning "No -KeyFile given: using a random key for this run only. Pseudonyms are consistent within this run but not comparable with other runs."
+    }
+    $rng.Dispose()
+    $Algorithm = [System.Security.Cryptography.HMACSHA256]::new($keyBytes)
+    [Array]::Clear($keyBytes, 0, $keyBytes.Length)
+
+    # Optional mapping pseudonym -> original (for the data controller only)
+    $Mapping = if ($MappingFile) { [System.Collections.Generic.Dictionary[string, string]]::new() } else { $null }
+    $Collisions = 0
+
     $Counter = 0
     
     # Analysis Collections
@@ -60,11 +132,16 @@ begin {
         if ([string]::IsNullOrEmpty($Value)) { return $Value }
         
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
-        $hashBytes = $Algorithm.ComputeHash($bytes)
+        $hashBytes = $Algorithm.ComputeHash($bytes)   # HMAC-SHA256 with the secret key (I3)
         $hashStr = [System.BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
         # Cap length at max hex string length (64 for SHA256)
         $len = [Math]::Min($HashLength, $hashStr.Length)
-        return $hashStr.Substring(0, $len)
+        $pseudonym = $hashStr.Substring(0, $len)
+        if ($null -ne $Mapping) {
+            if (-not $Mapping.ContainsKey($pseudonym)) { $Mapping[$pseudonym] = $Value }
+            elseif ($Mapping[$pseudonym] -ne $Value) { $script:Collisions++ }
+        }
+        return $pseudonym
     }
 
     function Add-Stat {
@@ -279,6 +356,16 @@ process {
 
 end {
     $Algorithm.Dispose()
+
+    if ($null -ne $Mapping) {
+        $Mapping.GetEnumerator() | ForEach-Object { [pscustomobject]@{ Pseudonym = $_.Key; Original = $_.Value } } |
+            Export-Csv -LiteralPath $MappingFile -Delimiter ';' -NoTypeInformation -Encoding UTF8
+        Protect-PrivateFile $MappingFile
+        Write-Warning "Mapping file written: $MappingFile ($($Mapping.Count) entries). It contains plaintext - keep it with the key, never share it."
+        if ($Collisions -gt 0) {
+            Write-Warning "$Collisions pseudonym collision(s): different values got the same pseudonym. Increase -HashLength."
+        }
+    }
     Write-Progress -Activity "Pseudonymizing Trace Data" -Completed
 
     if ($AnalyzeOnly) {

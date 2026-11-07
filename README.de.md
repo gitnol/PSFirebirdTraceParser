@@ -77,7 +77,7 @@ Liest die Datei in 4-MB-Stücken (Speicherbedarf begrenzt, unabhängig von der D
 ### Der Pseudonymisierer: `Pseudonymize-FirebirdTrace.ps1`
 Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
 
-*   **Hashing**: Verwendet SHA256 (gekürzt), um Werte zu ersetzen.
+*   **Hashing**: HMAC-SHA256 mit geheimem Schlüssel (gekürzt). Die Schlüsseldatei (`-KeyFile`) wie ein Passwort behandeln: ohne sie lassen sich Pseudonyme nicht gegen vermutete Werte prüfen; mit gleichem Schlüssel bleiben sie über Läufe vergleichbar.
 *   **Kontext-Sensitiv**: Erhält SQL-Operatoren (`LIKE`, `=`, etc.), versteckt aber die Werte.
     *   `SELECT * FROM Users WHERE Name = 'Muster'`
     *   wird zu
@@ -87,12 +87,14 @@ Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
 *   `-SensitiveKeywords "A", "B"`: Liste von Wörtern, die immer gehasht werden sollen.
 *   `-RedactLiterals`: Zwingt das Hashen **ALLER** Zeichenfolgen (empfohlen für maximale Sicherheit).
 *   `-AnalyzeOnly`: Vorschau, was geschwärzt würde, ohne Daten zu ändern.
+*   `-KeyFile <pfad>`: Geheimer Schlüssel (wird erzeugt, wenn er fehlt). Gleicher Schlüssel = gleiche Pseudonyme über mehrere Läufe. Ohne ihn gilt ein Zufallsschlüssel nur für diesen Lauf.
+*   `-MappingFile <pfad>`: Optionale CSV `Pseudonym;Original`, damit der Verantwortliche Ergebnisse zurückführen kann. Enthält Klartext.
 
 **Pseudonymisiert:** `User`, `ClientIP` (auch in `ProtocolInfo`), `ApplicationPath`, `DatabasePath`, Werte in `Params`; mit `-RedactLiterals` zusätzlich alle Zeichenketten und Zahlen in `SqlStatement` und Werte in `ErrorMessages`.
 **Nicht pseudonymisiert:** `SqlPlan`, `TableStats` sowie Tabellen-/Indexnamen (für die Analyse nötig), technische IDs, Zeitstempel, Zähler.
 
 > [!WARNING]
-> **Sicherheitshinweis**: Dieses Tool nutzt **Pseudonymisierung** (Deterministisches Hashing), keine Anonymisierung. Wörterbuch-Attacken gegen bekannte Werte sind möglich.
+> **Sicherheitshinweis**: Dieses Werkzeug pseudonymisiert (Hash mit Schlüssel, HMAC-SHA256), es anonymisiert nicht. Wer den Schlüssel hat, kann vermutete Werte prüfen; für den Verantwortlichen bleiben die Daten personenbezogen (DSGVO). Schlüssel- und Zuordnungsdatei (`-MappingFile`) nie weitergeben.
 
 ---
 

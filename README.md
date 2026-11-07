@@ -77,7 +77,7 @@ Streams the file in 4 MB chunks (memory stays bounded, independent of file size)
 ### The Pseudonymizer: `Pseudonymize-FirebirdTrace.ps1`
 Designed for DSGVO/GDPR compliance when sharing logs.
 
-*   **Hashing**: Uses SHA256 (truncated) to replace values.
+*   **Hashing**: HMAC-SHA256 with a secret key (truncated). Keep the key file (`-KeyFile`) like a password: without it, pseudonyms cannot be checked against guesses; with the same key, pseudonyms stay comparable across runs.
 *   **Context Aware**: Preserves SQL operators (`LIKE`, `=`, etc.) but hides the values.
     *   `SELECT * FROM Users WHERE Name = 'Muster'`
     *   becomes
@@ -87,12 +87,14 @@ Designed for DSGVO/GDPR compliance when sharing logs.
 *   `-SensitiveKeywords "A", "B"`: List of words to always hash.
 *   `-RedactLiterals`: Forcefully hash **ALL** string literals (recommended for maximum safety).
 *   `-AnalyzeOnly`: Preview what would be redacted without changing data (report goes to the console only).
+*   `-KeyFile <path>`: Secret key (created if missing). Same key = same pseudonyms across runs. Without it, a random key is used for this run only.
+*   `-MappingFile <path>`: Optional CSV `Pseudonym;Original` for the data controller to map results back. Contains plaintext.
 
 **Pseudonymized:** `User`, `ClientIP` (also in `ProtocolInfo`), `ApplicationPath`, `DatabasePath`, `Params` values; with `-RedactLiterals` also all string and numeric literals in `SqlStatement` and values in `ErrorMessages`.
 **Not pseudonymized:** `SqlPlan`, `TableStats` and table/index names (needed for analysis), technical IDs, timestamps, counters.
 
 > [!WARNING]
-> **Security Notice**: This tool uses **Pseudonymization** (Deterministic Hashing), not Anonymization. Dictionary attacks against known values are possible.
+> **Security Notice**: This tool uses **Pseudonymization** (keyed hashing, HMAC-SHA256), not Anonymization. Whoever has the key can verify guessed values; the data stays personal data for the data controller (GDPR). Never share the key file or the mapping file (`-MappingFile`).
 
 ---
 

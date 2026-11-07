@@ -165,3 +165,76 @@ Describe 'Pseudonymize-FirebirdTrace: Fehlermeldungen (I10)' {
         $out.ErrorCodes | Should -Be '335544665, 335545072'
     }
 }
+
+Describe 'Pseudonymize-FirebirdTrace: Schluessel (HMAC, I3, ADR-001)' {
+    BeforeAll {
+        function New-TestKeyFile([string]$Name) {
+            $p = Join-Path $TestDrive $Name
+            $bytes = [byte[]]::new(32)
+            [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+            Set-Content -Path $p -Value ([Convert]::ToBase64String($bytes)) -NoNewline
+            $p
+        }
+        function Get-PlainSha([string]$Value, [int]$Len = 12) {
+            $h = [System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($Value))
+            ([Convert]::ToHexString($h)).ToLowerInvariant().Substring(0, $Len)
+        }
+        $script:KeyA = New-TestKeyFile 'a.key'
+        $script:KeyB = New-TestKeyFile 'b.key'
+    }
+
+    It 'laesst sich nicht mehr per ungesalzenem SHA-256 vorausberechnen' {
+        $o = Get-TestStatement | & $script:Pseudo -KeyFile $script:KeyA
+        $o.ClientIP | Should -Not -BeExactly (Get-PlainSha '192.0.2.10')
+        $o.User     | Should -Not -BeExactly (Get-PlainSha 'MMUSTERMANN:NONE')
+    }
+
+    It 'liefert mit gleichem Schluessel ueber getrennte Laeufe gleiche Pseudonyme' {
+        $a = Get-TestStatement | & $script:Pseudo -KeyFile $script:KeyA
+        $b = Get-TestStatement | & $script:Pseudo -KeyFile $script:KeyA
+        $a.User | Should -BeExactly $b.User
+    }
+
+    It 'liefert mit anderem Schluessel andere Pseudonyme' {
+        $a = Get-TestStatement | & $script:Pseudo -KeyFile $script:KeyA
+        $b = Get-TestStatement | & $script:Pseudo -KeyFile $script:KeyB
+        $a.User | Should -Not -BeExactly $b.User
+    }
+
+    It 'nutzt ohne -KeyFile einen Zufallsschluessel pro Lauf und warnt' {
+        $a = Get-TestStatement | & $script:Pseudo -WarningVariable w 3>$null
+        $b = Get-TestStatement | & $script:Pseudo 3>$null
+        $a.User | Should -Not -BeExactly $b.User
+        ($w -join ' ') | Should -Match 'KeyFile'
+    }
+
+    It 'erzeugt einen fehlenden Schluessel (32 Byte) und warnt' {
+        $p = Join-Path $TestDrive 'neu.key'
+        $null = Get-TestStatement | & $script:Pseudo -KeyFile $p -WarningVariable w 3>$null
+        $p | Should -Exist
+        [Convert]::FromBase64String((Get-Content $p -Raw).Trim()).Length | Should -BeGreaterOrEqual 32
+        ($w -join ' ') | Should -Match 'neu\.key'
+    }
+
+    It 'lehnt einen zu kurzen Schluessel ab' {
+        $p = Join-Path $TestDrive 'kurz.key'
+        Set-Content -Path $p -Value ([Convert]::ToBase64String([byte[]](1..8))) -NoNewline
+        { Get-TestStatement | & $script:Pseudo -KeyFile $p -ErrorAction Stop } | Should -Throw '*32*'
+    }
+
+    It 'schreibt die Zuordnungsdatei Pseudonym -> Original nur fuer den Verantwortlichen' {
+        $map = Join-Path $TestDrive 'zuordnung.csv'
+        $o = Get-TestStatement | & $script:Pseudo -KeyFile $script:KeyA -MappingFile $map 3>$null
+        $rows = Import-Csv $map -Delimiter ';'
+        ($rows | Where-Object Pseudonym -eq $o.User).Original | Should -BeExactly 'MMUSTERMANN:NONE'
+        ($rows | Where-Object Pseudonym -eq $o.ClientIP).Original | Should -BeExactly '192.0.2.10'
+    }
+
+    It 'schreibt den Schluessel weder in die Ausgabe noch in die Zuordnungsdatei' {
+        $keyText = (Get-Content $script:KeyA -Raw).Trim()
+        $map = Join-Path $TestDrive 'zuordnung2.csv'
+        $o = Get-TestStatement | & $script:Pseudo -KeyFile $script:KeyA -MappingFile $map -RedactLiterals 3>$null
+        ($o | ConvertTo-Json -Depth 3) | Should -Not -Match ([regex]::Escape($keyText))
+        (Get-Content $map -Raw) | Should -Not -Match ([regex]::Escape($keyText))
+    }
+}
