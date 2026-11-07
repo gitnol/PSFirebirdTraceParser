@@ -4,7 +4,7 @@ Zuletzt aktualisiert: 2026-11-07
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
 **Letztes abgeschlossenes Inkrement:** I10 – Fehler-Ereignisse mit Fehlercodes (2026-11-07)
-**Nächster Schritt:** K3 aus I6 (Verbindungen mit `<internal>`), danach I6 (Streaming)
+**Nächster Schritt:** I6 – Streaming statt Gesamtdatei im Speicher
 **Nächste Reflexion:** bei Abschluss von I3 (siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md` — `docs/`-Drift prüfen + Template-Backport prüfen; danach Marker um 3 erhöhen)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
@@ -12,7 +12,7 @@ Zuletzt aktualisiert: 2026-11-07
 
 ## Nächster Schritt
 
-Als Nächstes K3 (Verbindungen mit `<internal>` bleiben leer; mit echtem Log belegt) aus I6 vorziehen, danach Streaming (I6). Im privaten Report-Projekt kann jetzt die Sperrkonflikt-Auswertung (dort I7) auf `ErrorCodes`/`ErrorMessages` aufsetzen. Empfohlenes Modell: Sonnet, mittlerer Effort.
+K3 ist behoben (alle Verbindungsformen). Als Nächstes I6 (zeilenweises Lesen, K2). Im privaten Report-Projekt kann die Sperrkonflikt-Auswertung (dort I7) auf `ErrorCodes`/`ErrorMessages` aufsetzen. Empfohlenes Modell: Sonnet, mittlerer Effort.
 
 ---
 

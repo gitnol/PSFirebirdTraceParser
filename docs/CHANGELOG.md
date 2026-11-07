@@ -10,6 +10,23 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-07 K3 – Verbindungszeile in allen Formen (Teil von I6)
+
+Vorgezogen, weil mit einem echten Firebird-5.0.4-Log belegt (12 von 298 Verbindungszeilen ohne Daten).
+
+**Trigger-Matrix:** Bekannter Fehler behoben → `KNOWN_ISSUES.md` K3; `features/TRACE_PARSING.md`; `TODO.md` I6 (Aufgabe erledigt).
+
+### Fixed
+- `Show-TraceStructure.ps1`: Die Verbindungszeile wird unabhängig von Dateiendung, Rolle und Protokoll gelesen —
+  `<internal>` (z. B. Firebirds Zugriff auf die Sicherheitsdatenbank), `USER:ROLLE`, `.fdb` klein, Linux-Pfade,
+  IPv6 und lokale Protokolle ohne Port (`XNET:HOST`). Vorher blieben Datenbank, Benutzer und IP leer.
+
+### Added
+- 4 Tests (je ein roter Fall vor der Änderung).
+
+### Confidence / Ungeprüft
+- Echtes Log danach: alle 298 Einträge mit Verbindungsdaten. XNET und IPv6 nur synthetisch geprüft.
+
 ## 2026-11-07 I10 – Fehler-Ereignisse mit Fehlercodes
 
 **Trigger-Matrix:** Neue Ausgabe-Properties → `features/TRACE_PARSING.md`, `README.md`, `README.de.md`; Pseudonymisierung erweitert → `features/PSEUDONYMIZATION.md`; `TODO.md`, `STATE.md`.

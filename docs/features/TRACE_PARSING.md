@@ -42,7 +42,7 @@ Kein `-WhatIf` (das Skript schreibt nichts). Kein `[CmdletBinding()]` → `-Verb
 | `Timestamp` | string | `$null` | Zeitstempel der Kopfzeile (nicht als `[datetime]`) |
 | `Action` | string | `$null` | Ereignisname der Kopfzeile (z. B. Statement-, Transaktions-, Verbindungsereignis); `FAILED …`/`UNAUTHORIZED …` vollständig (seit I10); bei `ERROR AT …`/`WARNING AT …` nur `ERROR`/`WARNING` |
 | `ProcessID`, `SessionID` | string | `$null` | `(PID:Adresse)` der Kopfzeile; die Adresse ist plattformabhängig: Windows `000001A2B3C4D5E0`, Linux `0x7f3a1c2b4d10` (beide werden erkannt, unverändert übernommen) |
-| `DatabasePath` | string | `$null` | Verbindungszeile, Pfad bis `.FDB` |
+| `DatabasePath` | string | `$null` | Verbindungszeile, Pfad bis `.FDB`; jede Endung, jede Rolle, auch `<internal>` und Protokolle ohne Port (seit K3-Fix 2026-11-07) |
 | `AttachID` | string | `$null` | `ATT_<n>` |
 | `User` | string | `$null` | Benutzer **inklusive** `:NONE` (Rolle) |
 | `ProtocolInfo` | string | `$null` | z. B. `TCPv4:<ip>/<port>` |

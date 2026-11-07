@@ -100,7 +100,6 @@ Bedrohung 3 in `security/THREAT_MODEL.md`.
 
 - [ ] Synthetische Fixture-Trace (fiktive Daten) unter `tests/fixtures/` + Charakterisierungstests für `Show-TraceStructure.ps1`
 - [ ] Zeilenweises Lesen (StreamReader) und Ausgabe pro Block in die Pipeline statt `Get-Content -Raw` + `return $results` (K2)
-- [ ] Verbindungs-Regex: Rolle ≠ `NONE`, Dateiendung case-insensitiv, weitere Protokolle (K3)
 - [ ] Statusausgaben über `Write-Verbose`/`Write-Information` statt `Write-Host`
 - [ ] Zähler (`Reads`, `Writes`, `Fetches`, `Marks`) als `[long]`; Verhalten bei Werten > Int32 testen
 
