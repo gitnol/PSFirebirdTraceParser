@@ -5,7 +5,7 @@
 #>
 
 BeforeAll {
-    $script:Pseudo = Join-Path $PSScriptRoot '..' 'Pseudonymize-FirebirdTrace.ps1'
+    $script:Pseudo = [System.IO.Path]::Combine($PSScriptRoot, '..', 'Pseudonymize-FirebirdTrace.ps1')
 
     function Get-TestErrorEntry([string]$Messages) {
         [pscustomobject]@{
@@ -84,6 +84,19 @@ Describe 'Pseudonymize-FirebirdTrace: Grundverhalten (Charakterisierung, I2)' {
     It 'gibt mit -AnalyzeOnly keine Trace-Objekte aus' {
         $o = Get-TestStatement | & $script:Pseudo -AnalyzeOnly 6>$null
         $o | Should -BeNullOrEmpty
+    }
+
+    It 'schreibt den -AnalyzeOnly-Bericht auf den Host-Kanal (Kopf, Abschnitte, Abschluss)' {
+        # Write-Host landet im Informationskanal (6); die Tabellen gehen per Out-Host direkt an die Konsole
+        $host6 = @(Get-TestStatement | & $script:Pseudo -AnalyzeOnly 6>&1 3>$null | Out-String -Stream |
+                Where-Object { $_ })
+        $host6 | Should -Be @(
+            '--- Trace Analysis Report ---'
+            'Detected String Literals (1 unique patterns):'
+            'Detected WHERE Clauses (1 unique patterns):'
+            'Detected HAVING Clauses: None found.'
+            'Analysis Complete. Use this info to refine -SensitiveKeywords or -RedactLiterals.'
+        )
     }
 
     It 'laesst Kennzahlen, Plan und Zeitstempel unveraendert' {
@@ -168,16 +181,20 @@ Describe 'Pseudonymize-FirebirdTrace: Fehlermeldungen (I10)' {
 
 Describe 'Pseudonymize-FirebirdTrace: Schluessel (HMAC, I3, ADR-001)' {
     BeforeAll {
-        function New-TestKeyFile([string]$Name) {
+        function New-TestKeyFile {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '',
+                Justification = 'Test helper, writes only into TestDrive')]
+            param([string]$Name)
             $p = Join-Path $TestDrive $Name
             $bytes = [byte[]]::new(32)
-            [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+            [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
             Set-Content -Path $p -Value ([Convert]::ToBase64String($bytes)) -NoNewline
             $p
         }
         function Get-PlainSha([string]$Value, [int]$Len = 12) {
-            $h = [System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($Value))
-            ([Convert]::ToHexString($h)).ToLowerInvariant().Substring(0, $Len)
+            # .NET-Framework-tauglich (Windows PowerShell 5.1): kein SHA256::HashData / Convert::ToHexString
+            $h = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Value))
+            (-join ($h | ForEach-Object { $_.ToString('x2') })).Substring(0, $Len)
         }
         $script:KeyA = New-TestKeyFile 'a.key'
         $script:KeyB = New-TestKeyFile 'b.key'

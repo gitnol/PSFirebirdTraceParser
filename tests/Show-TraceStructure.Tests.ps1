@@ -6,8 +6,8 @@
 #>
 
 BeforeAll {
-    $script:Parser  = Join-Path $PSScriptRoot '..' 'Show-TraceStructure.ps1'
-    $script:Fixture = Join-Path $PSScriptRoot 'fixtures' 'trace_fb5_windows.log'
+    $script:Parser  = [System.IO.Path]::Combine($PSScriptRoot, '..', 'Show-TraceStructure.ps1')
+    $script:Fixture = [System.IO.Path]::Combine($PSScriptRoot, 'fixtures', 'trace_fb5_windows.log')
 
     function Invoke-Parser([string]$Path) {
         # Statusausgaben (Write-Host) unterdruecken, nur die Objekte zurueckgeben
