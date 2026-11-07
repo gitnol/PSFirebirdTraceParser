@@ -10,6 +10,29 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-07 I10 – Fehler-Ereignisse mit Fehlercodes
+
+**Trigger-Matrix:** Neue Ausgabe-Properties → `features/TRACE_PARSING.md`, `README.md`, `README.de.md`; Pseudonymisierung erweitert → `features/PSEUDONYMIZATION.md`; `TODO.md`, `STATE.md`.
+
+### Added
+- `Show-TraceStructure.ps1`: Properties `ErrorSource`, `ErrorCodes`, `ErrorMessages` für `ERROR AT <Komponente>` und
+  `WARNING AT <Komponente>` (Fehlerzeilen `%9lu : <Text>`, Format nach Firebird 5.0.4 `TraceStatusVectorImpl::getText`).
+  Die Trace-Konfiguration zeichnet Sperrkonflikte und Deadlocks auf; bisher wurden diese Daten verworfen.
+- `Pseudonymize-FirebirdTrace.ps1`: mit `-RedactLiterals` werden in `ErrorMessages` Schlüsselwerte (`("ID" = 42)`) und
+  String-Literale gehasht; Constraint- und Tabellennamen bleiben lesbar.
+- Tests: 11 neue (Fehler-Ereignisse, `FAILED`, `WARNING AT`, Abgrenzung zu SQL-Text, Pseudonymisierung der Fehlertexte).
+
+### Changed
+- `Action` enthält bei `FAILED …` und `UNAUTHORIZED …` den vollständigen Ereignisnamen (`FAILED EXECUTE_STATEMENT_FINISH`
+  statt `FAILED`). Auswertungen, die auf `Action -eq 'FAILED'` prüfen, müssen angepasst werden (bisher dokumentiert war
+  nur der Ereignisname der Kopfzeile).
+
+### Confidence / Ungeprüft
+- Alle 11 neuen Tests waren vor der Umsetzung rot (7) bzw. sichern Abgrenzungen ab; Mutationsprüfung: 8 Mutanten,
+  alle erkannt (einer erst nach einem zusätzlichen Test).
+- Echtes Firebird-5.0.4-Log enthält keine Fehler-Ereignisse; das Fehlerformat stammt aus dem Quellcode, nicht aus einem
+  echten Log. Weitere Wertformen in Fehlertexten (z. B. Zahlen außerhalb von Schlüsselwerten) werden nicht gehasht.
+
 ## 2026-11-07 I9 – Kopfzeile plattformneutral, Parser-Tests
 
 **Trigger-Matrix:** Verhalten geändert → `features/TRACE_PARSING.md` (Kopfzeile); bekannter Fehler präzisiert → `KNOWN_ISSUES.md` K3; Testgerüst neu → `TODO.md` I2 (Hinweis); `STATE.md`.

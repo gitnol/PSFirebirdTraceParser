@@ -40,6 +40,8 @@ Trace-Daten für externe Analysen weitergegeben werden können; `-AnalyzeOnly` z
 | `DatabasePath` | **unverändert** | Server-/Datenbank-/Kundennamen im Klartext (I2) |
 | `ClientPort`, `ProcessID`, `SessionID`, `AttachID`, `TransactionID`, `RootTxID`, `ApplicationPID` | unverändert | technische IDs; erlauben Verknüpfung, aber keine direkte Identifikation |
 | `SqlPlan`, `TableStats` | unverändert | Tabellen-/Indexnamen (Schema-Interna) im Klartext — Entscheidung in I2 |
+| `ErrorMessages` (seit I10) | nur mit `-RedactLiterals`: Schlüsselwerte `("SPALTE" = wert)` → `<HASH:…>`, String-Literale `'…'` → `'<HASH:…>'`; Constraint- und Tabellennamen bleiben | ohne Schalter Klartext; andere Wertformen in Fehlertexten nicht abgedeckt |
+| `ErrorSource`, `ErrorCodes` | unverändert | technisch, keine Personendaten |
 | `Timestamp`, `Action`, `TransactionOptions`, Zähler | unverändert | Analysezweck |
 
 Ohne Schalter werden String-Literale **nicht** pseudonymisiert — nur `User`, IP, `ApplicationPath` und `Params`.
@@ -82,7 +84,7 @@ Tabellenname) — steht es nur in einem Literal, wird nur das Literal ersetzt. G
 
 ## Teststrategie
 
-- Zugehörige Testdatei: `tests/Pseudonymize-FirebirdTrace.Tests.ps1` (I2)
+- Zugehörige Testdatei: `tests/Pseudonymize-FirebirdTrace.Tests.ps1` (seit I10: Fehlertexte; übrige Felder folgen mit I2)
 - Pester-Beschreibung: `Describe 'Pseudonymize-FirebirdTrace' { ... }`
 - Eingaben als `[pscustomobject]` im Test gebaut (fiktive Werte), kein Fixture-File nötig
 - Kritische Testfälle: Original bleibt unverändert; jede Zeile der Feldabdeckung mit exaktem Erwartungswert;

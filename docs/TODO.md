@@ -79,20 +79,6 @@ Bedrohung 3 in `security/THREAT_MODEL.md`.
       Entwurf beim Owner vor (`-FETCH_PASSWORD`, `-TRUSTED`, `-ROLE`, `-NAME`; mit Ersatz-`fbtracemgr` getestet). Nach einem
       erfolgreichen Lauf gegen einen echten Server hier übernehmen — deckt I4 und I5 weitgehend ab.
 
-### I10: Parser – Fehler-Ereignisse mit Fehlercodes
-
-Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).
-Die Trace-Konfiguration zeichnet mit `log_errors` und `include_gds_codes = "lock_conflict, deadlock"` Sperrkonflikte
-und Deadlocks auf; der Parser verwirft diese Blöcke bisher. Voraussetzung für eine Sperrkonflikt-Auswertung im Report.
-
-**Aufgaben:**
-
-- [ ] Rote Tests für `ERROR AT <Komponente>` und `FAILED EXECUTE_STATEMENT_FINISH` (synthetische Blöcke)
-- [ ] Felder `ErrorCodes` und `ErrorMessages` (Zeilen `335544336 : …`) ergänzen; `Action` behält den Ereignistyp
-- [ ] Bei `FAILED …` die übrigen Felder (SQL, Verbindung, Transaktion) wie beim normalen Statement füllen
-- [ ] Pseudonymisierer: Fehlertexte können Werte enthalten — mit `-RedactLiterals` mitbehandeln
-- [ ] README/`features/TRACE_PARSING.md`: neue Properties dokumentieren
-
 ---
 
 ## Mittlere Priorität

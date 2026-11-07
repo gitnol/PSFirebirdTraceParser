@@ -40,7 +40,7 @@ Kein `-WhatIf` (das Skript schreibt nichts). Kein `[CmdletBinding()]` → `-Verb
 | Property | Typ | Default | Quelle im Block |
 |---|---|---|---|
 | `Timestamp` | string | `$null` | Zeitstempel der Kopfzeile (nicht als `[datetime]`) |
-| `Action` | string | `$null` | Ereignisname der Kopfzeile (z. B. Statement-, Transaktions-, Verbindungsereignis) |
+| `Action` | string | `$null` | Ereignisname der Kopfzeile (z. B. Statement-, Transaktions-, Verbindungsereignis); `FAILED …`/`UNAUTHORIZED …` vollständig (seit I10); bei `ERROR AT …`/`WARNING AT …` nur `ERROR`/`WARNING` |
 | `ProcessID`, `SessionID` | string | `$null` | `(PID:Adresse)` der Kopfzeile; die Adresse ist plattformabhängig: Windows `000001A2B3C4D5E0`, Linux `0x7f3a1c2b4d10` (beide werden erkannt, unverändert übernommen) |
 | `DatabasePath` | string | `$null` | Verbindungszeile, Pfad bis `.FDB` |
 | `AttachID` | string | `$null` | `ATT_<n>` |
@@ -55,6 +55,9 @@ Kein `-WhatIf` (das Skript schreibt nichts). Kein `[CmdletBinding()]` → `-Verb
 | `SqlStatement` | string | `$null` | Text nach `Statement <n>:` und Trennlinie bis Plan/Parameter/Statistik |
 | `SqlPlan` | string | `$null` | zusammenhängende `PLAN …`-Zeilen |
 | `TableStats` | string | `$null` | Tabellenstatistik ab `Table … Natural`, **ungetrimmt** (Spaltenausrichtung) |
+| `ErrorSource` | string | `$null` | Komponente aus `ERROR AT <Komponente>` bzw. `WARNING AT …` (seit I10) |
+| `ErrorCodes` | string | `$null` | Fehlercodes der Zeilen `%9lu : <Text>`, mit `, ` verbunden (nur bei `ERROR`/`WARNING`) |
+| `ErrorMessages` | string | `$null` | Fehlertexte derselben Zeilen, mit ` \| ` verbunden; können Werte enthalten (`Problematic key value is (…)`) |
 | `DurationMs`, `Reads`, `Writes`, `Fetches`, `Marks` | int | `0` | Performance-Zeile `<n> ms, … read(s), … write(s), … fetch(es), … mark(s)` |
 
 Die Property-Namen sind Eingabe von `Pseudonymize-FirebirdTrace.ps1` und von Nutzer-Exporten — Änderungen nur

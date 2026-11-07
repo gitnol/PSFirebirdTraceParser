@@ -3,8 +3,8 @@
 Zuletzt aktualisiert: 2026-11-07
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
-**Letztes abgeschlossenes Inkrement:** I9 – Kopfzeile plattformneutral, Parser-Tests (2026-11-07)
-**Nächster Schritt:** I10 – Fehler-Ereignisse mit Fehlercodes
+**Letztes abgeschlossenes Inkrement:** I10 – Fehler-Ereignisse mit Fehlercodes (2026-11-07)
+**Nächster Schritt:** K3 aus I6 (Verbindungen mit `<internal>`), danach I6 (Streaming)
 **Nächste Reflexion:** bei Abschluss von I3 (siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md` — `docs/`-Drift prüfen + Template-Backport prüfen; danach Marker um 3 erhöhen)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
@@ -12,7 +12,7 @@ Zuletzt aktualisiert: 2026-11-07
 
 ## Nächster Schritt
 
-I10 aus `docs/TODO.md`: Fehler-Ereignisse (`ERROR AT …`, `FAILED …`) mit Fehlercodes einlesen. Die Trace-Konfiguration zeichnet Sperrkonflikte und Deadlocks bereits auf; der Parser verwirft sie bisher. Danach K3 (`<internal>`-Verbindungen, mit echtem Log belegt) aus I6 vorziehen. Empfohlenes Modell: Sonnet, mittlerer Effort.
+Als Nächstes K3 (Verbindungen mit `<internal>` bleiben leer; mit echtem Log belegt) aus I6 vorziehen, danach Streaming (I6). Im privaten Report-Projekt kann jetzt die Sperrkonflikt-Auswertung (dort I7) auf `ErrorCodes`/`ErrorMessages` aufsetzen. Empfohlenes Modell: Sonnet, mittlerer Effort.
 
 ---
 
@@ -22,6 +22,7 @@ I10 aus `docs/TODO.md`: Fehler-Ereignisse (`ERROR AT …`, `FAILED …`) mit Feh
 |---|-------|-------|--------|
 | I1 | docs_template-Baseline eingeführt (Bestandscode dokumentiert, kein Code geändert) | 2026-10-11 | 21e92bc |
 | I9 | Kopfzeile plattformneutral (Windows/Linux-Adressformat), Pester-Grundgerüst, 11 Parser-Tests | 2026-11-07 | ae01289 |
+| I10 | Fehler-Ereignisse: `ERROR AT`/`WARNING AT` mit Komponente, Codes, Texten; `FAILED …` vollständig; Pseudonymisierung der Fehlertexte | 2026-11-07 | 442d834 |
 
 ---
 
@@ -36,7 +37,6 @@ I10 aus `docs/TODO.md`: Fehler-Ereignisse (`ERROR AT …`, `FAILED …`) mit Feh
 | I6 | Parser: Streaming statt Gesamtdatei im Speicher, Regex-Abdeckung | Mittel |
 | I7 | README-Drift beheben, Lizenzdatei klären | Niedrig |
 | I8 | Laufzeit- und Beispielstände aus dem Security-Sweep nachziehen | Niedrig |
-| I10 | Parser: Fehler-Ereignisse mit Fehlercodes (Sperrkonflikte, Deadlocks) | Hoch |
 | I11 | Parser: Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen | Mittel |
 | I12 | Parser: Verbindungen, Prozeduren und Trigger als Ereignisse | Mittel |
 | I13 | Parser: Robustheit und Diagnose | Mittel |
