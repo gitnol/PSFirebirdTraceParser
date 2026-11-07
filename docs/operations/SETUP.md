@@ -6,7 +6,7 @@
 
 - PowerShell ≥ 5.1 (`$PSVersionTable.PSVersion` prüfen)
   - Windows PowerShell 5.1 (vorinstalliert, über Windows Update aktuell halten) oder PowerShell 7.6 LTS (empfohlen,
-    mindestens 7.6.7 bzw. 7.5.12 / 7.4.21 wegen der Advisories vom 2026-10-13; 7.4/7.5 Supportende 2026-11-10)
+    mindestens 7.6.9 bzw. 7.5.13 / 7.4.22 wegen der Advisories vom 2026-10-13 und 2026-10-25; 7.4/7.5 Supportende 2026-11-10)
 - Für Parser und Pseudonymisierer: nichts weiter — keine Module, kein Netz
 - Für die Trace-Skripte: Firebird-Installation mit `fbtracemgr.exe` auf dem Datenbankserver, Zugang für den
   Service-Manager (`security/AUTHENTICATION.md`), Laufwerk `E:\` mit ausreichend Platz

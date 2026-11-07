@@ -50,6 +50,28 @@ Ablage für Scanner- und Recherche-Ergebnisse (`principles/SECURITY_CURRENCY.md`
 Öffentliches oder potenziell öffentliches Repo: die Betroffenheit **konkreter interner Hosts** nur in `docs/local/`,
 hier nur generisch (`CONVENTIONS_COMMON.md` 3.1).
 
+### 2026-11-07 – Kadenz-Sweep (fällig seit 2026-11-06)
+
+Zeitraum seit dem letzten Sweep 2026-10-23. Bestand unverändert: keine Laufzeit-Module, keine Manifest-/Lock-Datei;
+Entwicklungsrechner PowerShell 7.6.9; `fbtracemgr` einer Firebird-Installation. Quellen als Liste abgerufen
+(`gh`), Websuche nur ergänzend und als untrusted behandelt.
+
+| Prüfgegenstand | Ergebnis | Bewertung (betrifft uns / nicht, Begründung) | Quelle |
+|---|---|---|---|
+| PowerShell-7-Advisories, Dateikanal | Neu seit 2026-10-23: CVE-2026-111497 (RCE, Out-of-bounds-Write, Windows/macOS/Linux), eingestellt 2026-10-25; betroffen PowerShell 7.6 < 7.6.9, 7.5 < 7.5.13, 7.4 < 7.4.22. Mitigation laut Advisory: betrifft, wer `Invoke-WebRequest`/`Invoke-RestMethod` gegen Seiten ohne SSL oder fremde Seiten nutzt. Ordner `pwsh/2026/11` existiert nicht | Indirekt: Laufzeit der Skripte. Die Skripte dieses Projekts rufen weder `Invoke-WebRequest` noch `Invoke-RestMethod` auf (Parser und Pseudonymisierer arbeiten auf lokalen Dateien). Mindeststand für Nutzer jetzt 7.6.9 / 7.5.13 / 7.4.22. Entwicklungsrechner 7.6.9 = gepatcht | `gh api repos/PowerShell/Announcements/contents/pwsh/2026/10` |
+| PowerShell-Advisories, Issue-Kanal | Letztes Issue unverändert #101 (2026-09-23); CVE-2026-111497 fehlt dort | Kanallücke wie beim Oktober-Sweep bestätigt: Dateikanal **und** Release-Liste abgleichen | `gh issue list -R PowerShell/Announcements --state all` |
+| PowerShell-Releases seit 2026-10-23 | 7.4.22, 7.5.13, 7.6.9 (2026-10-25, Sicherheits-Release zu CVE-2026-111497; Release-Notes nennen nur das .NET-SDK-Update 10.0.403); 7.7.0-rc.1 (2026-10-29, Vorabversion) | Hier existiert Advisory **und** Release → keine Lücke. 7.7.0-rc.1 nicht für Nutzer empfohlen | `gh release list -R PowerShell/PowerShell` |
+| PowerShell-Lebenszyklus | 7.4 und 7.5 Supportende 2026-11-10 (in 3 Tagen) | Betrifft Nutzer auf 7.4/7.5 ab nächster Woche; `operations/SETUP.md` empfiehlt 7.6 LTS. Mindeststand dort auf 7.6.9 anheben (Folge der Sweep-Nachbearbeitung) | PowerShell Support Lifecycle (Stand Init-Befund, unverändert) |
+| Windows PowerShell 5.1 | Websuche ohne bestätigtes 5.1-CVE für November 2026; bekannte 5.1-Fälle (CVE-2025-54100) sind per Windows Update behoben. Treffer zu CVE-2026-42946 stammen aus einer Nebenquelle und sind nicht gegen Microsoft belegt | Nicht abschließend bewertet: MSRC Security Update Guide (November 2026, Produkt Windows PowerShell) nicht direkt abgefragt → bleibt offen. Patch über Windows Update | Websuche 2026-11-07 |
+| Firebird (GitHub-Advisories, Releases) | Kein neues Advisory und kein neues Release seit dem letzten Sweep (neueste Advisories 2026-04-17; aktuelle Releases 5.0.4 / 4.0.7 / 3.0.14) | Unverändert: Server-Betrieb, nicht der Code dieses Projekts; Betreiber auf ≥ 4.0.7 / 5.0.4 | `gh api repos/FirebirdSQL/firebird/security-advisories`, `gh release list -R FirebirdSQL/firebird` |
+| Pester, PSScriptAnalyzer | Keine Security-Advisories (0 / 0); Pester 6.2.0 und PSScriptAnalyzer 1.25.0 weiterhin aktuell (`Find-Module`) | Betrifft uns nicht (noch nicht verbaut, I2) | `gh api repos/pester/Pester/security-advisories`, `…/PSScriptAnalyzer/security-advisories`, `Find-Module` |
+| Scanner PSScriptAnalyzer | Auf diesem Rechner nicht installiert (`Import-Module` schlägt fehl); keine Installation aus PSGallery ohne Freigabe | Lauf **nicht** erfolgt, kein Beleg für „keine Befunde" | — |
+
+Offen aus diesem Sweep: (1) `operations/SETUP.md` und `architecture/DEPENDENCIES.md`: Mindest-Patchstand 7.6.9 / 7.5.13 /
+7.4.22 nachziehen; (2) MSRC Security Update Guide für Windows PowerShell 5.1 direkt abfragen; (3) PSScriptAnalyzer-Lauf,
+sobald das Modul installiert ist (I2); (4) I8 aus dem letzten Sweep (Beispielkonfiguration versionsneutral) besteht weiter.
+Kein Critical/High im Code dieses Projekts.
+
 ### 2026-10-23 – Kadenz-Sweep (vorgezogen, fällig 2026-10-25)
 
 Zeitraum seit dem Init-Abgleich 2026-10-11. Bestand: keine Laufzeit-Module, keine Manifest-/Lock-Datei, keine
