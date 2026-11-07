@@ -11,7 +11,7 @@ Verbindet sich mit `architecture/DEPENDENCIES.md` (Was ist drin?) und
 | Auslöser | Pflicht? |
 |---|---|
 | Vor jedem Release (Tag) | Ja |
-| Bei neuer oder aktualisierter Dependency (z. B. Pester, PSScriptAnalyzer ab I2) | Ja, die betroffene + Transitive |
+| Bei neuer oder aktualisierter Dependency (z. B. Pester, PSScriptAnalyzer) | Ja, die betroffene + Transitive |
 | Nach Sicherheitsmeldung (CVE) für PowerShell, .NET oder Firebird | Ja, sofort |
 | Kadenz-Sweep (Web-Advisory-/Best-Practice-Recherche für Base+Stack) | Default 14 Tage, Marker `**Nächster Security-Sweep:**` im `STATE.md`-Kopf — `principles/SECURITY_CURRENCY.md` |
 
@@ -25,7 +25,7 @@ Verbindet sich mit `architecture/DEPENDENCIES.md` (Was ist drin?) und
 | Entwickler-Module | `Get-Module Pester, PSScriptAnalyzer -ListAvailable` + `Find-Module Pester, PSScriptAnalyzer` | installiert vs. aktuell | PSGallery hat keine integrierte CVE-DB — manuell prüfen |
 | Firebird-Client-Werkzeug | `fbtracemgr -?` / Firebird-Version des Servers | Version | betrifft den Serverbetrieb; Abgleich gegen Firebird-Advisories |
 
-> Ergebnis datiert in der Tabelle „Befunde" unten festhalten. Es gibt keine Lock-Datei; ab I2 ist
+> Ergebnis datiert in der Tabelle „Befunde" unten festhalten. Es gibt keine Lock-Datei; seit I9 ist
 > `tests/RequiredModules.psd1` die Bestandsquelle für Entwickler-Module.
 
 ---
@@ -74,7 +74,7 @@ Kein Critical/High im Code dieses Projekts.
 
 Zeitraum seit dem Init-Abgleich 2026-10-11. Bestand: keine Laufzeit-Module, keine Manifest-/Lock-Datei, keine
 NuGet-Pakete; Entwicklungsrechner PowerShell 7.6.7 (`pwsh -v`), lokal installiert Pester 6.1.0/5.7.1 und
-PSScriptAnalyzer 1.25.0 (im Repo noch nicht genutzt, erst ab I2); `config.sample.json` zeigt auf ein
+PSScriptAnalyzer 1.25.0 (damals im Repo noch nicht genutzt; seit I9 gepinnt); `config.sample.json` zeigt auf ein
 Firebird-4.0.3-Verzeichnis (`fbtracemgr` aus 4.0.x). Quellen als Liste abgerufen (Advisory-Dateien, Issue-Liste,
 Release-Listen, GitHub-Advisories), Websuche nur ergänzend und als untrusted behandelt.
 

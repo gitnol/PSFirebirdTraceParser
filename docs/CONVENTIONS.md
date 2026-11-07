@@ -65,8 +65,8 @@ Commit-Pflicht pro Inkrement: `docs/KICKOFF.md` Phase 3b. Stack-spezifisch nur:
 - **Regex-Objekte einmal bauen:** `[regex]::new(…, Compiled)` außerhalb der Schleife bzw. im `begin`-Block — wie im
   Bestand; neue Muster mit Beispielzeile aus einer **fiktiven** Trace im Kommentar dokumentieren.
 - **Pipeline-Ausgabe ist das Ergebnis:** Statusmeldungen über `Write-Verbose`/`Write-Information`/`Write-Progress`,
-  nie über den Output-Stream. `Write-Host` nur für interaktive Hinweise. *Bestand:* `Show-TraceStructure.ps1` nutzt
-  `Write-Host` für Status (TODO I6).
+  nie über den Output-Stream. `Write-Host` nur für interaktive Hinweise. *Bestand:* `Show-TraceStructure.ps1` meldet Status seit I6 über
+  `Write-Verbose`/`Write-Progress`; `Write-Host` steht noch in den Trace-Skripten (I5) und im `-AnalyzeOnly`-Bericht.
 - **Eingabeobjekte nicht mutieren:** Pipeline-Filter arbeiten auf einer Kopie (`$InputObject | Select-Object *`), wie
   `Pseudonymize-FirebirdTrace.ps1`.
 - **Keine automatischen Variablen überschreiben** (`$matches`, `$input`, `$args`, `$_` …) — PSScriptAnalyzer-Regel
@@ -165,7 +165,7 @@ nicht; drei Schichten zusammen machen versehentliche Commits praktisch unmöglic
    dem Doku-Commit committet (siehe `BOOTSTRAP.md`).
 2. **Runtime (Fail-Fast):** Die Trace-Skripte prüfen die Existenz **vor** dem Lesen und brechen mit klarer Meldung ab
    (Bestand: `exit 1` mit Hinweis „config.json fehlt").
-3. **Regression (ab I2):** Pester-Test (Tag `Unit`) prüft `git ls-files`:
+3. **Regression (noch nicht umgesetzt):** Pester-Test (Tag `Unit`) prüft `git ls-files`:
    ```powershell
    It 'config.json ist NICHT in git getrackt' {
        (& git ls-files 'config.json') | Should -BeNullOrEmpty
@@ -203,18 +203,18 @@ nicht; drei Schichten zusammen machen versehentliche Commits praktisch unmöglic
 
 ## 9. Quality Gates — pre-commit (Definition of Done)
 
-Für PowerShell greifen zwei der vier Gates der Definition of Done. **Stand I1: noch nicht eingerichtet** — Werkzeuge,
-Settings-Datei und Tests entstehen in I2; bis dahin ist nur Gate 1 lokal ausführbar (ohne Settings-Datei).
+Für PowerShell greifen zwei der vier Gates der Definition of Done. **Stand I3:** Beide Gates laufen lokal; Pester-Tests
+und gepinnte Versionen gibt es seit I9. Noch nicht vorhanden: Settings-Datei für den Linter und CI (I14).
 
 ```powershell
 Invoke-ScriptAnalyzer -Path . -Recurse -Severity ParseError, Error, Warning   # Gate 1 — Linter (PSScriptAnalyzer)
-Invoke-Pester ./tests -ExcludeTag Integration -Output Detailed            # Gate 4 — Unit-Tests (Pester), ab I2
+Invoke-Pester ./tests -ExcludeTag Integration -Output Detailed            # Gate 4 — Unit-Tests (Pester), seit I9
 ```
 
 `-Severity` ist ein Filter, keine Mindeststufe: `-Severity Warning` allein zeigt weder Syntaxfehler (`ParseError`)
 noch Regeln der Stufe `Error` — alle drei Stufen nennen.
 
-Ab I2 mit `-Settings ./PSScriptAnalyzerSettings.psd1`. Projekt-eigene pre-commit-Prüfungen gehören nach
+Mit CI (I14) zusätzlich `-Settings ./PSScriptAnalyzerSettings.psd1` (Datei noch nicht vorhanden). Projekt-eigene pre-commit-Prüfungen gehören nach
 `tools/git-hooks/pre-commit.local` (der Interna-Hook ruft sie auf, `CONVENTIONS_COMMON.md` 3.1).
 
 Gate 2 (Formatter) und Gate 3 (statische Typanalyse) haben in PowerShell kein eigenständiges Standard-Werkzeug;

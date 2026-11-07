@@ -254,12 +254,6 @@ Im Reflexionsbericht die generischen offenen Lehren nur **nennen** („für die 
 L4, L7"). Will der Prompter eine Lehre sofort im Template haben, ist das ein Auftrag für eine Session im
 Template-Repo (zentrale Reflexion mit dieser einen Lehre), nicht Teil dieser Reflexion.
 
-> **Projektspezifisch (PSFirebirdTraceParser):** Backports gehen in das docs_template-Repository des Maintainers; das
-> Projekt-Repo ist öffentlich, deshalb steht der lokale Pfad nur in `docs/local/ENVIRONMENT.md` (`CONVENTIONS_COMMON.md`
-> 3.1). Ausgangsstand: docs_template v27@5ce0f84 (ungetaggt). Backports für diesen Stack zielen meist auf
-> `stacks/powershell-automation/` (siehe Stack-Lücke in `docs/BACKLOG.md`). Tag nur im Template-Repo und nur nach
-> bestandenem Pre-Tag-Gate: `git -C <Template-Repo> tag vN` (Schritt 3b) — nie aus diesem Projekt heraus.
-
 ### 3b. Pre-Tag Gate — BLOCKER (**kein `git tag` ohne diesen PASS**)
 
 > **Gilt nur im Template-Repo** — für die Session, die nach der zentralen Reflexion (`ZENTRALE_REFLEXION.md` dort)

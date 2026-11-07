@@ -22,18 +22,19 @@ Zerlegt ein Firebird-Trace-Log in Blöcke (ein Block je Zeitstempel-Zeile) und g
 |-----------|-----|---------|---------|-------------|-------------|
 | `-Path` | `[string]` | Ja (Position 0) | — | keine (nur `Test-Path` im Rumpf) | Pfad zur Trace-Datei |
 
-Kein `-WhatIf` (das Skript schreibt nichts). Kein `[CmdletBinding()]` → `-Verbose` u. ä. wirken nicht (TODO I6).
+Kein `-WhatIf` (das Skript schreibt nichts). `[CmdletBinding()]` seit I6 → Statusmeldungen mit `-Verbose`.
 
 ---
 
 ## Ablauf (Ist)
 
-1. Ganze Datei als ein String lesen (`Get-Content -Raw`).
-2. Split vor jeder Zeile, die mit `JJJJ-MM-TTThh:mm:ss.ffff` beginnt; leere Teile und Teile ohne Zeitstempel verwerfen.
-3. Je Block neun kompilierte Regex anwenden (Header, Datenbank/Verbindung, Anwendung, Transaktion, SQL, Parameter,
+1. Datei in Stücken von 4 MB lesen (`StreamReader`), `\r` entfernen (seit I6).
+2. Jedes Stück vor jeder Zeile teilen, die mit `JJJJ-MM-TTThh:mm:ss.ffff` beginnt; der unfertige letzte Block wandert ins
+   nächste Stück. Text vor dem ersten Zeitstempel wird übersprungen.
+3. Je Block die kompilierten Regex anwenden (Header, Fehlerzeilen, Datenbank/Verbindung, Anwendung, Transaktion, SQL, Parameter,
    Plan, Tabellenstatistik, Performance); fehlende Treffer lassen das Feld leer bzw. auf dem Default.
-4. Alle Objekte in einer `List[PSObject]` sammeln und **am Ende** gesammelt zurückgeben (`return $results`).
-5. Status über `Write-Host`, Fortschritt alle 5000 Blöcke über `Write-Progress`.
+4. Jedes Objekt sofort in die Pipeline geben (seit I6, vorher gesammelt am Ende).
+5. Status über `Write-Verbose`, Fortschritt je Stück über `Write-Progress`.
 
 ## Ausgabe-Vertrag (Properties, Reihenfolge wie im Code)
 
@@ -61,7 +62,7 @@ Kein `-WhatIf` (das Skript schreibt nichts). Kein `[CmdletBinding()]` → `-Verb
 | `DurationMs`, `Reads`, `Writes`, `Fetches`, `Marks` | int | `0` | Performance-Zeile `<n> ms, … read(s), … write(s), … fetch(es), … mark(s)` |
 
 Die Property-Namen sind Eingabe von `Pseudonymize-FirebirdTrace.ps1` und von Nutzer-Exporten — Änderungen nur
-gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen teils abweichende Namen (K1).
+gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1 behoben).
 
 ---
 
@@ -77,16 +78,12 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen teils abweichende Namen (K1
 
 | Einschränkung | Ursache | Status |
 |---------------|---------|--------|
-| Speicherbedarf ein Vielfaches der Dateigröße; Ausgabe erst nach komplettem Parsen | `Get-Content -Raw`, Split-Array, `return $results` (K2) | I6 |
-| Verbindungsfelder leer bei Rolle ≠ `NONE`, kleingeschriebener Endung `.fdb` oder Nicht-TCP-Protokollen | Regex `rxDb` (K3) | I6 |
 | `Timestamp` ist Text, kein `[datetime]` | Regex-Gruppe ohne Konvertierung | Akzeptiert (BACKLOG) |
-| Statusmeldungen über `Write-Host`, Meldung „Legacy Mode" | historisch | I6 |
 
 ---
 
 ## Bekannte Fallstricke
 
-- README beschreibt „line-by-line (low memory)" — gilt für den aktuellen Code nicht (K1/K2).
 - Ein Block ohne `Statement`-Abschnitt (z. B. Verbindungs- oder Transaktionsereignis) liefert `SqlStatement = $null` — beim Gruppieren berücksichtigen.
 
 ---

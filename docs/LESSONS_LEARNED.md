@@ -1,12 +1,14 @@
 # Lessons Learned – PSFirebirdTraceParser
 
 Strukturierter Index für gelernte Patterns. Jeder Eintrag benennt Scope und
-Backport-Ziel, damit die Reflexions-Phase (REFLECTION.md Schritt 3) offene
-generische Patterns als Backport-Vorschlag melden kann; eingespielt wird erst nach Freigabe
-des Prompters (REFLECTION.md Schritt 3, Freigabe-Disziplin).
+Backport-Ziel; die zentrale Reflexion im Template-Repo erntet diese Datei lesend und entscheidet
+projektübergreifend, ob eine Lehre ins Template wandert (REFLECTION.md Schritt 3). Das Projekt selbst schlägt
+keine Backports vor und schreibt nie ins Template. Global heißt ein Eintrag `<projekt>/L<N>` — Nummern deshalb nie
+neu vergeben.
 
 Neue Einträge entstehen aus dem „Lessons Learned"-Abschnitt der `CHANGELOG.md` —
-dort kurze Beschreibung, hier der strukturierte Steckbrief.
+dort kurze Beschreibung, hier der strukturierte Steckbrief. Ausnahme: Lessons aus einem Template-Update stehen nur
+hier (das Update hat keinen CHANGELOG-Eintrag); `Inkrement:` nennt dann das Update, z. B. `Template-Update v27`.
 
 ---
 
@@ -35,6 +37,36 @@ wenn das Schlüsselwort nach der Literal-Ersetzung noch vorkommt). Künftige Än
 
 ---
 
+## L3: Testdaten aus der Formatquelle bauen, echte Daten nur lokal und nur gezählt auswerten
+- Inkrement: I9, I10, K3
+- Scope: generisch-base
+- Backport-Ziel: `base/testing/UNIT_TESTS.md` (Fixtures) bzw. `base/CONVENTIONS_COMMON.md` 3.1 (öffentliche Repos)
+- Gesehen mit: v37
+- Status: offen
+
+In einem öffentlichen Repo mit sensiblen Echtdaten wurden die Test-Fixtures aus dem Quellcode des Herstellers abgeleitet
+(Format nach Firebird 5.0.4, Werte ausgedacht, IPs aus 192.0.2.0/24). Ein echtes Log diente nur lokal als Beleg, und zwar
+nur über Zählwerte (298 Kopfzeilen, 12 leere Verbindungszeilen) — so wurden zwei Parser-Fehler belegt, ohne Inhalte ins
+Repo zu bringen. Grenze: Formen, die nur im Quellcode stehen (Linux-Kopfzeile, Fehlerereignisse), bleiben unbelegt
+und müssen als „Ungeprüft" im CHANGELOG stehen. Bisher nur in diesem Projekt gesehen.
+
+---
+
+## L4: Vorbehalte an das Thema binden, nicht an eine vorhergesagte Inkrement-ID
+- Inkrement: Reflexion I3
+- Scope: generisch-base
+- Backport-Ziel: `base/REFLECTION.md` Schritt 1 (Health-Check) bzw. Init-Anleitung zu Vorbehalten
+- Gesehen mit: v37
+- Status: offen
+
+Beim Init entstanden 19 Vorbehalte „ab I2" in neun Dateien (Tests, gepinnte Module). Die Arbeit landete dann in I9, nicht
+in I2 — die Verweise waren nicht nur veraltet, sondern falsch, und der Health-Check fand sie erst, als I2 abgeschlossen
+war. Zusätzlich übersieht der Health-Check eine erledigte ID in der Status-Spalte von Tabellen („Bekannte Einschränkungen"
+mit `| I6 |`); dort standen nach I2/I3/I6 sieben erledigte Zeilen. Besser: Vorbehalt mit Stichwort schreiben („noch nicht
+vorhanden: CI") und die ID nur als Hinweis; bei Roadmap-Umbau nach den alten IDs suchen. Ein Projekt, ein Fall.
+
+---
+
 ## Pflege
 
 - Neuer „Lessons Learned"-Block im `CHANGELOG.md` → Eintrag `## L<N>:` hier anlegen.
@@ -43,11 +75,15 @@ wenn das Schlüsselwort nach der Literal-Ersetzung noch vorkommt). Künftige Än
   - `projekt-spezifisch` — nur für dieses Projekt relevant, kein Backport nötig.
   - `generisch-stack` — gehört in `docs_template/stacks/<stack>/CONVENTIONS.md` o.ä.
   - `generisch-base` — gehört in `docs_template/base/` (Prinzip, Basis-Convention, MANIFEST).
-- Status `offen` → wird bei der nächsten Reflexion (REFLECTION.md Schritt 3) als Backport-Vorschlag gemeldet;
-  bleibt `offen` bis zur Freigabe.
-- Status `backported vN@<commit>` → Backport-Commit ins Template-Repo durchgeführt (Template-Stand
-  Version + Commit, z. B. `v26@0a4c8f1`); der Tag `vN` folgt erst nach dem Pre-Tag-Gate (REFLECTION.md Schritt 3b).
+- `Gesehen mit` → Template-Stand beim Festhalten der Lehre, nur die Version aus dem `STATE.md`-Kopf
+  „Initialisiert mit" (letzter Stand der Kette, z. B. `v35`). Daran erkennt die zentrale Reflexion Lehren, die eine
+  neuere Template-Version schon behebt.
+- Status `offen` → wartet auf die zentrale Reflexion im Template-Repo; bleibt `offen`, bis das Template die Lehre
+  übernommen oder verworfen hat.
+- Status `backported vN@<commit>` → setzt das Projekt beim Template-Update (`ALTES_PROJECT_AKTUALISIEREN.md` im
+  Template-Repo), sobald `TEMPLATE_CHANGELOG.md` die Lehre als Herkunft (`<projekt>/L<N>`) nennt; Version + Commit
+  des Template-Stands, z. B. `v36@0a4c8f1`.
 - Status `projekt-intern` → Endzustand für `Scope: projekt-spezifisch` (kein Backport vorgesehen; die Lesson gilt
-  im Projekt weiter). Wird in der Reflexion nicht als Backport-Kandidat gemeldet.
+  im Projekt weiter). Die zentrale Reflexion überspringt sie.
 - Niemals Patterns löschen, auch wenn überholt — `Status: verworfen (<grund>)` setzen.
 - Diese Datei steht in der Trigger-Matrix in `KICKOFF.md` Phase 3a.

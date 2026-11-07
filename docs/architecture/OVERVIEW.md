@@ -12,7 +12,7 @@ Firebird-Server per `fbtracemgr` starten und stoppen. Kein Dienst, keine Datenba
 |---------|-------------|
 | Trace-Erfassung | `trace_start.ps1` / `trace_stop.ps1` → `fbtracemgr.exe` (Firebird Services API, lokal `service_mgr`) |
 | Parsing | `Show-TraceStructure.ps1` — .NET-Regex (`System.Text.RegularExpressions`, kompiliert) |
-| Pseudonymisierung | `Pseudonymize-FirebirdTrace.ps1` — SHA-256 (`System.Security.Cryptography`), gekürzt |
+| Pseudonymisierung | `Pseudonymize-FirebirdTrace.ps1` — HMAC-SHA256 mit Schlüssel (`System.Security.Cryptography`), gekürzt (ADR-001) |
 | Laufzeit | Windows PowerShell 5.1 oder PowerShell 7.x (keine PSGallery-Module) |
 | Datenbank | keine eigene; liest nur Trace-Ausgaben eines Firebird-Servers (Beispielkonfiguration: Firebird 4.0) |
 | Auth | Firebird-Benutzer/Passwort aus lokaler `config.json` für `fbtracemgr` (nur Trace-Skripte) |
@@ -51,9 +51,9 @@ flowchart TD
     STOP[trace_stop.ps1] -->|liest erste Zeile der<br/>neuesten *.log auf E:| LOG
     STOP -->|"fbtracemgr -STOP -ID n"| FB
     CFG --> STOP
-    LOG --> PARSE[Show-TraceStructure.ps1 -Path<br/>Get-Content -Raw → Split je Zeitstempel → Regex je Feld]
-    PARSE -->|"List[PSObject], ein Objekt je Trace-Block"| PIPE{Pipeline des Nutzers}
-    PIPE -->|optional| PSEUDO[Pseudonymize-FirebirdTrace.ps1<br/>SHA-256 gekürzt auf Kopie des Objekts]
+    LOG --> PARSE[Show-TraceStructure.ps1 -Path<br/>4-MB-Stücke → Split je Zeitstempel → Regex je Feld]
+    PARSE -->|"ein Objekt je Trace-Block, sofort in die Pipeline"| PIPE{Pipeline des Nutzers}
+    PIPE -->|optional| PSEUDO[Pseudonymize-FirebirdTrace.ps1<br/>HMAC-SHA256 gekürzt auf Kopie des Objekts]
     PSEUDO -->|-AnalyzeOnly| REPORT[Konsolenbericht:<br/>Literale, WHERE-, HAVING-Klauseln]
     PSEUDO --> OUT
     PIPE --> OUT[Out-GridView / Export-Csv / eigene Auswertung]
@@ -66,7 +66,7 @@ flowchart TD
 
 ```
 Show-TraceStructure.ps1         → Zerlegt eine Trace-Datei in Blöcke (Zeitstempel-Trenner) und mappt Felder per Regex auf ein Objekt je Block.
-Pseudonymize-FirebirdTrace.ps1  → Ersetzt identifizierende Werte der Parser-Objekte durch gekürzte SHA-256-Hashes; -AnalyzeOnly zeigt nur, was ersetzt würde.
+Pseudonymize-FirebirdTrace.ps1  → Ersetzt identifizierende Werte der Parser-Objekte durch gekürzte HMAC-SHA256-Pseudonyme; -AnalyzeOnly zeigt nur, was ersetzt würde.
 trace_start.ps1                 → Lädt config.json und startet eine Trace-Session mit fbtrace30.conf; Ausgabe in eine Datei mit Zeitstempel.
 trace_stop.ps1                  → Liest die Session-ID aus der Kopfzeile der neuesten Trace-Datei und stoppt die Session.
 fbtrace30.conf                  → Legt fest, was Firebird protokolliert (Schwellwert 100 ms, Statements, Pläne, Performance, Transaktionen, Fehler).
@@ -78,11 +78,11 @@ fbtrace30.conf                  → Legt fest, was Firebird protokolliert (Schwe
 
 | Constraint | Auswirkung |
 |-----------|-----------|
-| Trace-Logs werden mehrere GB groß | Parser hält heute Datei + Blockliste + Ergebnisliste gleichzeitig im Speicher (K2) — Streaming ist I6 |
+| Trace-Logs werden mehrere GB groß | Parser liest seit I6 in 4-MB-Stücken und gibt jedes Ereignis sofort aus; Speicher wächst nicht mit der Dateigröße |
 | Trace-Inhalte enthalten SQL-Literale, Parameter, Benutzer, IPs, Anwendungspfade | Personenbezogene/vertrauliche Daten; Weitergabe nur pseudonymisiert und mit Freigabe (`security/DATA_HANDLING.md`) |
 | Ausgabe-Properties des Parsers sind Eingabe des Pseudonymisierers und von Nutzer-Exporten | Property-Namen sind ein Vertrag (`features/TRACE_PARSING.md`) |
 | Lauffähig unter Windows PowerShell 5.1 **und** PowerShell 7 | Keine PS-7-only-Syntax (`??`, `?.`, Ternary); Encoding-Unterschiede beachten (`CONVENTIONS.md` §3) |
-| `fbtracemgr -START` läuft im Vordergrund, bis die Session gestoppt wird | `trace_start.ps1` blockiert die Konsole; Stoppen aus einer zweiten Konsole (`operations/RUNBOOK.md`) |
+| `fbtracemgr -START` läuft im Vordergrund, bis die Session gestoppt wird | Konsole bleibt belegt; Bedienung in `features/TRACE_CAPTURE.md` |
 | Öffentliches Repository | Keine Interna in Code, Doku, Commits; Interna-Hook (`CONVENTIONS_COMMON.md` 3.1) |
 
 ---

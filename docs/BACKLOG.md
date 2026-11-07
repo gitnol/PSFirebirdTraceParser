@@ -29,13 +29,15 @@ Wenn ein Backlog-Punkt für ein Inkrement vorgesehen wird → Verschiebung von
 - Konfig-Laden ist in `trace_start.ps1` und `trace_stop.ps1` dupliziert — bei der nächsten Änderung an beiden in eine gemeinsame Funktion/Modul ziehen (I4/I5)
 - Skriptnamen `trace_start.ps1`/`trace_stop.ps1` auf genehmigte Verben umstellen (`Start-FirebirdTrace.ps1`/`Stop-FirebirdTrace.ps1`) — bricht Nutzer-Gewohnheiten, nur mit README-Hinweis
 - `#Requires -Version 5.1` in allen Skripten
+- `Pseudonymize-FirebirdTrace.ps1` (3 Commits seit 2026-10-11, 395 Zeilen): der `process`-Block hat rund 175 Zeilen
+  mit einer Ersetzungsregel je Feld hintereinander — bei der nächsten Änderung prüfen, ob sich die Regeln als Tabelle
+  (Feld → Verfahren) fassen lassen (Hotspot-Liste der Reflexion I3)
 
 ---
 
 ## Technische Schuld
 
-- Keine Tests und keine Linter-Konfiguration — jede Änderung am Parser/Pseudonymisierer ist ungesichert (wird mit I2 begonnen)
-- README beschreibt teils veraltetes Verhalten (K1) — Nutzer bauen Auswertungen auf falsche Property-Namen
+- Keine Linter-Settings-Datei und keine CI — Pester-Tests laufen nur lokal (Tests gibt es seit I9; CI: I14)
 
 ---
 

@@ -1,15 +1,14 @@
 # Unit Test Conventions – PSFirebirdTraceParser
 
-**Stand I1:** Es gibt noch keine Tests. Das Grundgerüst entsteht in I2 (`docs/TODO.md`); diese Datei legt die
+**Stand I3:** Pester-Tests gibt es seit I9 (`tests/*.Tests.ps1`, Fixtures in `tests/fixtures/`); diese Datei legt die
 Regeln dafür fest.
 
-Framework: Pester — Version zentral in `tests/RequiredModules.psd1` pinnen, damit lokale Setups und spätere CI auf
-demselben Stand sind. Beim Init (2026-10-11) sind Pester 6.x und 5.x (gepflegt) verfügbar; die Wahl trifft I2 bewusst
-(`security/DEPENDENCY_AUDIT.md`). Die Fallstricke in Abschnitt 7 beziehen sich auf Pester 5.
+Framework: Pester — Version zentral in `tests/RequiredModules.psd1` gepinnt (seit I9: Pester 5.7.1, PSScriptAnalyzer
+1.25.0), damit lokale Setups und spätere CI auf demselben Stand sind. Die Fallstricke in Abschnitt 7 beziehen sich auf Pester 5.
 
 ```powershell
-# tests/RequiredModules.psd1 (Beispiel, Version in I2 festlegen)
-@{ Pester = @{ RequiredVersion = '5.9.1' } }
+# tests/RequiredModules.psd1 (Auszug)
+@{ Pester = @{ RequiredVersion = '5.7.1' } }
 
 # Lokales Setup / im CI-Workflow vor Test-Lauf
 $req = Import-PowerShellDataFile ./tests/RequiredModules.psd1

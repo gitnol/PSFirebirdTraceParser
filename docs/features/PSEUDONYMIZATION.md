@@ -11,7 +11,7 @@ Trace-Daten für externe Analysen weitergegeben werden können; `-AnalyzeOnly` z
 
 ## Technologie / Abhängigkeiten
 
-- PowerShell 5.1 / 7, `System.Security.Cryptography.SHA256`, .NET-Regex
+- PowerShell 5.1 / 7, `System.Security.Cryptography.HMACSHA256` (seit I3), .NET-Regex
 - Eingabe ausschließlich über die Pipeline (`ValueFromPipeline`); keine Dateien, kein Netz
 
 ---
@@ -56,7 +56,7 @@ mit Schlüssel prüfbar — Schlüssel und Zuordnungsdatei bleiben beim Verantwo
 ## Kritische Patterns
 
 - Arbeitet auf einer Kopie (`$InputObject | Select-Object *`) — das Original darf nie verändert werden.
-- Gleiches Eingabewort → gleiches Pseudonym (deterministisch, ungesalzen) — ermöglicht Gruppieren, ermöglicht aber auch Wörterbuchangriffe.
+- Gleiches Eingabewort → gleiches Pseudonym bei gleichem Schlüssel — ermöglicht Gruppieren; Wörterbuchangriffe nur mit dem Schlüssel (ADR-001).
 - Das Ergebnis bleibt personenbezogen (`security/DATA_HANDLING.md`); README warnt ausdrücklich vor Wörterbuchangriffen.
 
 ---
@@ -65,10 +65,7 @@ mit Schlüssel prüfbar — Schlüssel und Zuordnungsdatei bleiben beim Verantwo
 
 | Einschränkung | Ursache | Status |
 |---------------|---------|--------|
-| Numerische SQL-Literale, `DatabasePath`, `SqlPlan`/`TableStats` im Klartext | nur `'…'`-Literale und vier Felder werden behandelt | I2 |
-| Bulk-Redaktion erfasst nur die letzte WHERE/HAVING-Klausel | gieriges Muster `.*` vor dem letzten `where`/`having` im Ersetzungs-Regex | I2 |
-| Ungesalzener, gekürzter SHA-256 | kein geheimer Schlüssel | I3 |
-| `$matches` (automatische Variable) wird überschrieben | Variablenname im `-AnalyzeOnly`-Zweig (K6) | I2 |
+| In `ErrorMessages` werden nur Schlüsselwerte (`("ID" = 42)`) und String-Literale gehasht, andere Wertformen nicht | Muster aus dem Firebird-Quellcode, kein echtes Log mit Fehlern (I10) | akzeptiert, bei echtem Beleg nachziehen |
 
 ---
 

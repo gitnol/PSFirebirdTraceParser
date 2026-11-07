@@ -34,7 +34,6 @@ Lessons Learned). Danach archivieren oder löschen.
 | ~~K2~~ | Parser lud die ganze Datei in den Speicher und gab erst am Ende aus (78-MB-Datei: 1,5 GB Arbeitsspeicher) | `I6` (2026-11-07) | ae83580 |
 | ~~K1~~ | README nannte `IPAddress`/`Application` statt `ClientIP`/`ApplicationPath`, weitere Properties fehlten | `I7` (2026-11-07) | f3e476a |
 | ~~K3~~ | Verbindungsfelder blieben leer bei `<internal>`-Verbindungen (belegt: 12 von 298 im echten Firebird-5-Log), Rolle ≠ `NONE`, kleiner Endung, Protokoll ohne Port | `K3` (2026-11-07) | e82e31e |
-| (noch keine Einträge) | | | |
 
 ---
 

@@ -39,7 +39,8 @@ Es gibt keine eigenen Exception-Klassen. PowerShell-Regel für dieses Projekt:
 
 ## Was geloggt und was gerethrowt wird
 
-- Es gibt kein Log-Ziel; Meldungen gehen an die Konsole (`Write-Host`, `Write-Error`, `Write-Progress`).
+- Es gibt kein Log-Ziel; Meldungen gehen an die Konsole (`Write-Verbose`, `Write-Error`, `Write-Progress`; `Write-Host` nur
+  in den Trace-Skripten und im `-AnalyzeOnly`-Bericht).
   Level-Semantik: `docs/principles/LOGGING.md`.
 - **Unerwartet** (Programmierfehler, `fbtracemgr` fehlt) → terminierender Fehler mit Stacktrace in `$Error[0]`.
 - **Erwartet, fachlich** (Datei fehlt, keine Session-ID gefunden) → klare Meldung ohne Stacktrace.
@@ -65,9 +66,10 @@ Servers, sehr große Dateien, abgeschnittene Blöcke), außerdem Parameter und `
 > mitgerissen wird. Abgrenzung zu [[UNTRUSTED_DOCUMENT_CONTENT]]: dort geht es um fremden
 > Inhalt im LLM-Prompt (Injection/Fälschung), hier um die Robustheit des Prozesses.
 
-- **Größen begrenzen:** Der Parser liest heute die ganze Datei in den Speicher (K2) — Streaming in I6.
-- **Eingabe-abgeleitete Zahlen prüfen:** `[int]`-Casts auf Zähler (`Reads`, `Fetches` …) scheitern bei Werten über
-  `Int32.MaxValue` — Verhalten ungetestet (TODO I6).
+- **Größen begrenzen:** Der Parser liest seit I6 in 4-MB-Stücken (K2 behoben); ein einzelner sehr großer Block bleibt
+  ganz im Speicher (Obergrenze je Block: I13).
+- **Eingabe-abgeleitete Zahlen prüfen:** Zähler (`DurationMs`, `Reads`, `Fetches` …) sind seit I6 `[long]`; Werte über
+  `Int32.MaxValue` sind getestet.
 - **Regex auf untrusted Text:** Muster ohne verschachtelte, nicht verankerte Quantoren mit Fehlpfad; bei neuen
   Mustern Laufzeit gegen große synthetische Blöcke testen.
 - **Schreiben atomar:** Das Projekt schreibt selbst nur die Trace-Ausgabe (Umleitung von `fbtracemgr`); Exporte schreibt der Nutzer.

@@ -24,7 +24,7 @@ Bedrohung 3 in `security/THREAT_MODEL.md`; Ablösung in I4 (`docs/TODO.md`).
 |---|---|---|
 | Firebird-Passwort des Trace-Benutzers | DPAPI-Datei (`Export-Clixml`) oder `SecretManagement` | an den ausführenden Windows-Benutzer gebunden |
 | Übergabe an `fbtracemgr` | Option `-fetch <datei>` (Passwort aus Datei, ACL nur ausführender Benutzer, nach Gebrauch löschen) **oder** `-trusted` (Windows-Authentifizierung, falls serverseitig konfiguriert) | Optionen laut Firebird-4.0-Manpage von `fbtracemgr`; Auswahl in ADR-002 (I4) |
-| Pseudonymisierungs-Schlüssel (ab I3) | nur im Speicher des Laufs oder `SecretManagement` | nie in Exporten, Logs oder `config.json` |
+| Pseudonymisierungs-Schlüssel (seit I3, ADR-001) | Schlüsseldatei `-KeyFile` (Base64, Rechte nur aktueller Benutzer) oder Zufallsschlüssel nur im Speicher des Laufs | nie in Exporten, Logs, Zuordnungsdatei oder `config.json` |
 
 `.dpapi`-/`*.secret`-Dateien stehen in `.gitignore`.
 

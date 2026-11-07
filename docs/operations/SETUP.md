@@ -10,7 +10,7 @@
 - Für Parser und Pseudonymisierer: nichts weiter — keine Module, kein Netz
 - Für die Trace-Skripte: Firebird-Installation mit `fbtracemgr.exe` auf dem Datenbankserver, Zugang für den
   Service-Manager (`security/AUTHENTICATION.md`), Laufwerk `E:\` mit ausreichend Platz
-- Für Entwicklung (ab I2): Pester und PSScriptAnalyzer
+- Für Entwicklung: Pester und PSScriptAnalyzer (Versionen in `tests/RequiredModules.psd1`)
 
 ---
 
@@ -39,7 +39,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 Get-ChildItem *.ps1 | Unblock-File
 ```
 
-### Entwickler-Module (ab I2)
+### Entwickler-Module
 
 ```powershell
 Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck
@@ -47,7 +47,7 @@ Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
 Get-Module -Name Pester, PSScriptAnalyzer -ListAvailable
 ```
 
-Versionen: `security/DEPENDENCY_AUDIT.md` → Befunde; ab I2 gepinnt in `tests/RequiredModules.psd1`.
+Versionen: `security/DEPENDENCY_AUDIT.md` → Befunde; seit I9 gepinnt in `tests/RequiredModules.psd1`.
 
 ### Konfiguration für die Trace-Skripte anlegen
 
@@ -75,8 +75,8 @@ Kein Standardpasswort übernehmen; bis I4 steht das Passwort im Klartext in `con
 .\Show-TraceStructure.ps1 -Path .\trace.log | .\Pseudonymize-FirebirdTrace.ps1 -RedactLiterals |
     Export-Csv -Path ..\safe_trace.csv -NoTypeInformation
 
-# Quality Gates (ab I2)
-Invoke-ScriptAnalyzer -Path . -Recurse -Severity Warning
+# Quality Gates (alle drei Stufen nennen, CONVENTIONS.md)
+Invoke-ScriptAnalyzer -Path . -Recurse -Severity ParseError, Error, Warning
 Invoke-Pester ./tests -ExcludeTag Integration -Output Detailed
 ```
 

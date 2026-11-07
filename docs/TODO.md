@@ -123,9 +123,3 @@ Herkunft: `security/DEPENDENCY_AUDIT.md` → Kadenz-Sweep 2026-10-23.
 
 - [ ] Branch-History nach `CONVENTIONS_COMMON.md` 3.1 prüfen; Befund und Optionen in `docs/local/ENVIRONMENT.md` (Entscheidung Repo-Owner: History-Bereinigung oder dokumentierte Akzeptanz)
 - [ ] Interna-Hook in jedem Klon aktivieren: `git config core.hooksPath tools/git-hooks` und `.internal-terms` anlegen
-
----
-
-## Abgeschlossen
-
-- I1 docs_template-Baseline eingeführt (Bestandscode dokumentiert) — [ABGESCHLOSSEN 2026-10-11]

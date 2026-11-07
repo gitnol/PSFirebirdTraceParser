@@ -85,7 +85,8 @@ personenbezogen (EDPB-Leitlinien 01/2025) und damit **Vertraulich**.
 
 - Nur pseudonymisierte, auf nötige Spalten reduzierte Exporte.
 - Freigabe durch die für die Datenbank verantwortliche Stelle; bei externen Dienstleistern AVV (Klasse Vertraulich).
-- Bis I2/I3: Export manuell auf Klartext-Reste prüfen (Bedrohungen 1–2).
+- Export vor der Weitergabe mit `-AnalyzeOnly` und Stichprobe auf Klartext-Reste prüfen. I2/I3 haben die bekannten Lücken
+  geschlossen (Bedrohungen 1–2); Fehlertexte werden nur teilweise gehasht (`features/PSEUDONYMIZATION.md`).
 
 ---
 

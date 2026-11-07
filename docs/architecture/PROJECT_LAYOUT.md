@@ -25,8 +25,8 @@ flowchart TD
 
 - Pfeile zeigen erlaubte Aufrufrichtung (nur nach unten / nach innen).
 - **Ist-Zustand:** Domäne und Anwendung sind je Skript nicht getrennt — Regex-Definitionen, Mapping und
-  Ein-/Ausgabe stehen im selben Skriptkörper. Für Unit-Tests (ab I2/I6) wird die Logik in Funktionen geschnitten,
-  die ohne Dateisystem und ohne `fbtracemgr` aufrufbar sind (z. B. „Block-Text → Objekt", „Objekt → pseudonymisiertes Objekt").
+  Ein-/Ausgabe stehen im selben Skriptkörper. Die Pester-Tests (seit I9) rufen die Skripte als Ganzes auf — mit
+  synthetischen Fixture-Dateien bzw. Objekten; ein Schnitt der Logik in eigene Funktionsdateien war dafür bisher nicht nötig.
 - Die Skripte rufen sich gegenseitig **nicht** auf; die Kopplung läuft ausschließlich über die Pipeline und die
   Property-Namen der Trace-Objekte (`features/TRACE_PARSING.md`).
 - **Composition Root:** Der Nutzer bzw. die Pipeline-Zeile (`.\Show-TraceStructure.ps1 … | .\Pseudonymize-FirebirdTrace.ps1 …`).
@@ -52,10 +52,10 @@ PSFirebirdTraceParser/
 ## Ziel-Ergänzungen (mit dem jeweiligen Inkrement)
 
 ```
-├── tests/                          # ab I2: Pester-Tests, je Skript eine *.Tests.ps1
+├── tests/                          # seit I9: Pester-Tests, je Skript eine *.Tests.ps1
 │   ├── RequiredModules.psd1        # gepinnte Pester-Version
-│   └── fixtures/                   # ab I6: synthetische Trace-Dateien mit fiktiven Daten
-└── PSScriptAnalyzerSettings.psd1   # ab I2: Linter-Regeln für Gate 1
+│   └── fixtures/                   # seit I9: synthetische Trace-Dateien mit fiktiven Daten
+└── PSScriptAnalyzerSettings.psd1   # noch nicht vorhanden: Linter-Regeln für Gate 1 (mit CI, I14)
 ```
 
 ---

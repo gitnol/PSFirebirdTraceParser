@@ -10,12 +10,12 @@ Firebird-Installation.
 
 **Laufzeit:** keine.
 
-**Entwicklung (geplant ab I2, Versionen dann in `tests/RequiredModules.psd1` gepinnt):**
+**Entwicklung (seit I9 in `tests/RequiredModules.psd1` gepinnt):**
 
 | Modul | Mindestversion | Zweck | Risiko bei Ausfall |
 |-------|----------------|-------|-------------------|
-| `Pester` | 5.x oder 6.x (Entscheidung in I2, `security/DEPENDENCY_AUDIT.md`) | Gate 4 — Unit-Tests | Kein Regressionsschutz; Laufzeit unberührt |
-| `PSScriptAnalyzer` | aktuelle Version (Recherche 2026-10-11: 1.25.0) | Gate 1 — Linter | Kein Lint-Gate; Laufzeit unberührt |
+| `Pester` | 5.7.1 (gepinnt seit I9) | Gate 4 — Unit-Tests | Kein Regressionsschutz; Laufzeit unberührt |
+| `PSScriptAnalyzer` | 1.25.0 (gepinnt seit I9) | Gate 1 — Linter | Kein Lint-Gate; Laufzeit unberührt |
 
 **Installationsbefehl (Entwickler, einmalig):**
 ```powershell
@@ -36,7 +36,7 @@ Get-Module -Name Pester, PSScriptAnalyzer -ListAvailable | Select-Object Name, V
 |-------|-------|--------------|
 | `Microsoft.PowerShell.Utility` (`ConvertFrom-Json`, `Select-Object`, `Write-Progress`) | JSON-Konfiguration, Objektkopie, Fortschritt | Windows PowerShell 5.1 und PowerShell 7 |
 | `System.Text.RegularExpressions.Regex` | Parsing und Ersetzung | .NET Framework 4.x / .NET (PS 7) |
-| `System.Security.Cryptography.SHA256` | Pseudonym-Hashes | .NET Framework 4.x / .NET (PS 7) |
+| `System.Security.Cryptography.HMACSHA256` | Pseudonyme (seit I3, ADR-001) | .NET Framework 4.x / .NET (PS 7) |
 | `System.Diagnostics.Stopwatch` | Laufzeitmessung im Parser | .NET Framework 4.x / .NET (PS 7) |
 
 ---

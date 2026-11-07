@@ -14,7 +14,7 @@ und `security/THREAT_MODEL.md` (Bedrohung: Secret-Exposition).
 | Secret | Ist-Ablage | Soll | Inkrement |
 |---|---|---|---|
 | Firebird-Passwort für `fbtracemgr` | `config.json` (Klartext, gitignored) + Kommandozeile `-PASS` | DPAPI/`SecretManagement`, Übergabe per `-fetch` oder `-trusted` (`architecture/CREDENTIAL_STRATEGY.md`) | I4 |
-| Pseudonymisierungs-Schlüssel | existiert noch nicht (ungesalzener Hash) | nur im Speicher des Laufs bzw. `SecretManagement`, nie in Exporten | I3 |
+| Pseudonymisierungs-Schlüssel | seit I3: Schlüsseldatei `-KeyFile` (Rechte nur aktueller Benutzer) oder Zufallsschlüssel je Lauf (ADR-001) | wie Ist; nie in Exporten, Logs oder der Zuordnungsdatei | erledigt (I3) |
 
 Eine `.env`-Datei nutzt das Projekt nicht; die allgemeinen Regeln unten gelten sinngemäß für `config.json`.
 Die Vorlage `config.sample.json` darf versioniert sein, aber keine echten oder bekannten Standard-Passwörter enthalten (I4).

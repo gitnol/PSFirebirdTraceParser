@@ -1,11 +1,11 @@
 # Aktueller Projektstatus – PSFirebirdTraceParser
 
-Zuletzt aktualisiert: 2026-11-07
+Zuletzt aktualisiert: 2026-11-08
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
 **Letztes abgeschlossenes Inkrement:** I3 – HMAC mit Kundenschlüssel (2026-11-07)
 **Nächster Schritt:** I4 – Trace-Credentials (Entwurf für Firebird 5 nach echtem Lauf übernehmen)
-**Nächste Reflexion:** bei Abschluss von I3 (siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md` — `docs/`-Drift prüfen + Template-Backport prüfen; danach Marker um 3 erhöhen)
+**Nächste Reflexion:** bei Abschluss von I11 (= drittes Inkrement nach I3 in der Reihenfolge von `TODO.md`; ändert sich die Reihenfolge, gilt das dritte abgeschlossene Inkrement nach I3; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
 ---
@@ -51,7 +51,7 @@ Wenn keine Risiken bekannt: Zeile „(noch keine Einträge)" einsetzen, Tabelle 
 
 | Risiko / Blocker | Auswirkung | Mitigation / Nächster Schritt | Owner | Status |
 |---|---|---|---|---|
-| Pseudonymisierte Exporte enthalten weiterhin Klartext (Zahlen-Literale, Datenbankpfad) und umkehrbare Hashes (IP-Adressen) | Weitergabe personenbezogener Daten an Dritte trotz „Pseudonymisierung" | Bis I2/I3: Exporte vor Weitergabe manuell prüfen (`-AnalyzeOnly`), nur mit Freigabe teilen (`docs/security/DATA_HANDLING.md`) | Maintainer | offen |
+| Pseudonymisierte Exporte enthalten Klartext-Reste | Weitergabe personenbezogener Daten an Dritte trotz „Pseudonymisierung" | I2 (Klartext-Lücken) und I3 (HMAC mit Schlüssel) umgesetzt. Rest: Fehlertexte nur teilweise gehasht (`features/PSEUDONYMIZATION.md`); Exporte weiter vor Weitergabe mit `-AnalyzeOnly` prüfen, nur mit Freigabe teilen (`docs/security/DATA_HANDLING.md`) | Maintainer | gemindert |
 | `trace_start.ps1`/`trace_stop.ps1` übergeben das SYSDBA-Passwort als Kommandozeilenargument | Passwort für Administratoren/Monitoring in der Prozess-Kommandozeile sichtbar, ggf. in Prozess-Audit-Logs (Befehlszeilen-Protokollierung) | I4; bis dahin Skripte nur auf Hosts ohne Befehlszeilen-Protokollierung nutzen bzw. Passwort nach Nutzung rotieren | Maintainer | offen |
 | Ältere Commits der öffentlichen Git-History enthalten echte interne Verbindungsdaten in Kommentar-Beispielen | Informationsabfluss über das öffentliche Repository | Owner-Entscheidung zu History-Bereinigung (Force-Push) oder Akzeptanz; Details nur in `docs/local/ENVIRONMENT.md` | Repo-Owner | offen |
-| Keine automatisierten Tests, kein Linter-Gate | Refactorings am Parser/Pseudonymisierer ohne Regressionsschutz | Pester + PSScriptAnalyzer in I2 einführen | Maintainer | offen |
+| Tests laufen nur lokal, kein Linter-Gate in CI | Regressionen fallen erst auf, wenn jemand die Tests von Hand startet | Pester-Tests seit I9 (54 Tests, Stand 2026-11-08), Versionen gepinnt; CI mit PSScriptAnalyzer und Pester: I14 | Maintainer | gemindert |

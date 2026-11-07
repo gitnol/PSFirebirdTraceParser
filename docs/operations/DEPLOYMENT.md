@@ -13,7 +13,7 @@ Verbindet sich mit `operations/SETUP.md` (Erst-Setup), `operations/RUNBOOK.md`
 
 | Umgebung | Zweck | Datenquelle | Wer darf deployen |
 |---|---|---|---|
-| dev | Entwicklung, Tests | synthetische Trace-Dateien mit fiktiven Daten (ab I2/I6) | Maintainer |
+| dev | Entwicklung, Tests | synthetische Trace-Dateien mit fiktiven Daten (`tests/fixtures/`, seit I9) | Maintainer |
 | Nutzer-Einsatz | Trace auf einem Firebird-Server erfassen und auswerten | echte Trace-Daten (vertraulich) | Nutzer kopiert die Skripte aus einem Tag/Commit |
 
 Unterschiede zwischen Einsätzen werden ausschließlich über `config.json` und Parameter gesteuert
@@ -30,7 +30,7 @@ Unterschiede zwischen Einsätzen werden ausschließlich über `config.json` und 
 Auslieferungsartefakt: Git-Commit bzw. -Tag des Repositories (Skripte, `fbtrace30.conf`, `config.sample.json`, READMEs).
 
 **Reproduzierbar:**
-- [ ] Entwickler-Module gepinnt (`tests/RequiredModules.psd1`, ab I2)
+- [ ] Entwickler-Module gepinnt (`tests/RequiredModules.psd1`, seit I9)
 - [ ] Gates laufen in sauberer Umgebung (lokal bzw. CI, siehe BACKLOG)
 
 ---

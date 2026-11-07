@@ -10,6 +10,25 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 Reflexion nach I3
+
+Kein Inkrement (KICKOFF Phase 1c, `REFLECTION.md`). Erste Reflexion; begutachtet: I1, I9, I10, I7, K3, I6, I2, I3.
+
+### Changed
+- Fakten-Drift nach I2/I3/I6/I9 in Querschnitts-Docs behoben: Ablauf des Parsers (Streaming statt `Get-Content -Raw`),
+  Hash-Verfahren (HMAC statt SHA-256) in Übersicht, Abhängigkeiten, Secrets- und Credential-Doku, Teststand (seit I9
+  statt „ab I2"), erledigte Zeilen in „Bekannte Einschränkungen" von `features/TRACE_PARSING.md` und `features/PSEUDONYMIZATION.md`.
+- `STATE.md`: zwei Risiken auf „gemindert" (Pseudonymisierung, Tests); Reflexions-Marker auf I11.
+- `TODO.md`: Altformat-Abschnitt „Abgeschlossen" entfernt (I1 steht mit Hash in `STATE.md`).
+- `REFLECTION.md` wieder auf Template-Stand v37 (veralteter Projektblock zu Backports entfernt).
+- `LESSONS_LEARNED.md`: Kopf und Pflege auf v37; neu L3, L4.
+- `BACKLOG.md`: erledigte technische Schuld entfernt, Hotspot `Pseudonymize-FirebirdTrace.ps1` als Refactoring-Kandidat.
+
+### Confidence / Ungeprüft
+- Interna-Scan nur mit Ersatzliste: `.internal-terms` fehlt in diesem Klon, der Hook ist nicht aktiviert
+  (`core.hooksPath` leer). Owner-Aufgabe in `TODO.md` besteht weiter.
+- PSScriptAnalyzer 1.25.0 auf dem Stand `9d5b1b9`: 0 ParseError, 0 Error, 20 Warnungen (vorher 28).
+
 ## 2026-11-07 I3 – Pseudonyme per HMAC-SHA256 mit Kundenschlüssel
 
 **Trigger-Matrix:** Architekturentscheidung → `architecture/ADR/ADR-001-pseudonymisierung-hmac.md`; neue Parameter →
@@ -96,6 +115,9 @@ Bedrohung gemindert → `security/THREAT_MODEL.md` Bedrohung 1; Fehler behoben �
 - `README.md`/`README.de.md`: Ausgabe-Properties entsprechen dem Code (`ClientIP`, `ApplicationPath`, Verbindung,
   Transaktion, `Params`, `TableStats`, Kopfzeile); Verweis auf `LICENSE`. Abgleich gegen die tatsächlich ausgegebenen
   Properties (27) per Skript.
+
+### Confidence / Ungeprüft
+- Nachgetragen in der Reflexion nach I3: Properties per Skript gegen die Ausgabe abgeglichen (siehe Fixed); keine Tests.
 
 ## 2026-11-07 K3 – Verbindungszeile in allen Formen (Teil von I6)
 
