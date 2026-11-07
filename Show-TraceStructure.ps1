@@ -122,6 +122,8 @@ function ConvertFrom-TraceBlock {
         TableStats = $null; # New field for Table Statistics
         DurationMs = [long]0; Reads = [long]0; Writes = [long]0; Fetches = [long]0; Marks = [long]0;
         ErrorSource = $null; ErrorCodes = $null; ErrorMessages = $null; # ERROR AT / WARNING AT
+        ServiceName = $null; ServiceID = $null; # *_SERVICE events
+        SweepOIT = $null; SweepOAT = $null; SweepOST = $null; SweepNext = $null; # SWEEP_START / SWEEP_FINISH
     }
 
     # --- Header ---
