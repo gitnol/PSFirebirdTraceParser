@@ -49,10 +49,10 @@ Pseudonymisierung nennen schlüsselbasierte Verfahren (MAC/HMAC) als stärkere T
 `security/DEPENDENCY_AUDIT.md`).
 
 **Mitigation:**
-- I3: HMAC-SHA256 mit geheimem Schlüssel (pro Weitergabe bzw. Zufallsschlüssel pro Lauf); Entscheidung in ADR-001.
-- Bis dahin: IP-Adressen und Benutzer in weitergegebenen Daten als **nicht** geschützt betrachten.
+- Umgesetzt in I3 (2026-11-07, ADR-001): HMAC-SHA256 mit Schlüssel aus `-KeyFile` (≥ 32 Byte, Rechte nur aktueller Benutzer)
+  bzw. Zufallsschlüssel je Lauf; optionale Zuordnungsdatei nur beim Verantwortlichen; 8 Tests, Mutationsprüfung 5/5.
 
-**Restrisiko:** Hoch – bis I3; danach Gering (abhängig vom Schlüsselschutz).
+**Restrisiko:** Gering – abhängig vom Schutz der Schlüssel- und Zuordnungsdatei; bei Abfluss des Schlüssels sind vermutete Werte prüfbar.
 
 ---
 

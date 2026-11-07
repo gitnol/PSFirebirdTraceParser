@@ -10,6 +10,31 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-07 I3 – Pseudonyme per HMAC-SHA256 mit Kundenschlüssel
+
+**Trigger-Matrix:** Architekturentscheidung → `architecture/ADR/ADR-001-pseudonymisierung-hmac.md`; neue Parameter →
+`features/PSEUDONYMIZATION.md`, README (beide Sprachen); Bedrohung gemindert → `security/THREAT_MODEL.md` Bedrohung 2;
+Umgang mit Schlüssel/Zuordnung → `security/DATA_HANDLING.md`.
+
+### Changed
+- Pseudonyme = HMAC-SHA256 mit geheimem Schlüssel statt ungesalzenem SHA-256. **Pseudonyme ändern sich gegenüber
+  früheren Läufen**; alte und neue Exporte sind nicht vergleichbar.
+
+### Added
+- `-KeyFile`: Schlüssel (Base64, ≥ 32 Byte); fehlt die Datei, wird sie mit 32 Zufallsbytes angelegt und auf den aktuellen
+  Benutzer beschränkt. Ohne `-KeyFile`: Zufallsschlüssel nur für diesen Lauf, mit Warnung.
+- `-MappingFile`: Zuordnung Pseudonym → Original (CSV) für den Verantwortlichen, Rechte nur aktueller Benutzer, meldet Kollisionen.
+- 8 Tests (alle vorher rot).
+
+### Security
+- Pseudonyme sind ohne Schlüssel nicht mehr vorausberechenbar (Test: ungleich SHA-256 des Klartexts). Schlüssel erscheint
+  weder in der Ausgabe noch in der Zuordnungsdatei (Test). Schlüsselbytes werden nach dem Einlesen gelöscht.
+
+### Confidence / Ungeprüft
+- Mutationsprüfung: 5 Mutanten, alle erkannt. Zugriffsrechte unter Windows nachgesehen (nur aktueller Benutzer, keine
+  Vererbung); unter Linux (`SetUnixFileMode`, .NET 7+) nicht getestet.
+- Windows PowerShell 5.1 nicht getestet (Code nutzt nur .NET-Framework-kompatible Aufrufe; die Tests selbst brauchen PowerShell 7).
+
 ## 2026-11-07 I2 – Pseudonymisierung: Klartext-Lücken geschlossen
 
 **Trigger-Matrix:** Verhalten geändert → `features/PSEUDONYMIZATION.md` (Feldabdeckung als Vertrag), README (Felderliste);

@@ -96,3 +96,9 @@ personenbezogen (EDPB-Leitlinien 01/2025) und damit **Vertraulich**.
 - [ ] Externe Services nur nach Compliance-Prüfung einführen
 - [ ] Neue Parser-Property → Entscheidung in `features/PSEUDONYMIZATION.md` (pseudonymisiert oder begründet Klartext)
 - [ ] Test-Fixtures nur mit fiktiven Daten, nie Auszüge echter Traces
+
+## Schlüssel und Zuordnungsdatei (seit I3)
+
+- Schlüsseldatei (`-KeyFile`) und Zuordnungsdatei (`-MappingFile`) bleiben beim Verantwortlichen, werden nie weitergegeben und nie versioniert (`.gitignore`: `*.key`, `/*.csv`; andere Namen selbst ausschließen).
+- Beide Dateien erhalten beim Anlegen Rechte nur für den aktuellen Benutzer; Sicherung wie ein Passwort.
+- Weitergegeben werden nur die pseudonymisierten Objekte bzw. daraus erzeugte Exporte.

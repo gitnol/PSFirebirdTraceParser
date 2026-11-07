@@ -27,19 +27,6 @@ Bekannte Bugs ohne aktiven Fix: `KNOWN_ISSUES.md`.
 
 ## Aktuell (Hohe Priorität)
 
-### I3: Pseudonymisierung – geheimer Schlüssel statt ungesalzenem SHA-256
-
-Bedrohung 2 in `security/THREAT_MODEL.md`: ungesalzene, gekürzte SHA-256-Werte sind für kleine Wertebereiche
-(IPv4-Adressen, bekannte Benutzerlisten) per Wörterbuch umkehrbar.
-
-**Aufgaben:**
-
-- [ ] ADR-001: Schlüsselverfahren (HMAC-SHA256), Schlüsselquelle (Parameter als `SecureString` bzw. Zufallsschlüssel pro
-      Lauf), Konsistenz über mehrere Läufe, Verbleib des Schlüssels
-- [ ] Rote Tests: gleicher Wert + anderer Schlüssel → anderes Pseudonym; ohne Schlüssel kein Klartext-Hash-Vergleich möglich
-- [ ] `Get-ShortHash` auf HMAC umstellen; Schlüssel nie loggen oder ausgeben
-- [ ] README-Sicherheitshinweis aktualisieren (Pseudonymisierung bleibt personenbezogen, `security/DATA_HANDLING.md`)
-
 ### I4: Trace-Credentials härten
 
 Bedrohung 3 in `security/THREAT_MODEL.md`.

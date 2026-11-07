@@ -22,13 +22,15 @@ Trace-Daten für externe Analysen weitergegeben werden können; `-AnalyzeOnly` z
 |-----------|-----|---------|---------|-------------|-------------|
 | `-InputObject` | `[PSObject]` | über Pipeline | — | — | Trace-Objekt aus `Show-TraceStructure.ps1` |
 | `-SensitiveKeywords` | `[string[]]` | Nein | leer | — | Begriffe (case-insensitiv, Teilstring); Treffer im Literal → Literal pseudonymisieren; Treffer im Statement → letzte WHERE/HAVING-Klausel komplett ersetzen |
-| `-RedactLiterals` | Switch | Nein | `$false` | — | alle String-Literale mit ≥ 2 Zeichen (ohne `%`) pseudonymisieren |
+| `-RedactLiterals` | Switch | Nein | `$false` | — | alle nicht leeren String-Literale (reine `%` ausgenommen) und Zahlen im SQL pseudonymisieren (seit I2) |
 | `-AnalyzeOnly` | Switch | Nein | `$false` | — | keine Objekte ausgeben, nur Bericht (Top 50 je Kategorie) |
 | `-HashLength` | `[int]` | Nein | `12` | `[ValidateRange(8, 64)]` | Länge des hexadezimalen Pseudonyms |
+| `-KeyFile` | `[string]` | Nein (empfohlen) | Zufallsschlüssel je Lauf (Warnung) | Base64, ≥ 32 Byte | geheimer HMAC-Schlüssel; fehlt die Datei, wird sie mit 32 Zufallsbytes angelegt (Rechte nur aktueller Benutzer) |
+| `-MappingFile` | `[string]` | Nein | — | — | CSV `Pseudonym;Original` für den Verantwortlichen (Rechte nur aktueller Benutzer, meldet Kollisionen) |
 
 ---
 
-## Feldabdeckung (Vertrag, Stand I2 2026-11-07)
+## Feldabdeckung (Vertrag, Stand I3 2026-11-07)
 
 Jedes Feld ist entschieden: pseudonymisiert oder begründet im Klartext. Neue Felder des Parsers müssen hier
 eingetragen werden, bevor sie ausgeliefert werden.
@@ -46,7 +48,8 @@ eingetragen werden, bevor sie ausgeliefert werden.
 | `ClientPort`, `ProcessID`, `SessionID`, `AttachID`, `TransactionID`, `RootTxID`, `ApplicationPID`, `ErrorSource`, `ErrorCodes` | Klartext | technische IDs/Codes; erlauben Verknüpfung innerhalb des Traces, keine direkte Identifikation |
 | `Timestamp`, `Action`, `TransactionOptions`, Zähler | Klartext | Analysezweck |
 
-Hash-Verfahren bis I3: ungesalzenes SHA-256, gekürzt — für kleine Wertebereiche umkehrbar (`security/THREAT_MODEL.md` Bedrohung 2).
+Hash-Verfahren seit I3: HMAC-SHA256 mit geheimem Schlüssel, gekürzt auf `-HashLength` (ADR-001). Ohne Schlüssel nicht vorausberechenbar;
+mit Schlüssel prüfbar — Schlüssel und Zuordnungsdatei bleiben beim Verantwortlichen.
 
 ---
 
