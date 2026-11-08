@@ -16,9 +16,11 @@ BeforeDiscovery {
         @{ Name = 'unknown_event'; Params = @{}; Lines = @('2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) Unknown event in ATTACH_DATABASE', $conn, '') }
         @{ Name = 'unknown_event_lowercase'; Params = @{}; Lines = @('2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) UNKNOWN', '') }
         @{ Name = 'preamble'; Params = @{}; Lines = @('Trace session ID 2 started', '', 'some stray text', $start, $conn, '') }
+        @{ Name = 'start_line_lowercase'; Params = @{}; Lines = @('trace session id 4 started', $start, '') }
         @{ Name = 'no_events'; Params = @{}; Lines = @('this is not a trace', 'second line') }
         @{ Name = 'only_start_line'; Params = @{}; Lines = @('Trace session ID 3 started', '   ') }
         @{ Name = 'summary_order'; Params = @{}; Lines = @($start, $conn, '', ($start -replace '10:00:00', '10:00:01'), '', '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) COMMIT_TRANSACTION', '', '2026-11-08T10:00:03.0000 (4321:000001A2B3C4D5E0) ATTACH_DATABASE', '', '2026-11-08T10:00:04.0000 garbled', '') }
+        @{ Name = 'summary_order_underscore'; Params = @{}; Lines = @('2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) TEST_A', '', '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) TESTB', '', '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) testc', '') }
         @{ Name = 'long_block_cut'; Params = @{ MaxBlockLines = 5 }; Lines = @(
                 $start, $conn, '', '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH', $conn
             ) + @(1..20 | ForEach-Object { "param$_ = integer, ""$_""" }) + @('      7 ms', '', '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) COMMIT_TRANSACTION', $conn, '')
@@ -72,11 +74,36 @@ Describe 'Paritaet PowerShell- und C#-Parser: Diagnose (I18)' -Skip:($PSVersionT
         Compare-Engine $f | Should -BeNullOrEmpty
     }
 
+    It 'zaehlt zwei Warnungen in verschiedenen Stuecken gleich (zweite weiter hinten im Stueck als die erste)' {
+        $sql = 'SELECT ' + ('X' * 60000) + ' FROM T'
+        $lines = [System.Collections.Generic.List[string]]::new()
+        foreach ($i in 1..95) {
+            $head = if ($i -eq 5 -or $i -eq 90) { 'Unknown event in DETACH_DATABASE' } else { 'EXECUTE_STATEMENT_FINISH' }
+            $lines.AddRange([string[]]@("2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) $head", $script:Conn, '', "Statement $($i):", ('-' * 79), $sql, '', '      1 ms', ''))
+        }
+        $f = Join-Path $TestDrive 'two_chunks.log'
+        [System.IO.File]::WriteAllText($f, ($lines -join "`n") + "`n")
+        Compare-Engine $f | Should -BeNullOrEmpty
+    }
+
     It 'kuerzt einen Block ueber mehrere 4-MB-Stuecke gleich und zaehlt danach gleich' {
         $f = Join-Path $TestDrive 'huge_block.log'
         $text = '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION' + "`n" + ("xx`n" * 2000000) +
         '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) Unknown event in DETACH_DATABASE' + "`n" + $script:Conn + "`n" +
         '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION' + "`n"
+        [System.IO.File]::WriteAllText($f, $text)
+        Compare-Engine $f @{ MaxBlockLines = 1000 } | Should -BeNullOrEmpty
+    }
+
+    It 'zaehlt nach einem gekuerzten Block auch Stuecke spaeter gleich' {
+        $f = Join-Path $TestDrive 'cut_then_more.log'
+        $sql = 'SELECT ' + ('X' * 60000) + ' FROM T'
+        $more = [System.Text.StringBuilder]::new()
+        foreach ($i in 1..90) {
+            $null = $more.Append("2026-11-08T10:00:03.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH`n$($script:Conn)`n`nStatement $($i):`n$('-' * 79)`n$sql`n`n      1 ms`n`n")
+        }
+        $text = '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION' + "`n" + ("xx`n" * 2000000) + $more.ToString() +
+        '2026-11-08T10:00:09.0000 (4321:000001A2B3C4D5E0) Unknown event in DETACH_DATABASE' + "`n" + $script:Conn + "`n"
         [System.IO.File]::WriteAllText($f, $text)
         Compare-Engine $f @{ MaxBlockLines = 1000 } | Should -BeNullOrEmpty
     }

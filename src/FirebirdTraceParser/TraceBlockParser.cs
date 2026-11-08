@@ -21,6 +21,9 @@ namespace FirebirdTraceParser
 
         private readonly TracePatterns _rx;
         private readonly Action<string> _verbose;
+        private readonly TraceDiagnostics _diagnostics;
+        private readonly int _maxBlockLines;
+        private readonly string _timeoutText;
 
         // Parts of the transaction line -> field (Firebird register_transaction); a hashtable literal in the script
         private readonly System.Collections.Hashtable _txOptionField = PowerShellSemantics.NewHashtable();
@@ -28,31 +31,64 @@ namespace FirebirdTraceParser
         // Open connections for ConnectionDurationMs: "<database>|<ATT number>" -> time of ATTACH_DATABASE/CREATE_DATABASE
         private readonly Dictionary<string, DateTime> _openAttach = new Dictionary<string, DateTime>();
 
-        public TraceBlockParser(TimeSpan regexTimeout, Action<string> verbose)
+        public TraceBlockParser(TraceParserOptions options, TraceDiagnostics diagnostics, Action<string> verbose)
         {
-            _rx = new TracePatterns(regexTimeout);
+            _rx = new TracePatterns(TimeSpan.FromSeconds(options.RegexTimeoutSeconds));
             _verbose = verbose;
+            _diagnostics = diagnostics;
+            _maxBlockLines = options.MaxBlockLines;
+            // The script writes the number as PowerShell turns a [double] into text
+            _timeoutText = (string)System.Management.Automation.LanguagePrimitives.ConvertTo(options.RegexTimeoutSeconds, typeof(string), CultureInfo.InvariantCulture);
             foreach (var p in new[] { "READ_COMMITTED", "CONCURRENCY", "CONSISTENCY", "<unknown>" }) { _txOptionField[p] = TraceField.TxIsolation; }
             foreach (var p in new[] { "REC_VERSION", "NO_REC_VERSION", "READ_CONSISTENCY" }) { _txOptionField[p] = TraceField.TxReadMode; }
             foreach (var p in new[] { "WAIT", "NOWAIT" }) { _txOptionField[p] = TraceField.TxWaitMode; }
             foreach (var p in new[] { "READ_WRITE", "READ_ONLY" }) { _txOptionField[p] = TraceField.TxAccessMode; }
         }
 
-        public TraceEntry Parse(string text, int start, int length)
+        /// <summary>
+        /// One block = text.Substring(start, length). Warnings go to the diagnostics (line number and fixed texts only).
+        /// cut: lines of this block were already dropped while it was carried over several chunks.
+        /// </summary>
+        public TraceEntry Parse(string text, int start, int length, bool cut)
         {
             var block = text.Substring(start, length);
+            // Cheap pre-check: a block with more than MaxBlockLines lines has at least that many characters
+            if (cut || length > _maxBlockLines)
+            {
+                var end = TraceDiagnostics.GetLineEnd(block, _maxBlockLines);
+                if (cut || (end > 0 && end < block.Length))
+                {
+                    if (end > 0)
+                    {
+                        block = block.Substring(0, end);
+                    }
+
+                    _diagnostics.BlockWarning(text, start, "event has more than " + _maxBlockLines + " lines, only the first " + _maxBlockLines + " read (-MaxBlockLines)");
+                }
+            }
+
             var entry = new TraceEntry();
-            ReadHeader(block, entry);
-            ReadErrorLines(block, entry);
-            ReadConnection(block, entry);
-            var hasStatement = block.Contains("Statement ");
-            ReadRoutineOrDuration(block, entry, hasStatement);
-            ReadService(block, entry);
-            ReadSweep(block, entry);
-            ReadTransaction(block, entry);
-            ReadStatement(block, entry, hasStatement);
-            ReadRecordsFetched(block, entry);
-            ReadPerformance(block, entry);
+            try
+            {
+                ReadHeader(block, entry);
+                ReadErrorLines(block, entry);
+                ReadConnection(block, entry);
+                var hasStatement = block.Contains("Statement ");
+                ReadRoutineOrDuration(block, entry, hasStatement);
+                ReadService(block, entry);
+                ReadSweep(block, entry);
+                ReadTransaction(block, entry);
+                ReadStatement(block, entry, hasStatement);
+                ReadRecordsFetched(block, entry);
+                ReadPerformance(block, entry);
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                // Fields read so far stay; the next block is read as usual
+                _diagnostics.BlockWarning(text, start, "regex time limit (" + _timeoutText + " s) reached, remaining fields left empty (-RegexTimeoutSeconds)");
+            }
+
+            _diagnostics.CountEvent(text, start, block, entry.Text(TraceField.Action));
             return entry;
         }
 

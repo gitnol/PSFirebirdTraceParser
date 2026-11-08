@@ -1,4 +1,5 @@
-using System;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Management.Automation;
 
@@ -6,7 +7,8 @@ namespace FirebirdTraceParser
 {
     /// <summary>
     /// Parses a Firebird trace log into one PSCustomObject per trace event, with the same fields, order and types as
-    /// Show-TraceStructure.ps1 (docs/features/TRACE_PARSING.md, ADR-003).
+    /// Show-TraceStructure.ps1 (docs/features/TRACE_PARSING.md, ADR-003). Warnings and verbose messages have the same
+    /// texts as the script; they hold line numbers and fixed texts, never trace content.
     /// </summary>
     [Cmdlet(VerbsData.ConvertFrom, "FirebirdTrace")]
     [OutputType(typeof(PSObject))]
@@ -38,7 +40,9 @@ namespace FirebirdTraceParser
                 return;
             }
 
-            var parser = new TraceStreamParser(full, TimeSpan.FromSeconds(RegexTimeoutSeconds), WriteChunkProgress, WriteVerbose);
+            var sw = Stopwatch.StartNew();
+            var diagnostics = new TraceDiagnostics(WriteWarning);
+            var parser = new TraceStreamParser(full, new TraceParserOptions(MaxBlockLines, RegexTimeoutSeconds), diagnostics, WriteChunkProgress, WriteVerbose);
             try
             {
                 foreach (var entry in parser.Parse())
@@ -50,6 +54,15 @@ namespace FirebirdTraceParser
             {
                 WriteProgress(new ProgressRecord(1, ProgressActivity, "Completed") { RecordType = ProgressRecordType.Completed });
             }
+
+            // Summary (I13): verbose stream only, the pipeline output stays the same
+            foreach (var line in diagnostics.Summary())
+            {
+                WriteVerbose(line);
+            }
+
+            sw.Stop();
+            WriteVerbose("Parsed " + parser.Count + " events in " + sw.Elapsed.TotalSeconds.ToString("N2", CultureInfo.CurrentCulture) + " seconds.");
         }
 
         private void WriteChunkProgress(int events, int percent)
