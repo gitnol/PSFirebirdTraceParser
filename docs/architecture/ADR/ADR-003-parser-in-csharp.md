@@ -13,27 +13,34 @@ braucht ein Drittel bis ein Fünftel des Speichers. Große Logs (mehrere hundert
 sich immer gleich, bis C# den PowerShell-Parser ohne Änderung für Nutzer ersetzen kann; danach steuert PowerShell nur
 noch den C#-Code. Die Qualitätsregeln werden dafür nicht gelockert.
 
-Randbedingungen: Parser und Pseudonymisierer müssen unter Windows PowerShell 5.1 (.NET Framework 4.8) und PowerShell 7
-laufen (`architecture/OVERVIEW.md`). Die Ausgabe-Objekte sind Vertrag (`features/TRACE_PARSING.md`): Namen,
+**Korrektur des Owners (2026-11-08, gleicher Tag): Priorität ist PowerShell 7.** Windows PowerShell 5.1 ist für den
+C#-Kern nicht Pflicht; dort bleibt der PowerShell-Parser als Rückfall.
+
+Randbedingungen: Parser und Pseudonymisierer müssen weiter unter Windows PowerShell 5.1 (.NET Framework 4.8) und
+PowerShell 7 laufen (`architecture/OVERVIEW.md`) — unter 5.1 mit der PowerShell-Engine. Die Ausgabe-Objekte sind Vertrag (`features/TRACE_PARSING.md`): Namen,
 Reihenfolge und Typen der 46 Felder, `TableCounts` als `object[]` von Objekten, Warnungen und Verbose-Meldungen.
 
 ## 2. Betrachtete Alternativen
 
-* **A — Binär-Cmdlet in einer .NET-Standard-2.0-Bibliothek**, das `PSCustomObject` (`PSObject` mit `PSNoteProperty`)
+* **A — Binär-Cmdlet in einer Bibliothek für .NET 8 (`net8.0`)**, das `PSCustomObject` (`PSObject` mit `PSNoteProperty`)
   erzeugt und Warnungen, Verbose und Fortschritt über die Cmdlet-Methoden schreibt.
 * **B — Statische C#-API mit eigener Klasse je Ereignis**, aufgerufen aus dem Skript. Eine Klasse hat Properties statt
   NoteProperties (`Get-Member`, `PSObject.TypeNames` und `Select-Object *` verhalten sich anders); Warnungen müssten über
   Rückruf oder Warteschlange zurück ins Skript.
 * **C — `Add-Type` mit C#-Quelltext im Skript.** Übersetzt bei jedem neuen Prozess (Sekunden), unter 5.1 nur C# 5,
   ein Typ lässt sich in der Sitzung nicht ersetzen (`CONVENTIONS.md` §4).
-* **D — Zwei Builds (`net48` und `net8.0`+).** Mehr Aufwand und zwei Binaries ohne Nutzen: .NET Standard 2.0 lädt in
-  beiden Laufzeiten.
+* **D — .NET Standard 2.0** (lädt auch unter 5.1). Erst so angelegt, nach der Korrektur des Owners verworfen: Unter
+  5.1 bleibt ohnehin die PowerShell-Engine; .NET Standard 2.0 sperrt neuere APIs (`Span`, Regex-Quellgenerator,
+  Nullable-Annotationen der Laufzeit) und zieht das Paket `NETStandard.Library` mit.
+* **E — `net10.0`** (Laufzeit der installierten PowerShell 7.6). Läuft nicht unter PowerShell 7.4/7.5 (.NET 8/9);
+  `net8.0` ist das kleinste LTS-Ziel, das alle PowerShell-Versionen ab 7.4 laden.
 
 ## 3. Entscheidung
 
 Wir nehmen **A**:
 
-- Projekt `src/FirebirdTraceParser/` (`netstandard2.0`), einziges Paket `PowerShellStandard.Library` 5.1.1 nur zum
+- Projekt `src/FirebirdTraceParser/` (`net8.0`: kleinstes LTS-Ziel für PowerShell 7.4+, geprüft: PowerShell 7.6.9
+  läuft auf .NET 10.0.14 und lädt die DLL; Windows PowerShell 5.1 lädt sie nicht), einziges Paket `PowerShellStandard.Library` 5.1.1 nur zum
   Übersetzen (`PrivateAssets=all`); zur Laufzeit gilt das `System.Management.Automation` der aufrufenden PowerShell.
   Paketversionen fest über `packages.lock.json`, gebaut mit `RestoreLockedMode`.
 - Cmdlet `ConvertFrom-FirebirdTrace -Path -MaxBlockLines -RegexTimeoutSeconds` (gleiche Prüfungen wie das Skript).
@@ -47,10 +54,15 @@ Wir nehmen **A**:
 - **Ratsche:** ein Pester-Paritätstest lässt beide Parser über alle Fixtures und erzeugte Grenzfälle laufen und
   vergleicht jedes Feld jedes Objekts (Wert, Typ, `$null` gegen leer) sowie Warnungen; jeder Unterschied ist rot. Fehlt
   die DLL, ist der Test rot, nicht übersprungen.
-- `Show-TraceStructure.ps1` bekommt in I19 `-Engine Auto|PowerShell|CSharp` (Auto: C#, wenn die DLL gefunden wird).
+- **Begründung „Eigentümer: Priorität PowerShell 7":** C#-Engine nur unter PowerShell 7; unter Windows PowerShell 5.1
+  wählt `-Engine Auto` die PowerShell-Engine. Der 5.1-CI-Job baut nichts und testet weiter die PowerShell-Engine; die
+  Tests des C#-Parsers und die Paritätstests laufen nur unter PowerShell 7 (unter 5.1 übersprungen).
+- `Show-TraceStructure.ps1` bekommt in I19 `-Engine Auto|PowerShell|CSharp` (Auto: C#, wenn PowerShell 7 läuft und die
+  DLL gefunden wird).
   Ob der PowerShell-Parser danach als Fallback und Orakel bleibt oder entfällt, entscheidet I20 mit Belegen.
 - SDK: `global.json` verlangt mindestens 9.0.300 und nimmt die höchste installierte Hauptversion (`latestMajor`); CI
-  baut mit .NET SDK 10 (LTS). Das Ergebnis hängt nicht von der SDK-Version ab (Ziel .NET Standard 2.0).
+  baut mit .NET SDK 10 (LTS). Zur Laufzeit gilt die .NET-Version der aufrufenden PowerShell (7.6: .NET 10), nicht die
+  Zielversion; das Supportende von .NET 8 am 2026-11-10 betrifft nur Nutzer, die noch PowerShell 7.4 einsetzen.
 
 ## 4. Begründung
 
@@ -58,7 +70,8 @@ Wir nehmen **A**:
   (`Select-Object *`) und Nutzer-Exporte sehen keinen Unterschied.
 - Warnungen und Verbose laufen über die normalen Streams des Cmdlets und gehorchen `-WarningAction`/`-Verbose` des
   Skripts, ohne Rückrufe.
-- Eine DLL für beide Laufzeiten hält Build, CI und Doku klein.
+- Ein Ziel (`net8.0`) für alle PowerShell-7-Versionen hält Build, CI und Doku klein; 5.1 braucht keinen zweiten Build,
+  weil dort die PowerShell-Engine bleibt (Owner: Priorität PowerShell 7).
 - Wörtliches Übertragen statt „idiomatischem" C# macht die Gleichheit prüfbar: Eine Abweichung ist ein Fehler, keine
   Auslegungsfrage. Verbesserungen am Verhalten kommen erst nach I20, dann nur an einer Stelle.
 
@@ -69,4 +82,6 @@ Wir nehmen **A**:
 * **Negativ/Risiken:** Zwei Implementierungen bis I20 — jede Parser-Änderung muss in beiden gemacht werden (der
   Paritätstest erzwingt das). Neuer Build-Schritt mit .NET SDK und NuGet (Lieferkette: `security/DEPENDENCY_AUDIT.md`).
   Eine geladene DLL ist bis zum Ende des Prozesses gesperrt; ein Neubau braucht einen neuen PowerShell-Prozess. Nutzer
-  ohne .NET SDK bekommen die DLL nur gebaut oder aus einem Release (Verteilung noch offen, I20).
+  ohne .NET SDK bekommen die DLL nur gebaut oder aus einem Release (Verteilung noch offen, I20). Unter Windows
+  PowerShell 5.1 bleibt es bei der Laufzeit des PowerShell-Parsers; solange er Rückfall ist, bleiben beide Parser zu
+  pflegen.

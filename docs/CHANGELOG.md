@@ -12,6 +12,49 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 I16 – C#-Parser: Entscheidung, Projektgerüst, Build in Gate und CI
+
+Commits `4b2da51` (Tests rot, Stub mit Vertrag, ADR-003, Build in Gate und CI), `1a33b89` (Umsetzung, Ziel `net8.0`).
+Kein Split nötig: 5 C#-Dateien (~260 Zeilen), 2 Testdateien (~190 Zeilen), Gate/CI ~40 Zeilen.
+
+**Trigger-Matrix:** Architekturentscheidung → `architecture/ADR/ADR-003-parser-in-csharp.md`; neues Modul und
+Datenfluss → `architecture/OVERVIEW.md` (Stack, Modul-Verantwortlichkeiten, Mermaid, Constraints, Lese-Pfad); neue
+Schicht/Ordner → `architecture/PROJECT_LAYOUT.md`; neue Dependencies (.NET SDK, NuGet, `actions/setup-dotnet`) →
+`architecture/DEPENDENCIES.md`, `security/DEPENDENCY_AUDIT.md` (Ereignis-Prüfung mit Websuche und `dotnet list
+package --vulnerable`); Build-Pfad → `operations/DEPLOYMENT.md`, `operations/SETUP.md`; Gate-Regel →
+`CONVENTIONS.md` §9; Risiko → `STATE.md`. README nicht ausgelöst: das Cmdlet liefert erst die Kopfzeile und ist für
+Nutzer erst mit `-Engine` (I19) gedacht.
+
+### Added
+- `src/FirebirdTraceParser/` (`net8.0`, einziges Paket `PowerShellStandard.Library` 5.1.1 nur zum Übersetzen,
+  `packages.lock.json`): Cmdlet `ConvertFrom-FirebirdTrace -Path -MaxBlockLines -RegexTimeoutSeconds`, liest in
+  4-MB-Stücken wie das Skript, Kopfzeile (Zeitstempel, Action, Prozess, Adresse, `ErrorSource`), alle 46 Felder in
+  Vertrags-Reihenfolge mit denselben Standardwerten und Typen als echtes `PSCustomObject`.
+- `tools/Invoke-QualityGate.ps1 -Gate Build` (Exit 4); `All` = Build, Lint, Test. CI Job PowerShell 7 mit
+  `actions/setup-dotnet` (SDK 10.0.x) und Build-Schritt; `global.json`; `.gitignore` für `bin/` und `obj/`.
+- `tests/TraceParity.ps1` (strenger Vergleich: Namen, Reihenfolge, Typ, Wert, `$null` gegen leer, ordinal) und
+  `tests/FirebirdTraceParser.Engine.Tests.ps1` (16 Tests: Laden, Parameter, fehlende Datei, Feldliste je Fixture,
+  Kopfzeile je Fixture, Standardwerte, Stückgrenze bei 5 MB).
+
+### Changed
+- Korrektur des Owners während I16: **Priorität PowerShell 7**, Windows PowerShell 5.1 für den C#-Kern nicht Pflicht.
+  Erst als `netstandard2.0` angelegt (lud unter 5.1 und 7, geprüft), dann auf `net8.0` umgestellt (kleinstes LTS-Ziel
+  für PowerShell 7.4+; `NETStandard.Library` entfällt, neuere APIs möglich). Unter 5.1 lädt die DLL nicht (geprüft:
+  `FileNotFoundException`), die Tests des C#-Parsers sind dort übersprungen; der 5.1-CI-Job baut nicht.
+
+### Confidence / Ungeprüft
+- RED: 13 von 16 Tests rot gegen den Stub (z. B. `Expected 7, but got 0`, `count: 7 vs 0`); die drei grünen
+  (DLL liegt vor, Cmdlet geladen, Parameterprüfung) prüft schon der Stub — gewollt, sie sichern Build und Laden.
+  GREEN: 16 von 16 unter PowerShell 7.6.9; unter Windows PowerShell 5.1 16 übersprungen.
+- Gate: Build ✓ (0 Warnungen mit `latest-recommended`), PSScriptAnalyzer ✓ 0, Pester 7.6.9: 166 passed;
+  Windows PowerShell 5.1: 165 passed, 1 skipped (vor der Umstellung auf `net8.0`; danach Engine-Tests übersprungen).
+- Mutationsprobe (Neubau je Mutant, Kontrolle 0): 16 Mutanten, 14 rot. Nicht erkannt: `ChunkSize` 4 MB → 1 MB
+  (äquivalent: die Teilung hängt nicht von der Stückgröße ab) und `Replace("\r", …)` ausgeschaltet (bei nur
+  Kopfzeilen nicht sichtbar, `\S+` endet vor `\r`; CRLF-Fälle kommen in I18).
+- Nicht geprüft: Laden unter PowerShell 7.4/7.5 (.NET 8/9; nicht installiert) und der erste CI-Lauf mit Build.
+  Annahme: `windows-latest` mit `actions/setup-dotnet` v6.0.0 baut wie lokal.
+- Struktur-Check mit Template-Skript.
+
 ## 2026-11-08 Roadmap – C#-Parser parallel zum PowerShell-Parser (I16–I20)
 
 **Trigger-Matrix:** keine Zeile ausgelöst (nur Planung in `TODO.md`/`STATE.md`).

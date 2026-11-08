@@ -11,7 +11,8 @@
 - Für Parser und Pseudonymisierer: nichts weiter — keine Module, kein Netz
 - Für die Trace-Skripte: Firebird-Installation mit `fbtracemgr.exe` auf dem Datenbankserver, Zugang für den
   Service-Manager (`security/AUTHENTICATION.md`), ein Ausgabeordner mit ausreichend Platz (`OutputDirectory`)
-- Für Entwicklung: Pester und PSScriptAnalyzer (Versionen in `tests/RequiredModules.psd1`)
+- Für Entwicklung: Pester und PSScriptAnalyzer (Versionen in `tests/RequiredModules.psd1`) und seit I16 das .NET SDK
+  (mindestens 9.0.300 laut `global.json`, empfohlen 10.0 LTS — .NET 9 hat am 2026-11-10 Supportende) für den C#-Parser
 
 ---
 
@@ -122,7 +123,7 @@ Mapping des Windows-Kontos auf einen Firebird-Benutzer. Ungeprüft gegen einen e
 .\Show-TraceStructure.ps1 -Path .\trace.log | .\Pseudonymize-FirebirdTrace.ps1 -RedactLiterals |
     Export-Csv -Path ..\safe_trace.csv -NoTypeInformation
 
-# Quality Gates (wie in CI, CONVENTIONS.md §9)
+# Quality Gates (wie in CI, CONVENTIONS.md §9): Build des C#-Parsers, Lint, Tests
 pwsh -File ./tools/Invoke-QualityGate.ps1
 ```
 

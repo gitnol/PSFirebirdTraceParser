@@ -32,11 +32,23 @@ Gepinnte Versionen installieren: `Install-Module -Name <Modul> -RequiredVersion 
 
 ---
 
+## .NET SDK und NuGet (seit I16, nur Build des C#-Parsers)
+
+| Baustein | Version | Zweck | Risiko bei Ausfall |
+|---|---|---|---|
+| .NET SDK | mindestens 9.0.300 (`global.json`, `rollForward: latestMajor`); lokal 9.0.320, CI 10.0.x | `dotnet build` des C#-Parsers (`net8.0`) | Kein C#-Parser; der PowerShell-Parser läuft weiter |
+| `PowerShellStandard.Library` (NuGet) | 5.1.1, fest in `packages.lock.json` (mit Prüfsumme) | Referenz-Assemblys von `System.Management.Automation` nur zum Übersetzen (`PrivateAssets=all`, wird nicht mitgeliefert) | Build scheitert (Restore) |
+| nuget.org | — | Paketquelle beim Restore | Build scheitert ohne Cache |
+
+Laufzeit: Die DLL nutzt die .NET-Laufzeit und das `System.Management.Automation` der aufrufenden PowerShell 7
+(7.6: .NET 10). Keine weiteren Pakete, keine transitiven Abhängigkeiten (`packages.lock.json`).
+
 ## CI (GitHub Actions, seit I14)
 
 | Baustein | Version | Zweck | Risiko bei Ausfall |
 |---|---|---|---|
 | `actions/checkout` | v7.0.1, gepinnt auf Commit `3d3c42e5aac5ba805825da76410c181273ba90b1` | Repository im CI-Lauf auschecken (`persist-credentials: false`) | CI läuft nicht; lokal unberührt |
+| `actions/setup-dotnet` | v6.0.0, gepinnt auf Commit `a98b56852c35b8e3190ac28c8c2271da59106c68` (seit I16, nur Job PowerShell 7) | .NET SDK 10.0.x für den Build | Job PowerShell 7 rot (Build) |
 | Runner `windows-latest` | von GitHub gepflegt (nicht pinnbar) | PowerShell 7 und Windows PowerShell 5.1 vorinstalliert | Neues Runner-Image kann andere `pwsh`-Version bringen |
 | PowerShell Gallery | — | Pester und PSScriptAnalyzer in den gepinnten Versionen | CI-Lauf rot (Exit 3 „Modul fehlt") |
 

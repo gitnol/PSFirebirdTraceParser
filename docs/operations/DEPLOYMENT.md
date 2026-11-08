@@ -23,14 +23,20 @@ Unterschiede zwischen Einsätzen werden ausschließlich über `config.json` und 
 
 ## Build
 
-```
-(kein Build — die .ps1-Dateien werden direkt ausgeführt)
+```powershell
+pwsh -File ./tools/Invoke-QualityGate.ps1 -Gate Build   # dotnet build src/FirebirdTraceParser -> bin/FirebirdTraceParser.dll
 ```
 
-Auslieferungsartefakt: Git-Commit bzw. -Tag des Repositories (Skripte, `TraceCommon.ps1`, `fbtrace50.conf`/`fbtrace30.conf`, `config.sample.json`, READMEs).
+Die `.ps1`-Dateien werden direkt ausgeführt. Seit I16 gibt es den C#-Parser (ADR-003): Er wird mit dem .NET SDK
+(`global.json`) nach `bin/` gebaut, Paketversionen fest über `src/FirebirdTraceParser/packages.lock.json`
+(`RestoreLockedMode`). `bin/` ist nicht versioniert. Ein PowerShell-Prozess, der die DLL geladen hat, sperrt sie —
+vor einem Neubau diesen Prozess beenden. Die DLL läuft nur unter PowerShell 7.4+ (`net8.0`).
+
+Auslieferungsartefakt: Git-Commit bzw. -Tag des Repositories (Skripte, `TraceCommon.ps1`, `fbtrace50.conf`/`fbtrace30.conf`, `config.sample.json`, READMEs). Die DLL wird bisher nicht ausgeliefert, nur lokal gebaut (Verteilung: I20).
 
 **Reproduzierbar:**
 - [ ] Entwickler-Module gepinnt (`tests/RequiredModules.psd1`, seit I9)
+- [ ] NuGet-Pakete gepinnt (`packages.lock.json`, seit I16); SDK-Mindestversion in `global.json`
 - [ ] Gates laufen in sauberer Umgebung: CI seit I14 (`.github/workflows/ci.yml`, frischer Checkout auf `windows-latest`)
 
 ---

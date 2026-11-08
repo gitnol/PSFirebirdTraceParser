@@ -225,6 +225,12 @@ mit mehr als zwei Teilen (`[System.IO.Path]::Combine` nehmen).
 `-Severity` ist ein Filter, keine Mindeststufe: `-Severity Warning` allein zeigt weder Syntaxfehler (`ParseError`)
 noch Regeln der Stufe `Error` — alle drei Stufen nennen.
 
+**C#-Parser (seit I16, ADR-003):** `-Gate Build` baut `src/FirebirdTraceParser` mit Compiler-Warnungen als Fehler und
+den .NET-Analysatoren (`AnalysisLevel latest-recommended`, `Nullable enable`); das ist Gate 1–3 für C#. Regeln:
+Muster, Optionen und .NET-Aufrufe wörtlich aus `Show-TraceStructure.ps1` übernehmen (auch kulturabhängige wie
+`IndexOf(string)`), nicht „verbessern" — sonst rot im Paritätstest. Eine Analysator-Ausnahme dafür steht im Code als
+`SuppressMessage` mit Begründung. Tests des C#-Parsers laufen nur unter PowerShell 7 (`-Skip` unter 5.1).
+
 Projekt-eigene pre-commit-Prüfungen gehören nach
 `tools/git-hooks/pre-commit.local` (der Interna-Hook ruft sie auf, `CONVENTIONS_COMMON.md` 3.1).
 

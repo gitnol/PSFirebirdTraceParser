@@ -34,26 +34,6 @@ Split wegen der Größengrenze (KICKOFF Phase 2 Punkt 5): je Inkrement höchsten
 Gebündelt wird nichts: I8 liest andere Quellen (Security-Sweep), der Refactoring-Kandidat `Show-TraceStructure.ps1`
 (`BACKLOG.md`) wird durch I20 vielleicht überflüssig — deshalb **getrennt gelassen** und erst nach I20 entschieden.
 
-### I16: C#-Parser: Entscheidung, Projektgerüst, Build in Gate und CI
-
-**Aufgaben:**
-
-- [ ] ADR-003 (Status Accepted): Bibliothek für .NET Standard 2.0 als Binär-Cmdlet, Ausgabe als `PSCustomObject`,
-  Verweis auf die Entscheidung des Owners
-- [ ] `src/FirebirdTraceParser/`: Projekt (`netstandard2.0`, `PowerShellStandard.Library` nur zum Übersetzen), Cmdlet
-  `ConvertFrom-FirebirdTrace` mit `-Path`, `-MaxBlockLines`, `-RegexTimeoutSeconds` (gleiche Prüfungen wie das
-  Skript), Lesen in 4-MB-Stücken, Kopfzeile; alle 46 Felder in Reihenfolge und mit Standardwert
-- [ ] Build in `tools/Invoke-QualityGate.ps1` (`-Gate Build`; `All` = Build, Lint, Test) und in beiden CI-Jobs;
-  `bin/` und `obj/` ignoriert, kein Binary im Repo
-- [ ] Tests: Laden unter PowerShell 7 und Windows PowerShell 5.1; Feldnamen, Reihenfolge und Standardwerte gleich wie
-  `Show-TraceStructure.ps1`; Kopfzeilen-Felder gleich auf allen Fixtures
-
-**Zusätzliche Kriterien:**
-
-- [ ] Security-Currency-Hook für die neue Abhängigkeit (NuGet-Paket, .NET SDK) → `security/DEPENDENCY_AUDIT.md`
-- [ ] `architecture/DEPENDENCIES.md`, `architecture/OVERVIEW.md`, `architecture/PROJECT_LAYOUT.md`,
-  `operations/DEPLOYMENT.md` bzw. `operations/SETUP.md` (Bauen)
-
 ### I17: C#-Parser: alle Felder je Ereignis gleich wie PowerShell (Parität auf den Fixtures)
 
 **Aufgaben:**
@@ -73,13 +53,14 @@ Gebündelt wird nichts: I8 liest andere Quellen (Security-Sweep), der Refactorin
   `-MaxBlockLines`, `-RegexTimeoutSeconds`, Zusammenfassung mit `-Verbose`
 - [ ] Paritätstest auf erzeugten Grenzfällen: CRLF/LF gemischt, lange Namen und Umlaute, Trigger FB4/FB5,
   Sweep/Service, Fehler, gekürzte Blöcke, Zeitlimit (nur wo deterministisch); Warnungen und Verbose-Meldungen (ohne
-  Zeitangabe) müssen gleich sein; unter PowerShell 7 und 5.1
+  Zeitangabe) müssen gleich sein; unter PowerShell 7 (unter 5.1 bleibt die PowerShell-Engine)
 
 ### I19: `Show-TraceStructure.ps1 -Engine Auto|PowerShell|CSharp`, Standard Auto
 
 **Aufgaben:**
 
-- [ ] `-Engine`: `Auto` nimmt C#, wenn die gebaute DLL neben dem Skript oder unter `bin/` liegt, sonst PowerShell;
+- [ ] `-Engine`: `Auto` nimmt C#, wenn PowerShell 7 läuft und die gebaute DLL neben dem Skript oder unter `bin/`
+  liegt, sonst PowerShell (Windows PowerShell 5.1 immer PowerShell);
   `-Verbose` nennt die gewählte Engine; gleiche Parameter, Warnungen und Verbose-Meldungen in beiden
 - [ ] Paritätstest über das Skript mit beiden Engines; Pseudonymisierer mit C#-Ausgabe (Test)
 - [ ] README en/de, `features/TRACE_PARSING.md`, `architecture/CONFIGURATION.md`

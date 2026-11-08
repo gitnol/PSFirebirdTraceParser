@@ -51,8 +51,12 @@ PSFirebirdTraceParser/
 ├── tools/Invoke-QualityGate.ps1    # seit I14: Linter und Tests, lokal und in CI gleich
 ├── PSScriptAnalyzerSettings.psd1   # seit I14: Linter-Regeln für Gate 1
 ├── .github/workflows/ci.yml        # seit I14: CI bei Push und Pull Request (PS 7 und 5.1)
+├── src/FirebirdTraceParser/        # seit I16: C#-Parser (Cmdlet ConvertFrom-FirebirdTrace, net8.0, ADR-003)
+├── global.json                     # seit I16: Mindestversion des .NET SDK
+├── bin/                            # Build-Ausgabe des C#-Parsers (gitignored, tools/Invoke-QualityGate.ps1 -Gate Build)
 ├── tests/                          # seit I9: Pester-Tests, je Skript eine *.Tests.ps1
 │   ├── RequiredModules.psd1        # gepinnte Versionen von Pester und PSScriptAnalyzer
+│   ├── TraceParity.ps1             # seit I16: strenger Vergleich der Objekte beider Parser (Dot-Sourcing)
 │   └── fixtures/                   # synthetische Trace-Dateien mit fiktiven Daten
 └── docs/                           # Dieses Doku-Set (docs/local/ gitignored)
 ```
@@ -62,7 +66,11 @@ PSFirebirdTraceParser/
 - **Ein Skript pro Aufgabe** im Repo-Root; neue Aufgaben als neues Skript mit genehmigtem Verb (`CONVENTIONS.md` §2).
 - **Gemeinsam genutzte Logik** der Trace-Skripte liegt in `TraceCommon.ps1` (Dot-Sourcing, kein Modul; ADR-002). Ein
   Modul (`.psm1` mit Manifest) erst, wenn Code außerhalb dieses Ordners die Funktionen braucht ([[DRY]] vs. [[YAGNI]]).
-- **Tests parallel zur Quellstruktur:** `tests/<Skriptname>.Tests.ps1`.
+- **Tests parallel zur Quellstruktur:** `tests/<Skriptname>.Tests.ps1`; für den C#-Parser
+  `tests/FirebirdTraceParser.*.Tests.ps1` (nur PowerShell 7).
+- **C#-Parser** (seit I16): je Verantwortung eine Datei in `src/FirebirdTraceParser/` (Cmdlet, Stück-Schleife,
+  Block-Parser, Regex, Feldliste). Er überträgt `Show-TraceStructure.ps1` wörtlich (ADR-003); Änderungen am Parsing in
+  beiden Parsern im selben Commit.
 - **Keine Laufzeitdaten im Repo:** Trace-Logs, Exporte und `config.json` bleiben außerhalb der Versionierung
   (`.gitignore`: `**/*.log`, `trace_output*`, `/*.csv`, `config*.json`).
 

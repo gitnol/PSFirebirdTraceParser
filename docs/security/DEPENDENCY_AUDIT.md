@@ -23,6 +23,8 @@ Verbindet sich mit `architecture/DEPENDENCIES.md` (Was ist drin?) und
 |---|---|---|---|
 | PowerShell-Laufzeit | `$PSVersionTable.PSVersion` und Abgleich gegen die MSRC-Advisories | installierte Version | Windows PowerShell 5.1 wird über Windows Update gepatcht |
 | Entwickler-Module | `Get-Module Pester, PSScriptAnalyzer -ListAvailable` + `Find-Module Pester, PSScriptAnalyzer` | installiert vs. aktuell | PSGallery hat keine integrierte CVE-DB — manuell prüfen |
+| NuGet-Pakete des C#-Parsers (seit I16) | `dotnet list src/FirebirdTraceParser/FirebirdTraceParser.csproj package --vulnerable --include-transitive` und `… --outdated` | anfällige bzw. veraltete Pakete | nutzt die GitHub-Advisory-Datenbank über nuget.org |
+| .NET SDK | `dotnet --version` gegen die .NET-Download-Seite | Patchstand | Supportende im Blick (`architecture/DEPENDENCIES.md`) |
 | Firebird-Client-Werkzeug | `fbtracemgr -?` / Firebird-Version des Servers | Version | betrifft den Serverbetrieb; Abgleich gegen Firebird-Advisories |
 
 > Ergebnis datiert in der Tabelle „Befunde" unten festhalten. Es gibt keine Lock-Datei; seit I9 ist
@@ -49,6 +51,17 @@ falls Update nicht möglich ist.
 Ablage für Scanner- und Recherche-Ergebnisse (`principles/SECURITY_CURRENCY.md` → Artefakt). Neueste oben.
 Öffentliches oder potenziell öffentliches Repo: die Betroffenheit **konkreter interner Hosts** nur in `docs/local/`,
 hier nur generisch (`CONVENTIONS_COMMON.md` 3.1).
+
+### 2026-11-08 – Ereignis: neue Dependencies für den C#-Parser (I16)
+
+Auslöser: neuer Build mit .NET SDK und NuGet (ADR-003). Kein Kadenz-Sweep; Marker unverändert.
+
+| Prüfgegenstand | Ergebnis | Bewertung (betrifft uns / nicht, Begründung) | Quelle |
+|---|---|---|---|
+| `PowerShellStandard.Library` 5.1.1 | Neueste Version; `dotnet list package --vulnerable --include-transitive`: keine anfälligen Pakete; `--outdated`: keine Updates; 0 Security-Advisories im Repository `PowerShell/PowerShellStandard` | Betrifft uns nur beim Übersetzen: reine Referenz-Assemblys, `PrivateAssets=all`, nicht in `bin/`. Version und Prüfsumme fest in `packages.lock.json`, Build mit `RestoreLockedMode` | `dotnet list package`, `gh api repos/PowerShell/PowerShellStandard/security-advisories` |
+| .NET SDK 9.0.320 (lokal) | Neuester Patch von .NET 9 (9.0.22, 2026-10-25, enthält Sicherheitskorrekturen); .NET 9 und .NET 8 Supportende 2026-11-10; .NET 10 LTS bis 2028-11-14 | Betrifft den Build. CI baut deshalb mit SDK 10.0.x; `global.json` lässt neuere Hauptversionen zu (`latestMajor`). Lokal SDK 10 installieren (Owner, `STATE.md` Risiken) | dotnet.microsoft.com Download- und Support-Seite (abgerufen 2026-11-08) |
+| Zielversion `net8.0` | Supportende .NET 8 am 2026-11-10 | Betrifft nur das Übersetzungsziel: Zur Laufzeit gilt die .NET-Version der PowerShell (7.6: .NET 10.0.14, geprüft). Gewählt, damit PowerShell 7.4+ die DLL lädt (ADR-003) | `[Environment]::Version` in `pwsh` |
+| `actions/setup-dotnet` v6.0.0 | Commit `a98b5685…` (2026-07-16); 0 Security-Advisories. Das neuere v6.1.0 ist vom 2026-11-03 — bewusst noch nicht genommen (jünger als 14 Tage) | Ja, neue CI-Abhängigkeit, auf vollen Commit-SHA gepinnt, nur im Job PowerShell 7 | `gh api repos/actions/setup-dotnet/releases`, `…/git/ref/tags/v6.0.0`, `…/security-advisories` |
 
 ### 2026-11-08 – Ereignis: neue Dependency `actions/checkout` (I14)
 
