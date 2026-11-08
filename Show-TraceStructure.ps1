@@ -47,6 +47,8 @@ if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
 }
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
+# Time limit per match of the block regexes (I13). The chunk splitter below has none: it is anchored and linear.
+$script:RegexTimeout = [TimeSpan]::FromSeconds($RegexTimeoutSeconds)
 Write-Verbose "Streaming analysis started: $Path"
 
 
@@ -58,13 +60,13 @@ $rxHeader = [System.Text.RegularExpressions.Regex]::new(
     # Action keeps the full event name ("FAILED EXECUTE_STATEMENT_FINISH"); for "ERROR AT <component>" /
     # "WARNING AT <component>" Action is ERROR/WARNING and the component goes to ErrorSource.
     '^(?<Timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{4,})\s+\((?<ProcessID>\d+):(?<SessionID>(?:0x)?[0-9A-Fa-f]+)\)\s+(?<Action>(?:(?:FAILED|UNAUTHORIZED)\s+)?\S+)(?:\s+AT\s+(?<ErrorSource>\S+))?',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # Error/warning lines: "%9lu : <text>" (Firebird TraceStatusVectorImpl::getText)
 $rxErrorLine = [System.Text.RegularExpressions.Regex]::new(
     '^\s*(?<Code>\d{1,10})\s:\s(?<Message>.*?)\s*$',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # DB (Include IP/Port)
@@ -73,39 +75,39 @@ $rxErrorLine = [System.Text.RegularExpressions.Regex]::new(
 # Any database file name/extension and any role (K3).
 $rxDb = [System.Text.RegularExpressions.Regex]::new(
     '^\s+(?<DatabasePath>\S.*?)\s+\(ATT_(?<AttachID>\d+),\s+(?<User>[^,]+),\s+(?<Encoding>[^,]+),\s+(?<ProtocolInfo>(?<Protocol>[A-Za-z0-9]+):(?<IPAddress>[^/)]+)(?:/(?<Port>\d+))?|<[^>]+>)\)',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # App (Exclude ATT match)
 $rxApp = [System.Text.RegularExpressions.Regex]::new(
     '(?im)^\s+(?!.*\(ATT_)(?<ApplicationPath>(?:[a-z]:|\\\\).+?):(?<ApplicationPID>\d+)\s*$',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # Transaction (TRA_ID, Init, Options)
 $rxTx = [System.Text.RegularExpressions.Regex]::new(
     '^\s+\(TRA_(?<TransactionID>\d+)(?:,\s+INIT_(?<InitID>\d+))?,\s+(?<TxOpts>.+?)\)',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # SQL Statement
 # Stops at: ^^^^, PLAN (, paramX, records fetched, or X ms
 $rxSql = [System.Text.RegularExpressions.Regex]::new(
     'Statement\s+\d+:\s*[\r\n]+(?:-{3,}[\r\n]+)(?<SqlStatement>.+?)(?=(?m)[\r\n]+\s*(\^{4,}|PLAN \(|param\d+|[0-9]+\s+records? fetched|\d+\s+ms|Table\s+Natural))',
-    [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # SQL Plan (PLAN ...)
 $rxPlan = [System.Text.RegularExpressions.Regex]::new(
     '(?<SqlPlan>(?:^\s*PLAN\b.*[\r\n]?)+)',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # Table Stats (Treat as part of Plan or separate)
 # Matches "Table ... Natural ... ******* ... rows"
 $rxTableStats = [System.Text.RegularExpressions.Regex]::new(
     '(?<TableStats>Table\s+Natural.+?[\r\n]+\*+[\r\n]+(?:.+[\r\n]?)+)',
-    [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Singleline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 # Fixed-Width data parsing logic is separate, but regex is needed for detection.
 
@@ -113,14 +115,14 @@ $rxTableStats = [System.Text.RegularExpressions.Regex]::new(
 # Firebird 5 TracePluginImpl::register_service; the address may be "internal" or a protocol without address.
 $rxService = [System.Text.RegularExpressions.Regex]::new(
     '^\s+service_mgr,\s+\(Service\s+(?<ServiceID>(?:0x)?[0-9A-Fa-f]+),\s+(?<User>[^,]+),\s+(?<ProtocolInfo>(?<Protocol>[A-Za-z0-9]+):(?<IPAddress>[^/,)]+)(?:/(?<Port>\d+))?|[^,)]+)(?:,\s+(?<ApplicationPath>.+):(?<ApplicationPID>\d+))?\)\s*$',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 # Service name in quotes, e.g. "Backup Database", "Incremental Backup Database". The switches line below it holds
 # file paths and is deliberately not read (it would need its own pseudonymization).
 $rxServiceName = [System.Text.RegularExpressions.Regex]::new(
     '^\s+"(?<ServiceName>[^"
 ]+)"\s*$',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # Sweep transaction counters (log_sweep; only SWEEP_START and SWEEP_FINISH print them)
@@ -129,33 +131,33 @@ $rxSweep = [System.Text.RegularExpressions.Regex]::new(
 \s*Oldest active\s+(?<OAT>\d+)\s*
 \s*Oldest snapshot\s+(?<OST>\d+)\s*
 \s*Next transaction\s+(?<Next>\d+)',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # Procedures and functions: "Procedure <name>:" / "Function <name>:" on a line of their own
 # (Firebird 4 logRecordProcFunc, Firebird 5 logRecordProc/logRecordFunc; Firebird 5 may put a plan below it)
 $rxRoutine = [System.Text.RegularExpressions.Regex]::new(
     '^(?<Type>Procedure|Function) (?<Name>.+?):[ \t]*$',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 # Triggers. Firebird 5 (logRecordTrig): "Trigger[ <name>][ FOR <table>] (<when> <action>):" on a line of its own.
 # Firebird 4 (log_event_trigger_execute): "<TAB><name>[ FOR <table>] (<when> <action>) " below the transaction line,
 # "<unknown>" when the trigger has no name. <when>: BEFORE, AFTER, ON (database trigger, no table) or <unknown>.
 $rxTrigger = [System.Text.RegularExpressions.Regex]::new(
     '^(?:Trigger(?: (?<Name>.+?))?|[ \t]+(?<Name>.+?))(?: FOR (?<Table>.+?))? \((?<Time>BEFORE|AFTER|ON|<unknown>) (?<Event>[^)]+)\):?[ \t]*$',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # SQL Params (param0 = ...)
 $rxParams = [System.Text.RegularExpressions.Regex]::new(
     '(?<Params>(?:^\s*param\d+\s*=\s*.+[\r\n]?)+)',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 # Performance
 $rxPerf = [System.Text.RegularExpressions.Regex]::new(
     '^\s+(?<DurationMs>\d+)\s+ms(?:,\s+(?<Reads>\d+)\s+read\(s\))?(?:,\s+(?<Writes>\d+)\s+write\(s\))?(?:,\s+(?<Fetches>\d+)\s+fetch\(es\))?(?:,\s+(?<Marks>\d+)\s+mark\(s\))?',
-    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled, $script:RegexTimeout
 )
 
 
@@ -226,9 +228,71 @@ function ConvertFrom-TableStat {
     return , $rows.ToArray()
 }
 
+# Line numbers for warnings (I13), computed only when a warning is written. $script:LineBase is the line number of
+# $text[0]; when lines were dropped from an oversized carry, positions from $script:ShiftFrom on lie $script:Shift lines
+# further down in the file. The last result is cached, so many warnings in one chunk stay linear.
+$script:LineBase = 1
+$script:ShiftFrom = [int]::MaxValue
+$script:Shift = 0
+$script:LnText = $null; $script:LnIndex = 0; $script:LnCount = 0
+$script:WarningCount = 0
+$script:ActionCount = @{}
+
+function Measure-Newline([string]$Text, [int]$From, [int]$To) {
+    $part = $Text.Substring($From, $To - $From)
+    return $part.Length - $part.Replace("`n", '').Length
+}
+
+function Get-LineEnd([string]$Text, [int]$Lines) {
+    # Index after the n-th line break, or -1 if the text has fewer line breaks
+    $pos = -1
+    for ($k = 0; $k -lt $Lines; $k++) {
+        $pos = $Text.IndexOf("`n", $pos + 1)
+        if ($pos -lt 0) { return -1 }
+    }
+    return $pos + 1
+}
+
+function Write-BlockWarning([string]$Text, [int]$Start, [string]$Message) {
+    if (-not [object]::ReferenceEquals($Text, $script:LnText) -or $Start -lt $script:LnIndex) {
+        $script:LnText = $Text; $script:LnIndex = 0; $script:LnCount = 0
+    }
+    $script:LnCount += Measure-Newline -Text $Text -From $script:LnIndex -To $Start
+    $script:LnIndex = $Start
+    $line = $script:LineBase + $script:LnCount
+    if ($Start -ge $script:ShiftFrom) { $line += $script:Shift }
+    $script:WarningCount++
+    Write-Warning "Line ${line}: $Message"
+}
+
+function Test-Preamble([string]$Text) {
+    # Text before the first event: empty lines and the start line of fbtracemgr are expected, anything else is reported
+    $lines = $Text.Split("`n")
+    for ($k = 0; $k -lt $lines.Count; $k++) {
+        if ($lines[$k].Trim().Length -gt 0 -and $lines[$k] -notmatch '^Trace session ID \d+ started\s*$') {
+            $script:WarningCount++
+            Write-Warning "Line $($script:LineBase + $k): text before the first event skipped"
+            return
+        }
+    }
+}
+
 # 4. Block parsing (one trace event -> one object)
 function ConvertFrom-TraceBlock {
-    param([string]$block)
+    # One block = $Text.Substring($Start, $Length). Writes the object to the pipeline and diagnostics to the warning
+    # stream (line number and fixed texts only, never trace content). $Cut: lines of this block were already dropped
+    # while it was carried over several chunks.
+    param([string]$Text, [int]$Start, [int]$Length, [bool]$Cut)
+
+    $block = $Text.Substring($Start, $Length)
+    # Cheap pre-check: a block with more than MaxBlockLines lines has at least that many characters
+    if ($Cut -or $Length -gt $MaxBlockLines) {
+        $end = Get-LineEnd -Text $block -Lines $MaxBlockLines
+        if ($Cut -or ($end -gt 0 -and $end -lt $block.Length)) {
+            if ($end -gt 0) { $block = $block.Substring(0, $end) }
+            Write-BlockWarning -Text $Text -Start $Start -Message "event has more than $MaxBlockLines lines, only the first $MaxBlockLines read (-MaxBlockLines)"
+        }
+    }
 
     # Init Object
     $entry = [ordered]@{
@@ -252,185 +316,206 @@ function ConvertFrom-TraceBlock {
         ConnectionDurationMs = $null; # DETACH_DATABASE: time since ATTACH_DATABASE of the same connection
     }
 
-    # --- Header ---
-    $m = $rxHeader.Match($block)
-    if ($m.Success) {
-        $entry.Timestamp = $m.Groups['Timestamp'].Value
-        $entry.Action = $m.Groups['Action'].Value
-        $entry.ProcessID = $m.Groups['ProcessID'].Value
-        $entry.SessionID = $m.Groups['SessionID'].Value
-        if ($m.Groups['ErrorSource'].Success) { $entry.ErrorSource = $m.Groups['ErrorSource'].Value }
-    }
-
-    # --- Error / warning lines (only for ERROR AT / WARNING AT blocks) ---
-    if ($entry.Action -eq 'ERROR' -or $entry.Action -eq 'WARNING') {
-        $codes = [System.Collections.Generic.List[string]]::new()
-        $messages = [System.Collections.Generic.List[string]]::new()
-        foreach ($em in $rxErrorLine.Matches($block)) {
-            $codes.Add($em.Groups['Code'].Value)
-            $messages.Add($em.Groups['Message'].Value)
+    try {
+        # --- Header ---
+        $m = $rxHeader.Match($block)
+        if ($m.Success) {
+            $entry.Timestamp = $m.Groups['Timestamp'].Value
+            $entry.Action = $m.Groups['Action'].Value
+            $entry.ProcessID = $m.Groups['ProcessID'].Value
+            $entry.SessionID = $m.Groups['SessionID'].Value
+            if ($m.Groups['ErrorSource'].Success) { $entry.ErrorSource = $m.Groups['ErrorSource'].Value }
         }
-        if ($codes.Count -gt 0) {
-            $entry.ErrorCodes = $codes -join ', '
-            $entry.ErrorMessages = $messages -join ' | '
+
+        # --- Error / warning lines (only for ERROR AT / WARNING AT blocks) ---
+        if ($entry.Action -eq 'ERROR' -or $entry.Action -eq 'WARNING') {
+            $codes = [System.Collections.Generic.List[string]]::new()
+            $messages = [System.Collections.Generic.List[string]]::new()
+            foreach ($em in $rxErrorLine.Matches($block)) {
+                $codes.Add($em.Groups['Code'].Value)
+                $messages.Add($em.Groups['Message'].Value)
+            }
+            if ($codes.Count -gt 0) {
+                $entry.ErrorCodes = $codes -join ', '
+                $entry.ErrorMessages = $messages -join ' | '
+            }
         }
-    }
 
-    # --- DB ---
-    $m = $rxDb.Match($block)
-    if ($m.Success) {
-        $entry.DatabasePath = $m.Groups['DatabasePath'].Value
-        $entry.AttachID = $m.Groups['AttachID'].Value
-        $entry.User = $m.Groups['User'].Value
-        $entry.ProtocolInfo = $m.Groups['ProtocolInfo'].Value
-        $entry.ClientIP = $m.Groups['IPAddress'].Value
-        $entry.ClientPort = $m.Groups['Port'].Value
-    }
+        # --- DB ---
+        $m = $rxDb.Match($block)
+        if ($m.Success) {
+            $entry.DatabasePath = $m.Groups['DatabasePath'].Value
+            $entry.AttachID = $m.Groups['AttachID'].Value
+            $entry.User = $m.Groups['User'].Value
+            $entry.ProtocolInfo = $m.Groups['ProtocolInfo'].Value
+            $entry.ClientIP = $m.Groups['IPAddress'].Value
+            $entry.ClientPort = $m.Groups['Port'].Value
+        }
 
-    # --- App ---
-    $m = $rxApp.Match($block)
-    if ($m.Success) {
-        $entry.ApplicationPath = $m.Groups['ApplicationPath'].Value
-        $entry.ApplicationPID = $m.Groups['ApplicationPID'].Value
-    }
+        # --- App ---
+        $m = $rxApp.Match($block)
+        if ($m.Success) {
+            $entry.ApplicationPath = $m.Groups['ApplicationPath'].Value
+            $entry.ApplicationPID = $m.Groups['ApplicationPID'].Value
+        }
 
-    # Statement events (most blocks) carry neither a connection end nor a routine: skip both checks for them
-    $hasStatement = $block.Contains('Statement ')
-    $action = $entry.Action
-    if ($action -and -not $hasStatement) {
-        if ($action.EndsWith('_DATABASE')) {
-            # --- Connection duration: ATTACH_DATABASE -> DETACH_DATABASE of the same database and ATT number ---
-            $stamp = [datetime]::MinValue
-            if ($entry.AttachID -and [datetime]::TryParseExact($entry.Timestamp, $script:TIMESTAMP_FORMAT, $script:Invariant, 'None', [ref]$stamp)) {
-                $key = $entry.DatabasePath + '|' + $entry.AttachID
-                if ($action -eq 'ATTACH_DATABASE' -or $action -eq 'CREATE_DATABASE') { $script:OpenAttach[$key] = $stamp }
-                elseif ($action -eq 'DETACH_DATABASE' -and $script:OpenAttach.ContainsKey($key)) {
-                    $entry.ConnectionDurationMs = [long][Math]::Round(($stamp - $script:OpenAttach[$key]).TotalMilliseconds)
-                    $null = $script:OpenAttach.Remove($key)
+        # Statement events (most blocks) carry neither a connection end nor a routine: skip both checks for them
+        $hasStatement = $block.Contains('Statement ')
+        $action = $entry.Action
+        if ($action -and -not $hasStatement) {
+            if ($action.EndsWith('_DATABASE')) {
+                # --- Connection duration: ATTACH_DATABASE -> DETACH_DATABASE of the same database and ATT number ---
+                $stamp = [datetime]::MinValue
+                if ($entry.AttachID -and [datetime]::TryParseExact($entry.Timestamp, $script:TIMESTAMP_FORMAT, $script:Invariant, 'None', [ref]$stamp)) {
+                    $key = $entry.DatabasePath + '|' + $entry.AttachID
+                    if ($action -eq 'ATTACH_DATABASE' -or $action -eq 'CREATE_DATABASE') { $script:OpenAttach[$key] = $stamp }
+                    elseif ($action -eq 'DETACH_DATABASE' -and $script:OpenAttach.ContainsKey($key)) {
+                        $entry.ConnectionDurationMs = [long][Math]::Round(($stamp - $script:OpenAttach[$key]).TotalMilliseconds)
+                        $null = $script:OpenAttach.Remove($key)
+                    }
+                }
+            }
+            elseif ($action.Contains('TRIGGER')) {
+                # --- Trigger (EXECUTE_TRIGGER_*, COMPILE_TRIGGER, also FAILED/UNAUTHORIZED) ---
+                $m = $rxTrigger.Match($block)
+                if ($m.Success) {
+                    $entry.RoutineType = 'Trigger'
+                    $name = $m.Groups['Name'].Value
+                    if ($name -and $name -ne '<unknown>') { $entry.RoutineName = $name }
+                    if ($m.Groups['Table'].Success) { $entry.TriggerTable = $m.Groups['Table'].Value }
+                    $entry.TriggerTime = $m.Groups['Time'].Value
+                    $entry.TriggerEvent = $m.Groups['Event'].Value
+                }
+            }
+            elseif ($action.Contains('PROCEDURE') -or $action.Contains('FUNCTION')) {
+                # --- Procedure / function ---
+                $m = $rxRoutine.Match($block)
+                if ($m.Success) {
+                    $entry.RoutineType = $m.Groups['Type'].Value
+                    $entry.RoutineName = $m.Groups['Name'].Value
                 }
             }
         }
-        elseif ($action.Contains('TRIGGER')) {
-            # --- Trigger (EXECUTE_TRIGGER_*, COMPILE_TRIGGER, also FAILED/UNAUTHORIZED) ---
-            $m = $rxTrigger.Match($block)
+
+        # --- Service (ATTACH/START/QUERY/DETACH_SERVICE): fills the same connection fields as the DB line ---
+        if ($entry.Action -and $entry.Action.EndsWith('_SERVICE')) {
+            $m = $rxService.Match($block)
             if ($m.Success) {
-                $entry.RoutineType = 'Trigger'
-                $name = $m.Groups['Name'].Value
-                if ($name -and $name -ne '<unknown>') { $entry.RoutineName = $name }
-                if ($m.Groups['Table'].Success) { $entry.TriggerTable = $m.Groups['Table'].Value }
-                $entry.TriggerTime = $m.Groups['Time'].Value
-                $entry.TriggerEvent = $m.Groups['Event'].Value
+                $entry.ServiceID = $m.Groups['ServiceID'].Value
+                $entry.User = $m.Groups['User'].Value
+                $entry.ProtocolInfo = $m.Groups['ProtocolInfo'].Value
+                if ($m.Groups['IPAddress'].Success) { $entry.ClientIP = $m.Groups['IPAddress'].Value }
+                if ($m.Groups['Port'].Success) { $entry.ClientPort = $m.Groups['Port'].Value }
+                if ($m.Groups['ApplicationPath'].Success) {
+                    $entry.ApplicationPath = $m.Groups['ApplicationPath'].Value
+                    $entry.ApplicationPID = $m.Groups['ApplicationPID'].Value
+                }
             }
+            $m = $rxServiceName.Match($block)
+            if ($m.Success) { $entry.ServiceName = $m.Groups['ServiceName'].Value }
         }
-        elseif ($action.Contains('PROCEDURE') -or $action.Contains('FUNCTION')) {
-            # --- Procedure / function ---
-            $m = $rxRoutine.Match($block)
+
+        # --- Sweep counters ---
+        if ($block.Contains('Transaction counters')) {
+            $m = $rxSweep.Match($block)
             if ($m.Success) {
-                $entry.RoutineType = $m.Groups['Type'].Value
-                $entry.RoutineName = $m.Groups['Name'].Value
+                $entry.SweepOIT = [long]$m.Groups['OIT'].Value
+                $entry.SweepOAT = [long]$m.Groups['OAT'].Value
+                $entry.SweepOST = [long]$m.Groups['OST'].Value
+                $entry.SweepNext = [long]$m.Groups['Next'].Value
             }
         }
-    }
 
-    # --- Service (ATTACH/START/QUERY/DETACH_SERVICE): fills the same connection fields as the DB line ---
-    if ($entry.Action -and $entry.Action.EndsWith('_SERVICE')) {
-        $m = $rxService.Match($block)
+        # --- Tx ---
+        $m = $rxTx.Match($block)
         if ($m.Success) {
-            $entry.ServiceID = $m.Groups['ServiceID'].Value
-            $entry.User = $m.Groups['User'].Value
-            $entry.ProtocolInfo = $m.Groups['ProtocolInfo'].Value
-            if ($m.Groups['IPAddress'].Success) { $entry.ClientIP = $m.Groups['IPAddress'].Value }
-            if ($m.Groups['Port'].Success) { $entry.ClientPort = $m.Groups['Port'].Value }
-            if ($m.Groups['ApplicationPath'].Success) {
-                $entry.ApplicationPath = $m.Groups['ApplicationPath'].Value
-                $entry.ApplicationPID = $m.Groups['ApplicationPID'].Value
+            $entry.TransactionID = $m.Groups['TransactionID'].Value
+            $initID = $m.Groups['InitID'].Value
+            $entry.TransactionOptions = $m.Groups['TxOpts'].Value
+            # "READ_COMMITTED | REC_VERSION | WAIT 10 | READ_WRITE" -> separate fields (inline: cheaper than a function call)
+            foreach ($part in $entry.TransactionOptions.Split('|')) {
+                $p = $part.Trim()
+                $field = $script:TX_OPTION_FIELD[$p]
+                if ($field) { $entry[$field] = $p }
+                elseif ($p.StartsWith('WAIT ')) {
+                    $timeout = 0
+                    if ([int]::TryParse($p.Substring(5), [ref]$timeout)) { $entry.TxWaitMode = 'WAIT'; $entry.TxLockTimeout = $timeout }
+                }
             }
-        }
-        $m = $rxServiceName.Match($block)
-        if ($m.Success) { $entry.ServiceName = $m.Groups['ServiceName'].Value }
-    }
-
-    # --- Sweep counters ---
-    if ($block.Contains('Transaction counters')) {
-        $m = $rxSweep.Match($block)
-        if ($m.Success) {
-            $entry.SweepOIT = [long]$m.Groups['OIT'].Value
-            $entry.SweepOAT = [long]$m.Groups['OAT'].Value
-            $entry.SweepOST = [long]$m.Groups['OST'].Value
-            $entry.SweepNext = [long]$m.Groups['Next'].Value
-        }
-    }
-
-    # --- Tx ---
-    $m = $rxTx.Match($block)
-    if ($m.Success) {
-        $entry.TransactionID = $m.Groups['TransactionID'].Value
-        $initID = $m.Groups['InitID'].Value
-        $entry.TransactionOptions = $m.Groups['TxOpts'].Value
-        # "READ_COMMITTED | REC_VERSION | WAIT 10 | READ_WRITE" -> separate fields (inline: cheaper than a function call)
-        foreach ($part in $entry.TransactionOptions.Split('|')) {
-            $p = $part.Trim()
-            $field = $script:TX_OPTION_FIELD[$p]
-            if ($field) { $entry[$field] = $p }
-            elseif ($p.StartsWith('WAIT ')) {
-                $timeout = 0
-                if ([int]::TryParse($p.Substring(5), [ref]$timeout)) { $entry.TxWaitMode = 'WAIT'; $entry.TxLockTimeout = $timeout }
-            }
-        }
         
-        if (-not [string]::IsNullOrWhiteSpace($initID)) { $entry.RootTxID = $initID }
-        elseif (-not [string]::IsNullOrWhiteSpace($entry.TransactionID)) { $entry.RootTxID = $entry.TransactionID }
-    }
-
-    # --- SQL ---
-    # Cheap pre-check ($hasStatement above): most events (transactions, attach/detach) have no statement part
-    $m = if ($hasStatement) { $rxSql.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
-    if ($m.Success) {
-        # Trim whitespace AND separator lines like --- if they slipped in
-        $entry.SqlStatement = $m.Groups['SqlStatement'].Value.Trim()
-    }
-
-    # --- Params ---
-    $m = if ($block.Contains('param')) { $rxParams.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
-    if ($m.Success) {
-        $entry.Params = $m.Groups['Params'].Value.Trim()
-    }
-
-    # --- Plan ---
-    $m = if ($block.Contains('PLAN')) { $rxPlan.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
-    if ($m.Success) {
-        $entry.SqlPlan = $m.Groups['SqlPlan'].Value.Trim()
-    }
-    
-    # --- Table Stats (Separate Column) ---
-    $m = if ($block.Contains('Natural')) { $rxTableStats.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
-    if ($m.Success) {
-        $entry.TableStats = $m.Groups['TableStats'].Value # NO TRIM to preserve column alignment
-        $entry.TableCounts = ConvertFrom-TableStat -TableStats $entry.TableStats
-    }
-
-    # --- Records fetched ---
-    # Plain string search instead of a regex: the number is the whole line before the marker; an occurrence inside the
-    # SQL text (no number-only line) is skipped
-    $at = $block.IndexOf($script:RECORDS_FETCHED, $script:Ordinal)
-    while ($at -gt 0) {
-        $lineStart = $block.LastIndexOf("`n", $at - 1) + 1
-        $rows = [long]0
-        if ([long]::TryParse($block.Substring($lineStart, $at - $lineStart), $script:DigitsOnly, $null, [ref]$rows)) {
-            $entry.RecordsFetched = $rows
-            break
+            if (-not [string]::IsNullOrWhiteSpace($initID)) { $entry.RootTxID = $initID }
+            elseif (-not [string]::IsNullOrWhiteSpace($entry.TransactionID)) { $entry.RootTxID = $entry.TransactionID }
         }
-        $at = $block.IndexOf($script:RECORDS_FETCHED, $at + 1, $script:Ordinal)
+
+        # --- SQL ---
+        # Cheap pre-check ($hasStatement above): most events (transactions, attach/detach) have no statement part
+        $m = if ($hasStatement) { $rxSql.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
+        if ($m.Success) {
+            # Trim whitespace AND separator lines like --- if they slipped in
+            $entry.SqlStatement = $m.Groups['SqlStatement'].Value.Trim()
+        }
+
+        # --- Params ---
+        $m = if ($block.Contains('param')) { $rxParams.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
+        if ($m.Success) {
+            $entry.Params = $m.Groups['Params'].Value.Trim()
+        }
+
+        # --- Plan ---
+        $m = if ($block.Contains('PLAN')) { $rxPlan.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
+        if ($m.Success) {
+            $entry.SqlPlan = $m.Groups['SqlPlan'].Value.Trim()
+        }
+    
+        # --- Table Stats (Separate Column) ---
+        $m = if ($block.Contains('Natural')) { $rxTableStats.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
+        if ($m.Success) {
+            $entry.TableStats = $m.Groups['TableStats'].Value # NO TRIM to preserve column alignment
+            $entry.TableCounts = ConvertFrom-TableStat -TableStats $entry.TableStats
+        }
+
+        # --- Records fetched ---
+        # Plain string search instead of a regex: the number is the whole line before the marker; an occurrence inside the
+        # SQL text (no number-only line) is skipped
+        $at = $block.IndexOf($script:RECORDS_FETCHED, $script:Ordinal)
+        while ($at -gt 0) {
+            $lineStart = $block.LastIndexOf("`n", $at - 1) + 1
+            $rows = [long]0
+            if ([long]::TryParse($block.Substring($lineStart, $at - $lineStart), $script:DigitsOnly, $null, [ref]$rows)) {
+                $entry.RecordsFetched = $rows
+                break
+            }
+            $at = $block.IndexOf($script:RECORDS_FETCHED, $at + 1, $script:Ordinal)
+        }
+
+        # --- Perf ---
+        $m = if ($block.Contains(' ms')) { $rxPerf.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
+        if ($m.Success) {
+            $entry.DurationMs = [long]$m.Groups['DurationMs'].Value
+            if ($m.Groups['Reads'].Success) { $entry.Reads = [long]$m.Groups['Reads'].Value }
+            if ($m.Groups['Writes'].Success) { $entry.Writes = [long]$m.Groups['Writes'].Value }
+            if ($m.Groups['Fetches'].Success) { $entry.Fetches = [long]$m.Groups['Fetches'].Value }
+            if ($m.Groups['Marks'].Success) { $entry.Marks = [long]$m.Groups['Marks'].Value }
+        }
+
+    }
+    catch {
+        if ($_.Exception.GetBaseException() -isnot [System.Text.RegularExpressions.RegexMatchTimeoutException]) { throw }
+        Write-BlockWarning -Text $Text -Start $Start -Message "regex time limit ($RegexTimeoutSeconds s) reached, remaining fields left empty (-RegexTimeoutSeconds)"
     }
 
-    # --- Perf ---
-    $m = if ($block.Contains(' ms')) { $rxPerf.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
-    if ($m.Success) {
-        $entry.DurationMs = [long]$m.Groups['DurationMs'].Value
-        if ($m.Groups['Reads'].Success) { $entry.Reads = [long]$m.Groups['Reads'].Value }
-        if ($m.Groups['Writes'].Success) { $entry.Writes = [long]$m.Groups['Writes'].Value }
-        if ($m.Groups['Fetches'].Success) { $entry.Fetches = [long]$m.Groups['Fetches'].Value }
-        if ($m.Groups['Marks'].Success) { $entry.Marks = [long]$m.Groups['Marks'].Value }
+    # --- Diagnostics: events that cannot be assigned ---
+    if (-not $entry.Action) {
+        $script:ActionCount['(header not readable)']++
+        Write-BlockWarning -Text $Text -Start $Start -Message 'event header not readable, fields left empty'
+    }
+    else {
+        $script:ActionCount[$entry.Action]++
+        if ($entry.Action -eq 'Unknown') {
+            # Firebird writes fixed texts like "Unknown event in ATTACH_DATABASE" (TracePluginImpl.cpp)
+            $line = $block.Substring(0, [Math]::Max(0, $block.IndexOf("`n")))
+            Write-BlockWarning -Text $Text -Start $Start -Message ("unknown event '" + $line.Substring($line.IndexOf(') ') + 2) + "'")
+        }
     }
 
     [PSCustomObject]$entry
@@ -446,6 +531,8 @@ $rxBlockStartMulti = [System.Text.RegularExpressions.Regex]::new(
 $reader = [System.IO.StreamReader]::new((Resolve-Path -LiteralPath $Path).ProviderPath, [System.Text.Encoding]::UTF8, $true, 1MB)
 $chunk = [char[]]::new(4MB)
 $carry = ''
+$carryCut = $false     # lines of the carried block were dropped (MaxBlockLines)
+$seenBlock = $false
 $count = 0
 $length = [Math]::Max(1, $reader.BaseStream.Length)
 try {
@@ -453,24 +540,55 @@ try {
         # Trace files mix CRLF and LF; blocks are processed with LF only
         $text = $carry + ([string]::new($chunk, 0, $read)).Replace("`r", '')
         $starts = $rxBlockStartMulti.Matches($text)
-        if ($starts.Count -eq 0) { $carry = $text; continue }
-        # Everything before the first block start (e.g. 'Trace session ID n started') is skipped
-        for ($i = 0; $i -lt $starts.Count - 1; $i++) {
-            ConvertFrom-TraceBlock $text.Substring($starts[$i].Index, $starts[$i + 1].Index - $starts[$i].Index)
-            $count++
+        $carryStart = 0
+        if ($starts.Count -gt 0) {
+            # Everything before the first block start (e.g. 'Trace session ID n started') is skipped
+            if (-not $seenBlock) {
+                $seenBlock = $true
+                if ($starts[0].Index -gt 0) { Test-Preamble $text.Substring(0, $starts[0].Index) }
+            }
+            for ($i = 0; $i -lt $starts.Count - 1; $i++) {
+                ConvertFrom-TraceBlock $text $starts[$i].Index ($starts[$i + 1].Index - $starts[$i].Index) ($carryCut -and $i -eq 0)
+                $count++
+            }
+            if ($starts.Count -gt 1) { $carryCut = $false }
+            $carryStart = $starts[$starts.Count - 1].Index
         }
-        $carry = $text.Substring($starts[$starts.Count - 1].Index)
+        # Line number of the new carry start (only the text before it is finished)
+        if ($carryStart -gt 0) {
+            $script:LineBase += Measure-Newline -Text $text -From 0 -To $carryStart
+            if ($carryStart -ge $script:ShiftFrom) { $script:LineBase += $script:Shift; $script:Shift = 0; $script:ShiftFrom = [int]::MaxValue }
+        }
+        $carry = $text.Substring($carryStart)
+        # Memory guard: a block (or text without any event) longer than MaxBlockLines is cut while it is carried
+        if ($carry.Length -gt $MaxBlockLines) {
+            $end = Get-LineEnd -Text $carry -Lines $MaxBlockLines
+            if ($end -gt 0 -and $end -lt $carry.Length) {
+                $script:Shift += Measure-Newline -Text $carry -From $end -To $carry.Length
+                $script:ShiftFrom = $end
+                $carry = $carry.Substring(0, $end)
+                $carryCut = $seenBlock
+            }
+        }
         Write-Progress -Activity 'Parsing Firebird trace' -Status "$count events" -PercentComplete ([Math]::Min(100, 100 * $reader.BaseStream.Position / $length))
     }
     if ($rxBlockStartMulti.Match($carry).Index -eq 0 -and $rxBlockStartMulti.IsMatch($carry)) {
-        ConvertFrom-TraceBlock $carry
+        ConvertFrom-TraceBlock $carry 0 $carry.Length $carryCut
         $count++
     }
+    elseif (-not $seenBlock) { Test-Preamble $carry }
 }
 finally {
     $reader.Dispose()
     Write-Progress -Activity 'Parsing Firebird trace' -Completed
 }
+
+# Summary (I13): verbose stream only, the pipeline output stays the same
+$order = @{ Expression = 'Value'; Descending = $true }, @{ Expression = 'Key'; Descending = $false }
+foreach ($kv in ($script:ActionCount.GetEnumerator() | Sort-Object -Property $order)) {
+    Write-Verbose "Summary: $($kv.Key) = $($kv.Value)"
+}
+Write-Verbose "Summary: $script:WarningCount warning(s)"
 
 $sw.Stop()
 Write-Verbose "Parsed $count events in $($sw.Elapsed.TotalSeconds.ToString('N2')) seconds."

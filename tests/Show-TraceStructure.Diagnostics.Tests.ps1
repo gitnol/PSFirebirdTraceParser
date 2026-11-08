@@ -11,7 +11,7 @@ BeforeAll {
     $script:Fixtures = [System.IO.Path]::Combine($PSScriptRoot, 'fixtures')
     $script:Conn = "`tC:\DATA\SAMPLE.FDB (ATT_9, APPUSER:NONE, UTF8, TCPv4:192.0.2.90/50900)"
 
-    function New-TraceFile([string]$Name, [string[]]$Lines) {
+    function Write-TestTrace([string]$Name, [string[]]$Lines) {
         $f = Join-Path $TestDrive $Name
         [System.IO.File]::WriteAllText($f, (($Lines -join "`n") + "`n"))
         $f
@@ -35,7 +35,7 @@ Describe 'Show-TraceStructure: Warnungen mit Zeilennummer (I13)' {
     }
 
     It 'meldet eine unlesbare Kopfzeile mit Zeilennummer und gibt das Objekt trotzdem aus' {
-        $f = New-TraceFile 'bad_header.log' @(
+        $f = Write-TestTrace 'bad_header.log' @(
             'Trace session ID 1 started', ''
             '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION', $script:Conn, ''
             '2026-11-08T10:00:01.0000 garbled header without process', $script:Conn, ''
@@ -48,8 +48,21 @@ Describe 'Show-TraceStructure: Warnungen mit Zeilennummer (I13)' {
         $r.Warnings[0] | Should -Match 'header'
     }
 
+    It 'zaehlt mehrere Warnungen in einem Stueck je fuer sich richtig' {
+        $f = Write-TestTrace 'two_bad.log' @(
+            '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION', $script:Conn, ''
+            '2026-11-08T10:00:01.0000 garbled one', ''
+            '2026-11-08T10:00:02.0000 garbled two', ''
+            '2026-11-08T10:00:03.0000 (4321:000001A2B3C4D5E0) COMMIT_TRANSACTION', $script:Conn, ''
+        )
+        $r = Invoke-Parser $f
+        $r.Warnings.Count | Should -Be 2
+        $r.Warnings[0] | Should -Match '\bline 4\b'
+        $r.Warnings[1] | Should -Match '\bline 6\b'
+    }
+
     It 'meldet unbekannte Ereignisse ("Unknown event ...") mit Zeilennummer' {
-        $f = New-TraceFile 'unknown.log' @(
+        $f = Write-TestTrace 'unknown.log' @(
             '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) Unknown event in ATTACH_DATABASE', $script:Conn, ''
         )
         $r = Invoke-Parser $f
@@ -60,23 +73,24 @@ Describe 'Show-TraceStructure: Warnungen mit Zeilennummer (I13)' {
     }
 
     It 'meldet Text vor dem ersten Ereignis, aber nicht die Startzeile von fbtracemgr' {
-        $f = New-TraceFile 'preamble.log' @(
+        $f = Write-TestTrace 'preamble.log' @(
             'Trace session ID 2 started', '', 'some stray text'
             '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION', $script:Conn, ''
         )
         $r = Invoke-Parser $f
         $r.Objects.Count | Should -Be 1
         $r.Warnings.Count | Should -Be 1
-        $r.Warnings[0] | Should -Match '\bline 1\b'
+        $r.Warnings[0] | Should -Match '\bline 3\b'
         $r.Warnings[0] | Should -Match 'skipped'
     }
 
     It 'meldet eine Datei ohne Ereignis' {
-        $f = New-TraceFile 'no_events.log' @('this is not a trace', 'second line')
+        $f = Write-TestTrace 'no_events.log' @('this is not a trace', 'second line')
         $r = Invoke-Parser $f
         $r.Objects.Count | Should -Be 0
         $r.Warnings.Count | Should -Be 1
         $r.Warnings[0] | Should -Match 'skipped'
+        $r.Warnings[0] | Should -Match '\bline 1\b'
     }
 
     It 'zaehlt die Zeilen ueber die 4-MB-Stuecke hinweg richtig' {
@@ -86,7 +100,7 @@ Describe 'Show-TraceStructure: Warnungen mit Zeilennummer (I13)' {
             $lines.AddRange([string[]]@("2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH", $script:Conn, '', "Statement $($i):", ('-' * 79), $sql, '', '      1 ms', ''))
         }
         $lines.AddRange([string[]]@('2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) Unknown event in DETACH_DATABASE', $script:Conn, ''))
-        $f = New-TraceFile 'chunks.log' $lines.ToArray()
+        $f = Write-TestTrace 'chunks.log' $lines.ToArray()
         (Get-Item -LiteralPath $f).Length | Should -BeGreaterThan 5MB
         $r = Invoke-Parser $f
         $r.Objects.Count | Should -Be 91
@@ -97,7 +111,7 @@ Describe 'Show-TraceStructure: Warnungen mit Zeilennummer (I13)' {
 
 Describe 'Show-TraceStructure: Zusammenfassung mit -Verbose (I13)' {
     It 'nennt die Zahl der Bloecke je Action und die Warnungen' {
-        $f = New-TraceFile 'summary.log' @(
+        $f = Write-TestTrace 'summary.log' @(
             '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION', $script:Conn, ''
             '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION', $script:Conn, ''
             '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) COMMIT_TRANSACTION', $script:Conn, ''
@@ -120,12 +134,14 @@ Describe 'Show-TraceStructure: Zusammenfassung mit -Verbose (I13)' {
 
 Describe 'Show-TraceStructure: Schutz vor sehr langen Bloecken (I13)' {
     It 'kuerzt einen Block auf -MaxBlockLines Zeilen und meldet ihn mit Zeilennummer' {
-        $f = New-TraceFile 'long.log' (@(
+        $f = Write-TestTrace 'long.log' (@(
                 '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION', $script:Conn, ''
                 '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH', $script:Conn
-            ) + @(1..20 | ForEach-Object { "param$_ = integer, ""$_""" }) + @('      7 ms', ''))
+            ) + @(1..20 | ForEach-Object { "param$_ = integer, ""$_""" }) + @('      7 ms', '',
+                '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) COMMIT_TRANSACTION', $script:Conn, ''))
         $r = Invoke-Parser $f @{ MaxBlockLines = 5 }
-        $r.Objects.Count | Should -Be 2
+        $r.Objects.Count | Should -Be 3
+        $r.Objects[2].Action | Should -BeExactly 'COMMIT_TRANSACTION'
         $r.Objects[1].Action | Should -BeExactly 'EXECUTE_STATEMENT_FINISH'
         $r.Objects[1].AttachID | Should -Be '9'
         $r.Objects[1].DurationMs | Should -Be 0
@@ -136,8 +152,8 @@ Describe 'Show-TraceStructure: Schutz vor sehr langen Bloecken (I13)' {
     }
 
     It 'laesst Bloecke bis zur Grenze unveraendert' {
-        $f = New-TraceFile 'limit.log' @('2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH', $script:Conn, '      7 ms')
-        $r = Invoke-Parser $f @{ MaxBlockLines = 4 }
+        $f = Write-TestTrace 'limit.log' @('2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH', $script:Conn, '      7 ms')
+        $r = Invoke-Parser $f @{ MaxBlockLines = 3 }
         $r.Objects[0].DurationMs | Should -Be 7
         $r.Warnings | Should -BeNullOrEmpty
     }
@@ -146,10 +162,11 @@ Describe 'Show-TraceStructure: Schutz vor sehr langen Bloecken (I13)' {
         $filler = 'xx' + "`n"
         $f = Join-Path $TestDrive 'huge_block.log'
         $text = '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION' + "`n" + ($filler * 2000000) +
-        '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) Unknown event in DETACH_DATABASE' + "`n" + $script:Conn + "`n"
+        '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) Unknown event in DETACH_DATABASE' + "`n" + $script:Conn + "`n" +
+        '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION' + "`n"
         [System.IO.File]::WriteAllText($f, $text)
         $r = Invoke-Parser $f @{ MaxBlockLines = 1000 }
-        $r.Objects.Count | Should -Be 2
+        $r.Objects.Count | Should -Be 3
         $r.Objects[1].AttachID | Should -Be '9'
         $r.Warnings.Count | Should -Be 2
         $r.Warnings[0] | Should -Match '\bline 1\b'
