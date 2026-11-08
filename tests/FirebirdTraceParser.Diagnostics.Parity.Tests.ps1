@@ -21,6 +21,16 @@ BeforeDiscovery {
         @{ Name = 'only_start_line'; Params = @{}; Lines = @('Trace session ID 3 started', '   ') }
         @{ Name = 'summary_order'; Params = @{}; Lines = @($start, $conn, '', ($start -replace '10:00:00', '10:00:01'), '', '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) COMMIT_TRANSACTION', '', '2026-11-08T10:00:03.0000 (4321:000001A2B3C4D5E0) ATTACH_DATABASE', '', '2026-11-08T10:00:04.0000 garbled', '') }
         @{ Name = 'summary_order_underscore'; Params = @{}; Lines = @('2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) TEST_A', '', '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) TESTB', '', '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) testc', '') }
+        # Kelvin sign U+212A and Angstrom sign U+212B: equal to K / A-ring with the culture comparer, different with
+        # OrdinalIgnoreCase, which @{} uses under PowerShell 7 (I23). Built from char codes to keep the file ASCII.
+        @{ Name = 'summary_key_kelvin'; Params = @{}; Lines = @(
+                "2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) TEST$([char]0x212A)", '',
+                '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) TESTK', '',
+                '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) TESTk', '',
+                "2026-11-08T10:00:03.0000 (4321:000001A2B3C4D5E0) TEST$([char]0x212B)", '',
+                "2026-11-08T10:00:04.0000 (4321:000001A2B3C4D5E0) TEST$([char]0x00C5)", '',
+                "2026-11-08T10:00:05.0000 (4321:000001A2B3C4D5E0) TEST$([char]0x00E5)", '')
+        }
         @{ Name = 'long_block_cut'; Params = @{ MaxBlockLines = 5 }; Lines = @(
                 $start, $conn, '', '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH', $conn
             ) + @(1..20 | ForEach-Object { "param$_ = integer, ""$_""" }) + @('      7 ms', '', '2026-11-08T10:00:02.0000 (4321:000001A2B3C4D5E0) COMMIT_TRANSACTION', $conn, '')
@@ -142,5 +152,29 @@ Describe 'Paritaet PowerShell- und C#-Parser: Diagnose (I18)' -Skip:($PSVersionT
         $ps = Invoke-TraceEngine PowerShell $f $p
         @($ps.Warnings | Where-Object { $_ -match 'time limit' }).Count | Should -Be 1 -Because 'sonst prueft der Test kein Zeitlimit'
         Compare-TraceRun -Expected $ps -Actual (Invoke-TraceEngine CSharp $f $p) | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Annahme zum Vergleich der Hashtable-Schluessel (I23, ADR-003)' {
+    # Ratsche: die Annahme des C#-Parsers ueber `@{}` wird hier gemessen, nicht nur im Code behauptet.
+    # PowerShell 7: OrdinalIgnoreCase, Windows PowerShell 5.1: kulturabhaengig (Kelvin-Zeichen gleich K).
+    BeforeAll {
+        function Get-KeyComparerName {
+            $h = @{}
+            $flags = [System.Reflection.BindingFlags]'NonPublic,Instance'
+            $field = [hashtable].GetField('_keycomparer', $flags)
+            if ($field) { return $field.GetValue($h).GetType().Name }
+            [hashtable].GetProperty('EqualityComparer', $flags).GetValue($h).GetType().Name
+        }
+    }
+
+    It 'verwendet unter PowerShell 7 OrdinalIgnoreCase' -Skip:($PSVersionTable.PSEdition -ne 'Core') {
+        Get-KeyComparerName | Should -Be 'OrdinalIgnoreCaseComparer'
+    }
+
+    It 'haelt K und das Kelvin-Zeichen unter PowerShell 7 getrennt, unter 5.1 nicht' {
+        $h = @{ K = 1 }
+        $h[[string][char]0x212A] = 2
+        $h.Count | Should -Be $(if ($PSVersionTable.PSEdition -eq 'Core') { 2 } else { 1 })
     }
 }
