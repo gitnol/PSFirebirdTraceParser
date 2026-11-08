@@ -23,10 +23,6 @@ I12 und I13 umgesetzt, Reflexion I13 erledigt. Offene Entscheidung des Owners: `
 | I13 | Parser: Robustheit und Diagnose (Warnungen mit Zeilennummer, Zusammenfassung je `Action` mit `-Verbose`, `-RegexTimeoutSeconds`, `-MaxBlockLines`; Rest ohne Zeitstempel wird gekürzt); 14 Tests | 2026-11-08 | 30b4b43 |
 | I12 | Parser: Prozeduren, Funktionen und Trigger als Ereignisse (`RoutineType`, `RoutineName`, `TriggerTable`, `TriggerTime`, `TriggerEvent`; Trigger-Zeile Firebird 4 und 5), `ConnectionDurationMs`; 16 Tests | 2026-11-08 | 263b43d |
 | I11 | Parser: `RecordsFetched`, Transaktionsoptionen als fünf Felder (`Tx…`), Tabellenstatistik als `TableCounts` je Tabelle (Spalten relativ zum Kopf, Umlaute, überlange Namen); Pseudonymisierer kopiert `TableCounts`; 21 Tests | 2026-11-08 | 6450b79 |
-| I15 | Sweep-Ereignisse (Transaktionszähler OIT/OAT/OST/Next) und Service-Ereignisse (Dienstname, Kennung, Verbindung) lesen; synthetisches Fixture nach Firebird-5-Quellcode; 13 Tests | 2026-11-08 | bb82165 |
-| I14 | CI (GitHub Actions) mit PSScriptAnalyzer und Pester unter PowerShell 7 und Windows PowerShell 5.1; Settings-Datei, Gate-Skript, 21 Analyzer-Befunde beseitigt | 2026-11-08 | c26fb8b |
-| I4 | Trace-Anmeldung ohne Klartext-Passwort (`-FETCH_PASSWORD`/`-TRUSTED`, `-ROLE`, ADR-002), Vorlage ohne Passwort/SYSDBA; gebündelt mit I5 | 2026-11-08 | d9a2a8b |
-| I5 | Trace-Skripte robust: Konfigurationsprüfung, Sitzung per Name und Zustandsdatei, Exit-Codes 0–6, PowerShell 7.4+, `fbtrace50.conf`, 32 Tests mit gemocktem `fbtracemgr`; gebündelt mit I4 | 2026-11-08 | d9a2a8b |
 
 ---
 
