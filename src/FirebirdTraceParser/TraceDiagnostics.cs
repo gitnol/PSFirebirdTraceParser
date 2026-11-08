@@ -53,13 +53,16 @@ namespace FirebirdTraceParser
             return n;
         }
 
-        /// <summary>Index after the n-th line break, or -1 if the text has fewer line breaks.</summary>
+        /// <summary>
+        /// Index after the n-th line break, or -1 if the text has fewer line breaks. Ordinal char search like the script
+        /// since I21 (K8: the culture-sensitive string search costs time proportional to the rest of the text per call).
+        /// </summary>
         public static int GetLineEnd(string text, int lines)
         {
             var pos = -1;
             for (var k = 0; k < lines; k++)
             {
-                pos = text.IndexOf("\n", pos + 1);
+                pos = text.IndexOf('\n', pos + 1);
                 if (pos < 0)
                 {
                     return -1;

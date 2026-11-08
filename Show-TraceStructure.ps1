@@ -279,10 +279,11 @@ function Measure-Newline([string]$Text, [int]$From, [int]$To) {
 }
 
 function Get-LineEnd([string]$Text, [int]$Lines) {
-    # Index after the n-th line break, or -1 if the text has fewer line breaks
+    # Index after the n-th line break, or -1 if the text has fewer line breaks. Ordinal char search (K8): the
+    # culture-sensitive IndexOf(string) costs time proportional to the rest of the text per call (quadratic overall).
     $pos = -1
     for ($k = 0; $k -lt $Lines; $k++) {
-        $pos = $Text.IndexOf("`n", $pos + 1)
+        $pos = $Text.IndexOf([char]10, $pos + 1)
         if ($pos -lt 0) { return -1 }
     }
     return $pos + 1
