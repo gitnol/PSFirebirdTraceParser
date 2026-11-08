@@ -149,6 +149,9 @@ function ConvertFrom-TraceBlock {
         ErrorSource = $null; ErrorCodes = $null; ErrorMessages = $null; # ERROR AT / WARNING AT
         ServiceName = $null; ServiceID = $null; # *_SERVICE events
         SweepOIT = $null; SweepOAT = $null; SweepOST = $null; SweepNext = $null; # SWEEP_START / SWEEP_FINISH
+        RecordsFetched = [long]0; # "N records fetched" (rows), not the page fetches in Fetches
+        TxIsolation = $null; TxReadMode = $null; TxWaitMode = $null; TxLockTimeout = $null; TxAccessMode = $null; # from TransactionOptions
+        TableCounts = $null; # TableStats as one object per table
     }
 
     # --- Header ---

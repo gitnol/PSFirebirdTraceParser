@@ -96,8 +96,8 @@ Describe 'Show-TraceStructure: Service-Ereignisse' {
 
     It 'haengt die neuen Felder hinten an den Ausgabe-Vertrag an' {
         $names = @($script:R[0].PSObject.Properties.Name)
-        $names[-6..-1] | Should -Be @('ServiceName', 'ServiceID', 'SweepOIT', 'SweepOAT', 'SweepOST', 'SweepNext')
-        $names.IndexOf('ErrorMessages') | Should -Be ($names.Count - 7)
+        $start = $names.IndexOf('ErrorMessages') + 1
+        $names[$start..($start + 5)] | Should -Be @('ServiceName', 'ServiceID', 'SweepOIT', 'SweepOAT', 'SweepOST', 'SweepNext')
     }
 }
 

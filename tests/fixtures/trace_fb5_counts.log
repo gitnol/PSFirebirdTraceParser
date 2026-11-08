@@ -1,0 +1,68 @@
+Trace session ID 11 started
+
+2026-11-08T09:00:00.0010 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_21, APPUSER:NONE, UTF8, TCPv4:192.0.2.40/50500)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_501, READ_COMMITTED | REC_VERSION | WAIT 10 | READ_WRITE)
+
+Statement 2001:
+-------------------------------------------------------------------------------
+SELECT S.ID FROM WAREHOUSE_STOCK_MOVEMENT_HISTORY_ARCHIVE S JOIN ITEM I ON I.ID = S.ITEM_ID
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PLAN JOIN (I NATURAL, S INDEX (FK_STOCK_ITEM))
+
+1234 records fetched
+    420 ms, 310 read(s), 1 write(s), 25000 fetch(es), 3 mark(s)
+
+Table                                      Natural     Index    Update    Insert    Delete   Backout     Purge   Expunge
+************************************************************************************************************************
+WAREHOUSE_STOCK_MOVEMENT_HISTORY_ARCHIVE                5000                                       2         3         4
+ITEM                                           120                   7         8         9                              
+LAGER_ÜBERSICHT                                 1        22                                                            
+
+2026-11-08T09:00:01.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_21, APPUSER:NONE, UTF8, TCPv4:192.0.2.40/50500)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_502, CONSISTENCY | NOWAIT | READ_ONLY)
+
+Statement 2002:
+-------------------------------------------------------------------------------
+SELECT ID FROM ITEM WHERE ID = ?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PLAN (ITEM INDEX (PK_ITEM))
+param0 = integer, "7"
+
+0 records fetched
+      1 ms, 3 fetch(es)
+
+2026-11-08T09:00:02.0000 (4321:000001A2B3C4D5E0) EXECUTE_PROCEDURE_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_21, APPUSER:NONE, UTF8, TCPv4:192.0.2.40/50500)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_503, READ_COMMITTED | READ_CONSISTENCY | WAIT | READ_WRITE)
+
+Procedure SAMPLE_PROC:
+      3 ms, 2 fetch(es)
+
+2026-11-08T09:00:03.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION
+	C:\DATA\SAMPLE.FDB (ATT_21, APPUSER:NONE, UTF8, TCPv4:192.0.2.40/50500)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_504, READ_COMMITTED | NO_REC_VERSION | WAIT 5 | READ_WRITE)
+
+2026-11-08T09:00:04.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_21, APPUSER:NONE, UTF8, TCPv4:192.0.2.40/50500)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_505, CONCURRENCY | WAIT | READ_WRITE)
+
+Statement 2005:
+-------------------------------------------------------------------------------
+SELECT COUNT(*) FROM ORDER_POSITION_HISTORY_ARCHIVES
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PLAN (ORDER_POSITION_HISTORY_ARCHIVES NATURAL)
+
+3000000000 records fetched
+ 900000 ms, 2000000 read(s), 3000000000 fetch(es)
+
+Table                             Natural     Index    Update    Insert    Delete   Backout     Purge   Expunge
+***************************************************************************************************************
+ORDER_POSITION_HISTORY_ARCHIVES3000000000                                                                      
+
