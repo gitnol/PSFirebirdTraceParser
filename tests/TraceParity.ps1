@@ -68,9 +68,8 @@ function Compare-TraceOutput {
 }
 
 function Invoke-TraceEngine {
-    # Runs one parser and splits pipeline objects, warnings and verbose messages. Verbose lines that only one engine
-    # writes or that hold a time are normalized: the start line of the script is dropped, "Parsed n events in x seconds."
-    # loses the time.
+    # Runs Show-TraceStructure.ps1 with one engine (since I19 -Engine) and splits pipeline objects, warnings and verbose
+    # messages. The line naming the engine is dropped, "Parsed n events in x seconds." loses the time.
     [CmdletBinding()]
     [OutputType([pscustomobject])]
     param(
@@ -79,17 +78,15 @@ function Invoke-TraceEngine {
         [hashtable]$Parameters = @{}
     )
     $parser = [System.IO.Path]::Combine($PSScriptRoot, '..', 'Show-TraceStructure.ps1')
-    $all = if ($Engine -eq 'PowerShell') {
-        @(& $parser -Path $Path @Parameters -Verbose 3>&1 4>&1 6>$null)
-    }
-    else {
-        @(ConvertFrom-FirebirdTrace -Path $Path @Parameters -Verbose 3>&1 4>&1 6>$null)
-    }
+    $all = @(& $parser -Path $Path -Engine $Engine @Parameters -Verbose 3>&1 4>&1 6>$null)
+    # Guard: the run must really have used the requested engine, otherwise the comparison compares a parser with itself
+    $used = @($all | Where-Object { $_ -is [System.Management.Automation.VerboseRecord] -and $_.Message.StartsWith('Engine: ', [System.StringComparison]::Ordinal) } | ForEach-Object Message)
+    if (($used -join '|') -cne "Engine: $Engine") { throw "Expected engine $Engine, the script reported [$($used -join '|')]" }
     [PSCustomObject]@{
         Objects  = @($all | Where-Object { $_ -isnot [System.Management.Automation.WarningRecord] -and $_ -isnot [System.Management.Automation.VerboseRecord] })
         Warnings = @($all | Where-Object { $_ -is [System.Management.Automation.WarningRecord] } | ForEach-Object Message)
         Verbose  = @($all | Where-Object { $_ -is [System.Management.Automation.VerboseRecord] } | ForEach-Object Message |
-                Where-Object { -not $_.StartsWith('Streaming analysis started: ', [System.StringComparison]::Ordinal) } |
+                Where-Object { -not $_.StartsWith('Engine: ', [System.StringComparison]::Ordinal) } |
                 ForEach-Object { $_ -replace '^(Parsed \d+ events) in .* seconds\.$', '$1' })
     }
 }

@@ -38,13 +38,21 @@ param (
 
     # Time limit per regex evaluation in a block; when reached, the remaining fields stay empty (warning).
     [ValidateRange(0.001, 3600)]
-    [double]$RegexTimeoutSeconds = 2
+    [double]$RegexTimeoutSeconds = 2,
+
+    # Parser: Auto = C# (FirebirdTraceParser.dll next to the script or in bin/) under PowerShell 7, else PowerShell (ADR-003)
+    [ValidateSet('Auto', 'PowerShell', 'CSharp')]
+    [string]$Engine = 'Auto'
 )
 
 if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
     Write-Error "File not found: $Path"
     return
 }
+
+# Contract stub (I19): always the PowerShell parser, -Engine is not evaluated yet
+$null = $Engine
+Write-Verbose 'Engine: PowerShell'
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 # Time limit per match of the block regexes (I13). The chunk splitter below has none: it is anchored and linear.
