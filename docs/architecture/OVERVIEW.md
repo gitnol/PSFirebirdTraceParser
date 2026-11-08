@@ -10,13 +10,13 @@ Firebird-Server per `fbtracemgr` starten und stoppen. Kein Dienst, keine Datenba
 
 | Schicht | Technologie |
 |---------|-------------|
-| Trace-Erfassung | `trace_start.ps1` / `trace_stop.ps1` → `fbtracemgr.exe` (Firebird Services API, lokal `service_mgr`) |
+| Trace-Erfassung | `trace_start.ps1` / `trace_stop.ps1` + `TraceCommon.ps1` → `fbtracemgr.exe` (Firebird Services API, lokal `service_mgr`) |
 | Parsing | `Show-TraceStructure.ps1` — .NET-Regex (`System.Text.RegularExpressions`, kompiliert) |
 | Pseudonymisierung | `Pseudonymize-FirebirdTrace.ps1` — HMAC-SHA256 mit Schlüssel (`System.Security.Cryptography`), gekürzt (ADR-001) |
-| Laufzeit | Windows PowerShell 5.1 oder PowerShell 7.x (keine PSGallery-Module) |
-| Datenbank | keine eigene; liest nur Trace-Ausgaben eines Firebird-Servers (Beispielkonfiguration: Firebird 4.0) |
-| Auth | Firebird-Benutzer/Passwort aus lokaler `config.json` für `fbtracemgr` (nur Trace-Skripte) |
-| Build | keine (Skripte werden direkt ausgeführt) |
+| Laufzeit | Windows PowerShell 5.1 oder PowerShell 7.x (keine PSGallery-Module); Trace-Skripte PowerShell 7.4+ |
+| Datenbank | keine eigene; liest nur Trace-Ausgaben eines Firebird-Servers (Beispielkonfiguration: Firebird 5.0) |
+| Auth | nur Trace-Skripte: Firebird-Benutzer + Passwortdatei (`-FETCH_PASSWORD`) oder Windows-Anmeldung (`-TRUSTED`), optional Rolle (ADR-002) |
+| Build | keiner (Skripte werden direkt ausgeführt); CI mit PSScriptAnalyzer und Pester (`.github/workflows/ci.yml`) |
 
 ---
 
@@ -87,7 +87,8 @@ tools/Invoke-QualityGate.ps1    → Linter und Tests, lokal und in CI gleich (se
 | Trace-Logs werden mehrere GB groß | Parser liest seit I6 in 4-MB-Stücken und gibt jedes Ereignis sofort aus; Speicher wächst nicht mit der Dateigröße |
 | Trace-Inhalte enthalten SQL-Literale, Parameter, Benutzer, IPs, Anwendungspfade | Personenbezogene/vertrauliche Daten; Weitergabe nur pseudonymisiert und mit Freigabe (`security/DATA_HANDLING.md`) |
 | Ausgabe-Properties des Parsers sind Eingabe des Pseudonymisierers und von Nutzer-Exporten | Property-Namen sind ein Vertrag (`features/TRACE_PARSING.md`) |
-| Lauffähig unter Windows PowerShell 5.1 **und** PowerShell 7 | Keine PS-7-only-Syntax (`??`, `?.`, Ternary); Encoding-Unterschiede beachten (`CONVENTIONS.md` §3) |
+| Parser und Pseudonymisierer lauffähig unter Windows PowerShell 5.1 **und** PowerShell 7 | Keine PS-7-only-Syntax (`??`, `?.`, Ternary); Encoding-Unterschiede beachten (`CONVENTIONS.md` §3); CI prüft beide (seit I14) |
+| Trace-Skripte brauchen PowerShell 7.4+ | nur dann landet die Ausgabe von `fbtracemgr` byte-genau in der Datei (ADR-002) |
 | `fbtracemgr -START` läuft im Vordergrund, bis die Session gestoppt wird | Konsole bleibt belegt; Bedienung in `features/TRACE_CAPTURE.md` |
 | Öffentliches Repository | Keine Interna in Code, Doku, Commits; Interna-Hook (`CONVENTIONS_COMMON.md` 3.1) |
 
@@ -102,7 +103,7 @@ baut auf dem vorigen auf:
 2. `architecture/PROJECT_LAYOUT.md` — wo welche Schicht und welcher Code liegt.
 3. `architecture/CONFIGURATION.md` — `config.json`, Parameter, Trace-Konfiguration.
 4. `architecture/ERROR_HANDLING.md` — Exit-Codes und Fehlerverhalten der Skripte.
-5. `architecture/ADR/` — Architekturentscheidungen (bisher nur die Vorlage `ADR-000-template.md`).
+5. `architecture/ADR/` — Architekturentscheidungen: ADR-001 (Pseudonyme per HMAC), ADR-002 (Anmeldung der Trace-Skripte).
 6. **Stack-spezifische Architektur-Docs:** `architecture/DEPENDENCIES.md` (PowerShell, .NET, `fbtracemgr`),
    `architecture/CREDENTIAL_STRATEGY.md` (Firebird-Zugangsdaten der Trace-Skripte).
 7. Feature-Details: `features/TRACE_PARSING.md`, `features/PSEUDONYMIZATION.md`, `features/TRACE_CAPTURE.md`.

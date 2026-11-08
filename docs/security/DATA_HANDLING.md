@@ -28,7 +28,7 @@ personenbezogen (EDPB-Leitlinien 01/2025) und damit **Vertraulich**.
 ## 1. Lokale Verarbeitung / Datenisolation
 
 - Alle Skripte arbeiten lokal; es gibt keinen Netzwerkzugriff außer dem lokalen Firebird-Service-Manager.
-- Zugriff auf Rohdaten hat, wer auf dem Datenbankserver Leserechte auf das Ausgabeverzeichnis (`E:\`) hat, und wer
+- Zugriff auf Rohdaten hat, wer auf dem Datenbankserver Leserechte auf den Ausgabeordner (`OutputDirectory`) hat, und wer
   Exporte erhält.
 - Keine Air-Gap-Anforderung im Projekt; Weitergabe ist ein bewusster, manueller Schritt des Nutzers.
 

@@ -66,10 +66,11 @@ Kein `-WhatIf` (das Skript schreibt nichts). `[CmdletBinding()]` seit I6 → Sta
 
 Die Schalterzeile von `START_SERVICE` (z. B. `-VERBOSE <Datenbank> <Sicherungsdatei>`) wird bewusst **nicht** gelesen:
 sie enthält Dateipfade, für die es keine Pseudonymisierung gibt. Voraussetzung im Trace: `log_sweep = true` (Abschnitt
-`database`) bzw. `log_services = true` (Abschnitt `services`).
+`database`) bzw. `log_services = true` (Abschnitt `services`) — beides ist in `fbtrace50.conf` eingeschaltet (seit I4/I5),
+in `fbtrace30.conf` nicht.
 
 Die Property-Namen sind Eingabe von `Pseudonymize-FirebirdTrace.ps1` und von Nutzer-Exporten — Änderungen nur
-gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1 behoben).
+gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1 behoben), seit 2026-11-08 auch die Felder aus I15.
 
 ---
 

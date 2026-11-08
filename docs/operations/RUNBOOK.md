@@ -7,15 +7,15 @@ Häufige Operationen und Troubleshooting. Die Skripte laufen interaktiv (kein Ta
 ## Häufige Commands
 
 ```powershell
-# 1. Trace starten (auf dem Datenbankserver; blockiert diese Konsole, bis die Session gestoppt ist)
-.\trace_start.ps1
-# Ausgabe: E:\trace_output_<yyyyMMdd_HHmmss>.log
+# 1. Trace starten (auf dem Datenbankserver, PowerShell 7.4+; blockiert diese Konsole, bis die Session gestoppt ist)
+pwsh -File .\trace_start.ps1
+# Ausgabe: <OutputDirectory>\trace_output_<yyyyMMdd_HHmmss>.log
 
-# 2. In einer ZWEITEN Konsole: Trace stoppen (nimmt die neueste *.log unter E:\)
-.\trace_stop.ps1
+# 2. In einer ZWEITEN Konsole: Trace stoppen (findet die gemerkte Sitzung über ihren Namen)
+pwsh -File .\trace_stop.ps1          # oder gezielt: -Id <n>
 
 # 3. Auswerten
-.\Show-TraceStructure.ps1 -Path E:\trace_output_<zeitstempel>.log | Out-GridView
+.\Show-TraceStructure.ps1 -Path <OutputDirectory>\trace_output_<zeitstempel>.log | Out-GridView
 
 # 4. Für Weitergabe pseudonymisieren (erst -AnalyzeOnly, dann Export)
 .\Show-TraceStructure.ps1 -Path <datei> | .\Pseudonymize-FirebirdTrace.ps1 -RedactLiterals -AnalyzeOnly
@@ -51,12 +51,15 @@ die Meldung steht auf der Konsole. Eine leere Datei während der Aufzeichnung is
 leer: keine Statements über `time_threshold` → in der Trace-Konfiguration senken.
 `-TRUSTED` scheitert: der Server erlaubt keine Windows-Anmeldung (`AuthServer = Srp256, Win_Sspi` in `firebird.conf`).
 
-### Parser bricht mit OutOfMemory ab oder braucht sehr lange
-→ Die Datei wird komplett in den Speicher geladen (K2). 64-Bit-PowerShell mit genug RAM nutzen oder die Datei vorher
-an Blockgrenzen (Zeilen mit Zeitstempel) teilen; Streaming folgt in I6.
+### Parser braucht sehr lange
+→ Seit I6 liest der Parser in 4-MB-Stücken (Speicher bleibt begrenzt, K2 behoben); die Laufzeit wächst mit der
+Dateigröße. Fortschritt mit `-Verbose`; bei sehr großen Dateien Ausgabe direkt in `Export-Csv` leiten statt in
+`Out-GridView`.
 
 ### Felder `DatabasePath`, `User`, `ClientIP` sind leer
-→ Verbindungszeile passt nicht zum Regex (Rolle ≠ `NONE`, Endung `.fdb` klein, Nicht-TCP-Verbindung) — K3.
+→ Seit dem K3-Fix (2026-11-07) liest der Parser alle bekannten Formen der Verbindungszeile. Bleiben die Felder leer,
+hat der Block keine Verbindungszeile (z. B. Sweep- oder Fehlerereignis ohne Verbindung) oder eine neue Form — dann
+als Fehler melden, mit einer **fiktiven** Beispielzeile.
 
 ### Trace-Skripte melden, dass PowerShell 7.4 nötig ist
 → Die Trace-Skripte brauchen PowerShell 7.4+ (ADR-002): `pwsh -File .\trace_start.ps1`.

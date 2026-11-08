@@ -37,11 +37,12 @@ weil sie unbegrenzt Daten schreibt und den Datenbankserver belastet.
 # Laufende Trace-Sessions (Anmeldung wie in security/AUTHENTICATION.md)
 & "<FirebirdPath>\fbtracemgr" -SE service_mgr -LIST <Anmeldeparameter>
 
-# Freier Platz auf dem Ausgabelaufwerk
-Get-PSDrive -Name E | Select-Object Used, Free
+# Freier Platz auf dem Laufwerk des Ausgabeordners (OutputDirectory aus config.json)
+$out = (Get-Content .\config.json -Raw | ConvertFrom-Json).Firebird.OutputDirectory
+Get-PSDrive -Name (Split-Path -Qualifier $out).TrimEnd(':') | Select-Object Used, Free
 
 # Größe und Alter der Trace-Dateien (Retention, security/DATA_HANDLING.md §5)
-Get-ChildItem E:\trace_output_*.log | Select-Object Name, Length, LastWriteTime
+Get-ChildItem (Join-Path $out 'trace_output_*.log') | Select-Object Name, Length, LastWriteTime
 ```
 
 ---
@@ -51,7 +52,7 @@ Get-ChildItem E:\trace_output_*.log | Select-Object Name, Length, LastWriteTime
 | Signal | Mögliche Ursache | Maßnahme |
 |--------|-----------------|---------|
 | Trace-Datei wächst sehr schnell | `time_threshold` zu niedrig, alle Datenbanken im Trace | Session stoppen, Konfiguration einschränken |
-| Freier Platz auf `E:\` sinkt stark | vergessene Session | Session per `-LIST`/`-STOP` beenden, Datei sichern oder löschen |
+| Freier Platz im Ausgabeordner sinkt stark | vergessene Session | Session per `-LIST`/`-STOP` beenden, Datei sichern oder löschen |
 | Alte `trace_output_*.log` liegen herum | Aufräumen vergessen | löschen bzw. Retention durchsetzen |
 | Spürbar höhere Last/Latenz auf dem DB-Server | Trace mit `print_plan`/`print_perf` auf viele Statements | Dauer verkürzen, Schwellwert erhöhen |
 | Parser meldet deutlich weniger Datensätze als erwartet | Format abweichend (Firebird-Version) oder Datei abgeschnitten | Kopf- und Zeitstempelzeilen der Datei prüfen |

@@ -72,8 +72,10 @@ Liest die Datei in 4-MB-Stücken (Speicherbedarf begrenzt, unabhängig von der D
 *   `Params`: Statement-Parameter (`param0 = typ, "wert"`).
 *   `TableStats`: Tabellenstatistik je Tabelle (`Natural`, `Index`, …), Spaltenausrichtung bleibt erhalten.
 *   `Timestamp`, `ProcessID`, `SessionID`: Kopfzeile jedes Trace-Ereignisses.
-*   `Action`: Ereignisname, z. B. `EXECUTE_STATEMENT_FINISH`, `FAILED EXECUTE_STATEMENT_FINISH`, `ERROR`, `WARNING`.
+*   `Action`: Ereignisname, z. B. `EXECUTE_STATEMENT_FINISH`, `FAILED EXECUTE_STATEMENT_FINISH`, `ERROR`, `WARNING`, `SWEEP_FINISH`, `START_SERVICE`.
 *   `ErrorSource`, `ErrorCodes`, `ErrorMessages`: Bei `ERROR AT …` / `WARNING AT …` (z. B. Deadlocks, Sperrkonflikte).
+*   `ServiceName`, `ServiceID`: Bei Dienst-Ereignissen (`ATTACH_SERVICE`, `START_SERVICE`, …), z. B. `Backup Database`; Benutzer, Adresse und Programm des Dienstes stehen in den Verbindungsfeldern. Braucht `log_services` (in `fbtrace50.conf` an).
+*   `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext`: Transaktionszähler bei `SWEEP_START` / `SWEEP_FINISH`. Braucht `log_sweep` (in `fbtrace50.conf` an).
 
 ### Der Pseudonymisierer: `Pseudonymize-FirebirdTrace.ps1`
 Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
@@ -92,7 +94,7 @@ Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
 *   `-MappingFile <pfad>`: Optionale CSV `Pseudonym;Original`, damit der Verantwortliche Ergebnisse zurückführen kann. Enthält Klartext.
 
 **Pseudonymisiert:** `User`, `ClientIP` (auch in `ProtocolInfo`), `ApplicationPath`, `DatabasePath`, Werte in `Params`; mit `-RedactLiterals` zusätzlich alle Zeichenketten und Zahlen in `SqlStatement` und Werte in `ErrorMessages`.
-**Nicht pseudonymisiert:** `SqlPlan`, `TableStats` sowie Tabellen-/Indexnamen (für die Analyse nötig), technische IDs, Zeitstempel, Zähler.
+**Nicht pseudonymisiert:** `SqlPlan`, `TableStats` sowie Tabellen-/Indexnamen (für die Analyse nötig), technische IDs, Zeitstempel, Zähler, `ServiceName`/`ServiceID` und Sweep-Zähler.
 
 > [!WARNING]
 > **Sicherheitshinweis**: Dieses Werkzeug pseudonymisiert (Hash mit Schlüssel, HMAC-SHA256), es anonymisiert nicht. Wer den Schlüssel hat, kann vermutete Werte prüfen; für den Verantwortlichen bleiben die Daten personenbezogen (DSGVO). Schlüssel- und Zuordnungsdatei (`-MappingFile`) nie weitergeben.

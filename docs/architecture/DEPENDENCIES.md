@@ -82,9 +82,9 @@ Service-Manager: `security/AUTHENTICATION.md`.
 
 | Ressource | Mindestversion / Pfad | Zweck |
 |-----------|----------------------|-------|
-| Windows | Windows mit Windows PowerShell 5.1 oder PowerShell 7 | Laufzeit; Trace-Skripte nutzen Windows-Pfade (`E:\`) |
-| PowerShell | ≥ 5.1 (nicht deklariert; Code nutzt `::new()`, `[ordered]`, `[CmdletBinding()]`) | Sprache; ein `#Requires -Version 5.1` fehlt (BACKLOG) |
-| Firebird-Server | Trace-Format ab Firebird 3 (Zeitstempel `…T…ffff`); Vorlage: Firebird 4.0 | Quelle der Trace-Logs |
+| Windows | Windows mit Windows PowerShell 5.1 oder PowerShell 7 | Laufzeit; Trace-Skripte rufen `fbtracemgr.exe` auf |
+| PowerShell | Parser/Pseudonymisierer ≥ 5.1 (nicht deklariert, in CI geprüft); Trace-Skripte ≥ 7.4 (`#Requires`) | Sprache; ein `#Requires -Version 5.1` für Parser/Pseudonymisierer fehlt (BACKLOG) |
+| Firebird-Server | Trace-Format ab Firebird 3 (Zeitstempel `…T…ffff`); Vorlage: Firebird 5.0 (auch 4.0) | Quelle der Trace-Logs |
 | Ausgabeordner | `OutputDirectory` in `config.json` (seit I5) | Ablage der Trace-Ausgabe (`trace_output_*.log`) — muss existieren und genug Platz haben |
 | PowerShell 7.4+ | nur für die Trace-Skripte (`#Requires -Version 7.4`, ADR-002) | byte-genaue Umleitung der `fbtracemgr`-Ausgabe |
 

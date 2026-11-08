@@ -102,7 +102,8 @@ aus einer realen Umgebung (Einzelheiten bewusst nur in `docs/local/ENVIRONMENT.m
 oder Doku könnten erneut echte Trace-Auszüge enthalten.
 
 **Mitigation:**
-- Interna-Hook (`tools/git-hooks/`, Denylist `.internal-terms`) in jedem Klon aktivieren (`CONVENTIONS_COMMON.md` 3.1).
+- Interna-Hook (`tools/git-hooks/`, Denylist `.internal-terms`) in jedem Klon aktivieren (`CONVENTIONS_COMMON.md` 3.1);
+  im Arbeitsklon des Owners seit 2026-11-08 aktiv. Er prüft nur neue Commits, nicht die History.
 - Fixtures und Beispiele nur mit fiktiven Werten (`CONVENTIONS.md` §6).
 - Owner-Entscheidung zur History-Bereinigung (`docs/TODO.md` → Owner-Aufgaben).
 

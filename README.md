@@ -72,8 +72,10 @@ Streams the file in 4 MB chunks (memory stays bounded, independent of file size)
 *   `Params`: Statement parameters (`param0 = type, "value"`).
 *   `TableStats`: Per-table statistics block (`Natural`, `Index`, …), column alignment preserved.
 *   `Timestamp`, `ProcessID`, `SessionID`: Header of each trace event.
-*   `Action`: Event name, e.g. `EXECUTE_STATEMENT_FINISH`, `FAILED EXECUTE_STATEMENT_FINISH`, `ERROR`, `WARNING`.
+*   `Action`: Event name, e.g. `EXECUTE_STATEMENT_FINISH`, `FAILED EXECUTE_STATEMENT_FINISH`, `ERROR`, `WARNING`, `SWEEP_FINISH`, `START_SERVICE`.
 *   `ErrorSource`, `ErrorCodes`, `ErrorMessages`: For `ERROR AT …` / `WARNING AT …` events (e.g. deadlocks, lock conflicts).
+*   `ServiceName`, `ServiceID`: For service events (`ATTACH_SERVICE`, `START_SERVICE`, …), e.g. `Backup Database`; user, address and program of the service are in the connection fields. Needs `log_services` (on in `fbtrace50.conf`).
+*   `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext`: Transaction counters of `SWEEP_START` / `SWEEP_FINISH`. Needs `log_sweep` (on in `fbtrace50.conf`).
 
 ### The Pseudonymizer: `Pseudonymize-FirebirdTrace.ps1`
 Designed for DSGVO/GDPR compliance when sharing logs.
@@ -92,7 +94,7 @@ Designed for DSGVO/GDPR compliance when sharing logs.
 *   `-MappingFile <path>`: Optional CSV `Pseudonym;Original` for the data controller to map results back. Contains plaintext.
 
 **Pseudonymized:** `User`, `ClientIP` (also in `ProtocolInfo`), `ApplicationPath`, `DatabasePath`, `Params` values; with `-RedactLiterals` also all string and numeric literals in `SqlStatement` and values in `ErrorMessages`.
-**Not pseudonymized:** `SqlPlan`, `TableStats` and table/index names (needed for analysis), technical IDs, timestamps, counters.
+**Not pseudonymized:** `SqlPlan`, `TableStats` and table/index names (needed for analysis), technical IDs, timestamps, counters, `ServiceName`/`ServiceID` and sweep counters.
 
 > [!WARNING]
 > **Security Notice**: This tool uses **Pseudonymization** (keyed hashing, HMAC-SHA256), not Anonymization. Whoever has the key can verify guessed values; the data stays personal data for the data controller (GDPR). Never share the key file or the mapping file (`-MappingFile`).
