@@ -38,7 +38,7 @@ wenn das Schlüsselwort nach der Literal-Ersetzung noch vorkommt). Künftige Än
 ---
 
 ## L3: Testdaten aus der Formatquelle bauen, echte Daten nur lokal und nur gezählt auswerten
-- Inkrement: I9, I10, K3
+- Inkrement: I9, I10, K3, I11, I12
 - Scope: generisch-base
 - Backport-Ziel: `base/testing/UNIT_TESTS.md` (Fixtures) bzw. `base/CONVENTIONS_COMMON.md` 3.1 (öffentliche Repos)
 - Gesehen mit: v37
@@ -48,7 +48,8 @@ In einem öffentlichen Repo mit sensiblen Echtdaten wurden die Test-Fixtures aus
 (Format nach Firebird 5.0.4, Werte ausgedacht, IPs aus 192.0.2.0/24). Ein echtes Log diente nur lokal als Beleg, und zwar
 nur über Zählwerte (298 Kopfzeilen, 12 leere Verbindungszeilen) — so wurden zwei Parser-Fehler belegt, ohne Inhalte ins
 Repo zu bringen. Grenze: Formen, die nur im Quellcode stehen (Linux-Kopfzeile, Fehlerereignisse), bleiben unbelegt
-und müssen als „Ungeprüft" im CHANGELOG stehen. Bisher nur in diesem Projekt gesehen.
+und müssen als „Ungeprüft" im CHANGELOG stehen. In I11/I12 wieder so (Tabellenstatistik, Trigger-Zeile in zwei
+Firebird-Versionen); bisher nur in diesem Projekt gesehen.
 
 ---
 

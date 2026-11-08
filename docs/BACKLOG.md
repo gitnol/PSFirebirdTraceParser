@@ -18,7 +18,8 @@ Wenn ein Backlog-Punkt für ein Inkrement vorgesehen wird → Verschiebung von
 
 - SQL-Text normalisieren (Literale/Parameterwerte durch Platzhalter) als zusätzliches Feld `SqlPattern`, damit Auswertungen gleiche Abfragen zusammenfassen können — keiner der verglichenen Parser hat das (Vergleich 2026-11-07)
 - Pseudonymisierte Ausgabe im Trace-Rohformat (nicht nur Objekte/CSV) — für Analysedienste, die Original-Trace-Dateien erwarten; frühere Hilfsskripte dafür wurden entfernt
-- `Timestamp` als `[datetime]` (zusätzliche Property, um den Vertrag nicht zu brechen)
+- `Timestamp` als `[datetime]` (zusätzliche Property, um den Vertrag nicht zu brechen); seit I12 billiger: das Parsen
+  (`TryParseExact`, Format `yyyy-MM-ddTHH:mm:ss.FFFFFFF`) gibt es schon für `ConnectionDurationMs` (Reflexion I13)
 - Trace-Konfiguration mit Datenbankfilter (`include_filter`) als zweite Vorlage oder dokumentierte Option, damit eine
   Sitzung nicht alle Datenbanken des Servers protokolliert (Datenminimierung, `security/DATA_HANDLING.md` §2;
   `security/THREAT_MODEL.md` Bedrohung 4)
@@ -34,6 +35,10 @@ Wenn ein Backlog-Punkt für ein Inkrement vorgesehen wird → Verschiebung von
   Regel) fassen; über 300 Zeilen Datei-Grenze aus `CONVENTIONS.md` §3, dann nach `functions/` aufteilen
 - Skriptnamen `trace_start.ps1`/`trace_stop.ps1` auf genehmigte Verben umstellen (`Start-FirebirdTrace.ps1`/`Stop-FirebirdTrace.ps1`) — bricht Nutzer-Gewohnheiten, nur mit README-Hinweis
 - `#Requires -Version 5.1` in Parser und Pseudonymisierer (die Trace-Skripte haben seit I5 `#Requires -Version 7.4`)
+- `Show-TraceStructure.ps1` (5 Commits seit der Reflexion I5, 594 Zeilen; Hotspot-Liste der Reflexion I13):
+  `ConvertFrom-TraceBlock` hat 242 Zeilen mit einem Abschnitt je Feldgruppe in einem `try`. Über der Grenze aus
+  `CONVENTIONS.md` §3: Feldgruppen (Verbindung, Routine, Tabellenstatistik, Diagnose) als Funktionen nach `functions/`
+  — vorher Laufzeit messen, ein Funktionsaufruf je Block kostet in PowerShell spürbar (I11/I12)
 - `Pseudonymize-FirebirdTrace.ps1` (3 Commits seit 2026-10-11, 395 Zeilen): der `process`-Block hat rund 175 Zeilen
   mit einer Ersetzungsregel je Feld hintereinander — bei der nächsten Änderung prüfen, ob sich die Regeln als Tabelle
   (Feld → Verfahren) fassen lassen (Hotspot-Liste der Reflexion I3)

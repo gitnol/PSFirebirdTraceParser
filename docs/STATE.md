@@ -5,14 +5,14 @@ Zuletzt aktualisiert: 2026-11-08
 **Stack / Overlays:** powershell-automation / keine
 **Letztes abgeschlossenes Inkrement:** I13 – Parser: Robustheit und Diagnose (2026-11-08)
 **Nächster Schritt:** I8 (Rest) mit dem Security-Sweep am 2026-11-21
-**Nächste Reflexion:** beim dritten abgeschlossenen Inkrement nach I5 (voraussichtlich I13, Reihenfolge `TODO.md`: I11 und I12 erledigt, dann I13; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
+**Nächste Reflexion:** beim dritten abgeschlossenen Inkrement nach I13 (Reflexion I13 am 2026-11-08; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
 ---
 
 ## Nächster Schritt
 
-I12 umgesetzt: Prozeduren, Funktionen und Trigger mit Namen (Trigger: Tabelle, Zeitpunkt, Aktion; Firebird 4 und 5) und `ConnectionDurationMs` bei `DETACH_DATABASE`. Damit echte Daten kommen, muss im Trace `log_procedure_finish`/`log_trigger_finish` eingeschaltet werden (in `fbtrace50.conf` auskommentiert, Entscheidung Owner). I13 umgesetzt: Warnungen mit Zeilennummer, Zusammenfassung je `Action` mit `-Verbose`, `-RegexTimeoutSeconds` und `-MaxBlockLines`. Danach Reflexion; I8 (Rest) zusammen mit dem Security-Sweep am 2026-11-21. Vorher sinnvoll: einmal `trace_start.ps1`/`trace_stop.ps1` gegen den Testserver laufen lassen und den ersten CI-Lauf nach dem Push ansehen. Empfohlenes Modell: Sonnet, mittlerer Effort.
+I12 und I13 umgesetzt, Reflexion I13 erledigt. Offene Entscheidung des Owners: `log_procedure_finish`/`log_trigger_finish` in `fbtrace50.conf` einschalten (sonst liefern die I12-Felder keine echten Daten; Trigger können das Log stark vergrößern). Als Nächstes I8 (Rest) zusammen mit dem Security-Sweep am 2026-11-21; Vorschlag danach: Refactoring `Show-TraceStructure.ps1` (`BACKLOG.md`). Vorher sinnvoll: einmal `trace_start.ps1`/`trace_stop.ps1` gegen den Testserver laufen lassen und den ersten CI-Lauf nach dem Push ansehen. Empfohlenes Modell: Sonnet, mittlerer Effort.
 
 ---
 

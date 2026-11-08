@@ -10,6 +10,44 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 Reflexion nach I13
+
+Kein Inkrement (KICKOFF Phase 1c, `REFLECTION.md`). Begutachtet: I11, I12, I13 (drittes abgeschlossenes Inkrement
+nach I5).
+
+### Advocatus Diaboli
+- **Positiv:** Formate aus dem Quellcode belegt statt geraten (I11 `appendTableCounts`, I12 Trigger-Zeile in
+  `TracePluginImpl.cpp` `v4.0-release` und `v5.0-release` verglichen — der alte Kommentar „Format 4.0 = 5.0" in
+  `fbtrace50.conf` war falsch). Die Mutationsproben fanden in jedem der drei Inkremente echte Testlücken (I11
+  Umlaut-Korrektur, I12 `CREATE_DATABASE`, I13 drei Wege der Zeilenzählung/Kürzung). Streaming bleibt; Laufzeit je
+  Inkrement gemessen (I11 etwa +15 %, I12 +4 %, I13 +2 % auf 9,7 MB).
+- **Negativ:** `Show-TraceStructure.ps1` hat jetzt 594 Zeilen, `ConvertFrom-TraceBlock` allein 242 Zeilen in einem
+  `try` (`wc -l`, awk-Zählung) — über der Grenze aus `CONVENTIONS.md` §3 (Funktionen im Skript nur unter 300 Zeilen) →
+  Refactoring-Kandidat in `BACKLOG.md`. I12 hat noch keinen End-to-End-Konsumenten: `fbtrace50.conf` schaltet
+  `log_procedure_finish`/`log_trigger_finish` nicht ein, echte Daten gibt es erst nach einer Entscheidung des Owners.
+  I13 baut `-RegexTimeoutSeconds` und `-MaxBlockLines` gegen ein angenommenes Risiko; die Standardwerte sind geschätzt.
+  Belegt ist nur der Speicherfehler beim Rest ohne Zeitstempel (aus dem Code gelesen: `$carry = $text` ohne Grenze),
+  nicht gemessen. Ein Kontrolllauf der I13-Mutationsprobe war einmal ohne erkennbaren Grund rot (Vermutung:
+  Zeitlimit-Test).
+- **Lehren-Filter:** L8 ist ein Fall in einem Projekt (so vermerkt). L3 hat zwei weitere Fälle im selben Projekt
+  (I11, I12) — weiter nur ein Projekt. L4–L7 unverändert offen.
+
+### Changed
+- `BACKLOG.md`: Refactoring-Kandidat `Show-TraceStructure.ps1` (Hotspot); `Timestamp` als `[datetime]` ist seit I12
+  billiger (das Parsen gibt es schon für die Verbindungsdauer).
+- `LESSONS_LEARNED.md`: L3 um I11/I12 ergänzt.
+- `STATE.md`: Reflexions-Marker auf das dritte Inkrement nach I13; Nächster Schritt gekürzt.
+
+### Confidence / Ungeprüft
+- Health-Check (Grep auf offene Verweise): 0 Treffer; Validator OK. Bestehende Hinweise unverändert: toter Verweis auf `testing/INTEGRATION_TESTS.md` in `CONVENTIONS_COMMON.md` (Template-Datei) und Dubletten zwischen `README.md`/`README.de.md`/`SETUP.md` (gewollt: zwei Sprachen). Fakten-Drift gesucht („Format 4.0 = 5.0",
+  „Obergrenze je Block", „ganz im Speicher"): in I12/I13 schon umgestellt. Interna-Scan gegen `.internal-terms` über alle
+  versionierten Dateien: 0 Treffer; Suche mit Wortgrenzen für kurze Namen nicht gemacht.
+- Hotspots seit `6da250b`: `Show-TraceStructure.ps1` 5 Commits / 594 Zeilen (Kandidat); READMEs und Tests sind keine
+  Kandidaten.
+- Testgüte: Mutationsproben in I11 (19, 1 äquivalent), I12 (21, 2 äquivalent), I13 (22, alle rot nach Testergänzung).
+- Roadmap: offen ist nur I8 (Rest, mit dem Security-Sweep am 2026-11-21). Vorschlag für danach, nicht in `TODO.md`
+  übernommen (Entscheidung Owner): Refactoring `Show-TraceStructure.ps1`, dann `Timestamp` als `[datetime]`.
+
 ## 2026-11-08 I13 – Parser: Robustheit und Diagnose
 
 Commits `4df3e6c` (Tests rot, Stub mit Vertrag), `30b4b43` (Umsetzung). Kein Split: 2 Code-/Testdateien, ~420 Zeilen
