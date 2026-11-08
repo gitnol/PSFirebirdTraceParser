@@ -46,19 +46,14 @@ PSFirebirdTraceParser/
 ├── README.md / README.de.md        # Nutzerdoku (englisch/deutsch)
 ├── AGENTS.md / CLAUDE.md           # Einstieg für Agenten → docs/KICKOFF.md
 ├── tools/git-hooks/                # Interna-Hook (pre-commit, commit-msg)
+├── tools/Invoke-QualityGate.ps1    # seit I14: Linter und Tests, lokal und in CI gleich
+├── PSScriptAnalyzerSettings.psd1   # seit I14: Linter-Regeln für Gate 1
+├── .github/workflows/ci.yml        # seit I14: CI bei Push und Pull Request (PS 7 und 5.1)
+├── tests/                          # seit I9: Pester-Tests, je Skript eine *.Tests.ps1
+│   ├── RequiredModules.psd1        # gepinnte Versionen von Pester und PSScriptAnalyzer
+│   └── fixtures/                   # synthetische Trace-Dateien mit fiktiven Daten
 └── docs/                           # Dieses Doku-Set (docs/local/ gitignored)
 ```
-
-## Ziel-Ergänzungen (mit dem jeweiligen Inkrement)
-
-```
-├── tests/                          # seit I9: Pester-Tests, je Skript eine *.Tests.ps1
-│   ├── RequiredModules.psd1        # gepinnte Pester-Version
-│   └── fixtures/                   # seit I9: synthetische Trace-Dateien mit fiktiven Daten
-└── PSScriptAnalyzerSettings.psd1   # noch nicht vorhanden: Linter-Regeln für Gate 1 (mit CI, I14)
-```
-
----
 
 ## Regeln
 

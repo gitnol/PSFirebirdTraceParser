@@ -10,6 +10,46 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 I14 – CI mit PSScriptAnalyzer und Pester
+
+Commits `8c75645` (Tests: Charakterisierung `-AnalyzeOnly`, lauffähig unter 5.1), `ca1edc9` (Analyzer-Befunde
+beseitigt), `c26fb8b` (Workflow, Settings, Gate-Skript). Freigabe des Owners 2026-11-08.
+
+**Trigger-Matrix:** Build-/Prüfpfad geändert → `operations/DEPLOYMENT.md`; neue Abhängigkeit (`actions/checkout`,
+Runner, PSGallery in CI) → `architecture/DEPENDENCIES.md` + `security/DEPENDENCY_AUDIT.md` (Ereignis-Abgleich); neue
+Dateien → `architecture/PROJECT_LAYOUT.md`; Gate-Befehle → `CONVENTIONS.md` §9; Fehler beseitigt (K5) → `KNOWN_ISSUES.md`;
+Risiko → `STATE.md`; Lessons → `LESSONS_LEARNED.md` L5, L6; erledigte Schuld → `BACKLOG.md`. README unverändert (keine
+Nutzerfunktion; kein Badge, solange der Workflow nie lief).
+
+### Added
+- `.github/workflows/ci.yml`: bei Push und Pull Request zwei Jobs auf `windows-latest` — PowerShell 7 (Lint und Tests)
+  und Windows PowerShell 5.1 (Tests). `actions/checkout` auf Commit-SHA gepinnt (v7.0.1), Workflow nur mit Leserecht.
+- `PSScriptAnalyzerSettings.psd1`: Stufen ParseError, Error, Warning; keine Regel ausgeschlossen. Entscheidung:
+  `Information` (z. B. Leerzeichen am Zeilenende, 34 Hinweise) ist kein Gate; Ausnahmen nur im Code mit Begründung.
+- `tools/Invoke-QualityGate.ps1`: dieselben Befehle lokal und in CI; lädt genau die gepinnten Versionen.
+- Charakterisierungstest für den `-AnalyzeOnly`-Bericht (67 Tests).
+
+### Changed
+- Tests laufen jetzt auch unter Windows PowerShell 5.1 (vorher scheiterten dort alle am Aufbau).
+- `-AnalyzeOnly`-Bericht in eigene Funktion mit begründeter `Write-Host`-Ausnahme; Verhalten gleich.
+
+### Fixed
+- K5: `trace_start.ps1`/`trace_stop.ps1` als UTF-8 mit BOM.
+
+### Confidence / Ungeprüft
+- **Der Workflow ist nie auf GitHub gelaufen** (kein Push erlaubt). Geprüft: YAML mit `python yaml` lesbar; die
+  Befehle des Workflows lokal unter PowerShell 7.6.9 und 5.1 ausgeführt, auch in einem frischen Klon (Zeilenenden wie
+  im CI-Checkout). Ungeprüft: `Install-Module` auf dem Runner (vor allem unter 5.1: PowerShellGet-Version, NuGet-Provider),
+  Laufzeit, kein `actionlint` verfügbar.
+- Gate lokal: grün (0 Befunde, 67/67 unter beiden Versionen); rot mit Exit 1 auf dem Code vor `ca1edc9` (21 Befunde),
+  rot mit Exit 2 bei absichtlich falschem Test.
+- Mutationsprobe am verschobenen Bericht: 3 Mutanten, 3 erkannt.
+- Der Interna-Hook prüft weiter nur Begriffe; das Gate ist **nicht** im pre-commit-Hook (bewusst: Laufzeit ~10 s je Commit).
+
+### Lessons Learned
+- Zugesagte Laufzeit (5.1) war ohne Tests darunter nicht belegt → L5.
+- `Stop` im Gate-Skript änderte das Verhalten der getesteten Skripte → L6.
+
 ## 2026-11-08 I15 – Sweep- und Service-Ereignisse lesen
 
 Commits `0492e4d` (Tests rot, Vertrag mit leeren Feldern), `bb82165` (Umsetzung). Zustimmung des Owners (2026-11-07)

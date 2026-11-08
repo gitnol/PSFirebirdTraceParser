@@ -37,7 +37,7 @@ Wenn ein Backlog-Punkt für ein Inkrement vorgesehen wird → Verschiebung von
 
 ## Technische Schuld
 
-- Keine Linter-Settings-Datei und keine CI — Pester-Tests laufen nur lokal (Tests gibt es seit I9; CI: I14)
+(keine Einträge — Linter-Settings und CI seit I14)
 
 ---
 

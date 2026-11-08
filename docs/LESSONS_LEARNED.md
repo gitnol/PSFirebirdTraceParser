@@ -67,6 +67,33 @@ vorhanden: CI") und die ID nur als Hinweis; bei Roadmap-Umbau nach den alten IDs
 
 ---
 
+## L5: Unterstützte Laufzeit nur zusagen, wenn die Tests darunter laufen
+- Inkrement: I14
+- Scope: generisch-stack
+- Backport-Ziel: `stacks/powershell-automation/testing/UNIT_TESTS.md` (Abschnitt 7) bzw. Stack-CI-Vorlage
+- Gesehen mit: v37
+- Status: offen
+
+Das Projekt sagt Windows PowerShell 5.1 und PowerShell 7 zu, die Tests liefen aber nur unter 7: `Join-Path` mit drei
+Teilen und .NET-5-APIs (`Convert::ToHexString`, `SHA256::HashData`) ließen unter 5.1 alle 66 Tests scheitern, bevor
+sie den Code prüften. Nach dem Umbau auf `[System.IO.Path]::Combine` und .NET-Framework-Aufrufe liefen alle Tests auch
+unter 5.1 grün — erst dann trägt ein zweiter CI-Job. Ein Fall, ein Projekt.
+
+---
+
+## L6: Ein Gate-Skript mit `$ErrorActionPreference = 'Stop'` verändert die Tests
+- Inkrement: I14
+- Scope: generisch-stack
+- Backport-Ziel: `stacks/powershell-automation/CONVENTIONS.md` (Quality Gates) bzw. Vorlage eines Gate-Skripts
+- Gesehen mit: v37
+- Status: offen
+
+`Invoke-Pester` läuft im Bereich des aufrufenden Skripts. Setzte das Gate-Skript `Stop`, wurde aus einem erwarteten,
+nicht abbrechenden Fehler (`Write-Error` bei fehlender Datei) ein Abbruch — ein Test war nur im Gate rot, beim direkten
+Aufruf grün. Lösung: Pester in einem Kindbereich mit den Standard-Einstellungen starten. Ein Fall, ein Projekt.
+
+---
+
 ## Pflege
 
 - Neuer „Lessons Learned"-Block im `CHANGELOG.md` → Eintrag `## L<N>:` hier anlegen.

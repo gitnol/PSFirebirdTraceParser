@@ -203,18 +203,27 @@ nicht; drei Schichten zusammen machen versehentliche Commits praktisch unmöglic
 
 ## 9. Quality Gates — pre-commit (Definition of Done)
 
-Für PowerShell greifen zwei der vier Gates der Definition of Done. **Stand I3:** Beide Gates laufen lokal; Pester-Tests
-und gepinnte Versionen gibt es seit I9. Noch nicht vorhanden: Settings-Datei für den Linter und CI (I14).
+Für PowerShell greifen zwei der vier Gates der Definition of Done. **Stand I14:** Beide Gates laufen lokal und in CI
+(`.github/workflows/ci.yml`, bei Push und Pull Request) mit denselben Befehlen aus `tools/Invoke-QualityGate.ps1`;
+Versionen gepinnt in `tests/RequiredModules.psd1`, Linter-Regeln in `PSScriptAnalyzerSettings.psd1`.
 
 ```powershell
-Invoke-ScriptAnalyzer -Path . -Recurse -Severity ParseError, Error, Warning   # Gate 1 — Linter (PSScriptAnalyzer)
-Invoke-Pester ./tests -ExcludeTag Integration -Output Detailed            # Gate 4 — Unit-Tests (Pester), seit I9
+pwsh -File ./tools/Invoke-QualityGate.ps1              # beide Gates; Exit 0 = grün
+pwsh -File ./tools/Invoke-QualityGate.ps1 -Gate Lint   # Gate 1 — PSScriptAnalyzer mit PSScriptAnalyzerSettings.psd1
+powershell -File .\tools\Invoke-QualityGate.ps1 -Gate Test   # Gate 4 — Pester unter Windows PowerShell 5.1
 ```
+
+Das Skript führt aus: `Invoke-ScriptAnalyzer -Path . -Recurse -Settings ./PSScriptAnalyzerSettings.psd1` (Stufen
+ParseError, Error, Warning) und `Invoke-Pester ./tests -ExcludeTag Integration` (Pester mit den Standard-Einstellungen
+für Fehler, nicht mit `Stop`). Ausnahmen von einer Regel stehen im Code als `SuppressMessageAttribute` mit
+`Justification`, nicht als ausgeschlossene Regel in der Settings-Datei. Tests bleiben unter Windows PowerShell 5.1
+lauffähig: keine APIs, die es erst in .NET 5+ gibt (`Convert::ToHexString`, `SHA256::HashData`), kein `Join-Path`
+mit mehr als zwei Teilen (`[System.IO.Path]::Combine` nehmen).
 
 `-Severity` ist ein Filter, keine Mindeststufe: `-Severity Warning` allein zeigt weder Syntaxfehler (`ParseError`)
 noch Regeln der Stufe `Error` — alle drei Stufen nennen.
 
-Mit CI (I14) zusätzlich `-Settings ./PSScriptAnalyzerSettings.psd1` (Datei noch nicht vorhanden). Projekt-eigene pre-commit-Prüfungen gehören nach
+Projekt-eigene pre-commit-Prüfungen gehören nach
 `tools/git-hooks/pre-commit.local` (der Interna-Hook ruft sie auf, `CONVENTIONS_COMMON.md` 3.1).
 
 Gate 2 (Formatter) und Gate 3 (statische Typanalyse) haben in PowerShell kein eigenständiges Standard-Werkzeug;

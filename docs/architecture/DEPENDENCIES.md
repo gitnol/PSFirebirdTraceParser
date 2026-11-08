@@ -27,6 +27,20 @@ Get-Module -Name Pester, PSScriptAnalyzer -ListAvailable | Select-Object Name, V
 ```
 
 `-Scope CurrentUser` genügt: Die Skripte laufen interaktiv unter dem angemeldeten Benutzer, nicht unter einem Dienstkonto.
+Gepinnte Versionen installieren: `Install-Module -Name <Modul> -RequiredVersion <Version aus tests/RequiredModules.psd1>`
+(so macht es auch die CI).
+
+---
+
+## CI (GitHub Actions, seit I14)
+
+| Baustein | Version | Zweck | Risiko bei Ausfall |
+|---|---|---|---|
+| `actions/checkout` | v7.0.1, gepinnt auf Commit `3d3c42e5aac5ba805825da76410c181273ba90b1` | Repository im CI-Lauf auschecken (`persist-credentials: false`) | CI läuft nicht; lokal unberührt |
+| Runner `windows-latest` | von GitHub gepflegt (nicht pinnbar) | PowerShell 7 und Windows PowerShell 5.1 vorinstalliert | Neues Runner-Image kann andere `pwsh`-Version bringen |
+| PowerShell Gallery | — | Pester und PSScriptAnalyzer in den gepinnten Versionen | CI-Lauf rot (Exit 3 „Modul fehlt") |
+
+Workflow: `.github/workflows/ci.yml`; Befehle: `tools/Invoke-QualityGate.ps1` (`CONVENTIONS.md` §9).
 
 ---
 

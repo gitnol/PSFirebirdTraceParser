@@ -50,6 +50,19 @@ Ablage für Scanner- und Recherche-Ergebnisse (`principles/SECURITY_CURRENCY.md`
 Öffentliches oder potenziell öffentliches Repo: die Betroffenheit **konkreter interner Hosts** nur in `docs/local/`,
 hier nur generisch (`CONVENTIONS_COMMON.md` 3.1).
 
+### 2026-11-08 – Ereignis: neue Dependency `actions/checkout` (I14)
+
+Auslöser: CI eingeführt (`.github/workflows/ci.yml`). Kein Kadenz-Sweep; Marker unverändert.
+
+| Prüfgegenstand | Ergebnis | Bewertung (betrifft uns / nicht, Begründung) | Quelle |
+|---|---|---|---|
+| `actions/checkout` | Neuestes Release v7.0.1 (2026-07-20), Tag zeigt auf Commit `3d3c42e5…`; 0 Security-Advisories | Ja, neue CI-Abhängigkeit. Gepinnt auf den vollen Commit-SHA (ein Tag kann umgehängt werden), `persist-credentials: false` (kein Token im Arbeitsverzeichnis), Workflow nur mit `contents: read` | `gh api repos/actions/checkout/releases/latest`, `…/git/ref/tags/v7.0.1`, `…/security-advisories` |
+| Pester 5.7.1, PSScriptAnalyzer 1.25.0 | Unverändert gegenüber Sweep 2026-11-07 (keine Advisories) | Jetzt in CI verbaut; Versionen aus `tests/RequiredModules.psd1` | Sweep 2026-11-07 |
+
+Restrisiko: Der Runner `windows-latest` ist nicht pinnbar (GitHub tauscht das Image); die Modulquelle PowerShell Gallery
+hat keine Signaturprüfung im Workflow (`-SkipPublisherCheck` für Pester nötig, weil Windows ein altes, anders
+signiertes Pester 3.4 mitbringt).
+
 ### 2026-11-07 – Kadenz-Sweep (fällig seit 2026-11-06)
 
 Zeitraum seit dem letzten Sweep 2026-10-23. Bestand unverändert: keine Laufzeit-Module, keine Manifest-/Lock-Datei;

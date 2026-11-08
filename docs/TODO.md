@@ -91,16 +91,6 @@ Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer
 - [ ] Zusammenfassung am Ende: Anzahl Blöcke je `Action`, übersprungene/unbekannte Blöcke
 - [ ] Zeitlimit für Regex-Auswertung (Schutz vor sehr langen Blöcken), Obergrenze Zeilen je Block
 
-### I14: CI mit PSScriptAnalyzer und Pester
-
-Aus `BACKLOG.md` übernommen (2026-11-07), weil mit I2/I9 die ersten Tests entstehen.
-
-**Aufgaben:**
-
-- [ ] GitHub-Actions-Workflow: PSScriptAnalyzer (alle drei Schweregrade) und Pester unter PowerShell 7 bei Push und PR
-- [ ] Optional zweiter Lauf unter Windows PowerShell 5.1
-- [ ] Modulversionen pinnen (`tests/RequiredModules.psd1`)
-
 ---
 
 ## Niedrige Priorität

@@ -31,7 +31,7 @@ Auslieferungsartefakt: Git-Commit bzw. -Tag des Repositories (Skripte, `fbtrace3
 
 **Reproduzierbar:**
 - [ ] Entwickler-Module gepinnt (`tests/RequiredModules.psd1`, seit I9)
-- [ ] Gates laufen in sauberer Umgebung (lokal bzw. CI, siehe BACKLOG)
+- [ ] Gates laufen in sauberer Umgebung: CI seit I14 (`.github/workflows/ci.yml`, frischer Checkout auf `windows-latest`)
 
 ---
 
