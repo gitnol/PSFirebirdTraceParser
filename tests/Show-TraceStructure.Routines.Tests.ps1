@@ -140,11 +140,11 @@ Describe 'Show-TraceStructure: Verbindungsdauer (I12)' {
         $d[1].ConnectionDurationMs | Should -BeNullOrEmpty
     }
 
-    It 'trennt gleiche Verbindungsnummern verschiedener Datenbanken' {
+    It 'trennt gleiche Verbindungsnummern verschiedener Datenbanken (auch ab CREATE_DATABASE)' {
         $f = Join-Path $TestDrive 'two_db.log'
         $conn = { param($db) "`tC:\DATA\$db (ATT_5, APPUSER:NONE, UTF8, TCPv4:192.0.2.70/50800)" }
         @(
-            '2026-11-08T14:00:00.0000 (4321:000001A2B3C4D5E0) ATTACH_DATABASE', (& $conn 'A.FDB'), ''
+            '2026-11-08T14:00:00.0000 (4321:000001A2B3C4D5E0) CREATE_DATABASE', (& $conn 'A.FDB'), ''
             '2026-11-08T14:00:10.0000 (4321:000001A2B3C4D5E0) ATTACH_DATABASE', (& $conn 'B.FDB'), ''
             '2026-11-08T14:00:12.5000 (4321:000001A2B3C4D5E0) DETACH_DATABASE', (& $conn 'B.FDB'), ''
             '2026-11-08T14:01:00.0000 (4321:000001A2B3C4D5E0) DETACH_DATABASE', (& $conn 'A.FDB'), ''

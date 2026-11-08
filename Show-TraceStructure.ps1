@@ -18,6 +18,9 @@
     - RecordsFetched: "N records fetched" (rows; Fetches are page fetches)
     - TxIsolation/TxReadMode/TxWaitMode/TxLockTimeout/TxAccessMode: parts of TransactionOptions
     - TableCounts: TableStats as one object per table (Table, Natural, Index, Update, Insert, Delete, Backout, Purge, Expunge)
+    - RoutineType/RoutineName: procedure, function or trigger of EXECUTE_*/COMPILE_* events
+    - TriggerTable/TriggerTime/TriggerEvent: trigger line (Firebird 4 and 5 formats)
+    - ConnectionDurationMs: DETACH_DATABASE, time since ATTACH_DATABASE of the same connection in this file
 
     Status messages go to the verbose stream (-Verbose), not to the console.
 
@@ -121,6 +124,20 @@ $rxSweep = [System.Text.RegularExpressions.Regex]::new(
     [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
 )
 
+# Procedures and functions: "Procedure <name>:" / "Function <name>:" on a line of their own
+# (Firebird 4 logRecordProcFunc, Firebird 5 logRecordProc/logRecordFunc; Firebird 5 may put a plan below it)
+$rxRoutine = [System.Text.RegularExpressions.Regex]::new(
+    '^(?<Type>Procedure|Function) (?<Name>.+?):[ \t]*$',
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+)
+# Triggers. Firebird 5 (logRecordTrig): "Trigger[ <name>][ FOR <table>] (<when> <action>):" on a line of its own.
+# Firebird 4 (log_event_trigger_execute): "<TAB><name>[ FOR <table>] (<when> <action>) " below the transaction line,
+# "<unknown>" when the trigger has no name. <when>: BEFORE, AFTER, ON (database trigger, no table) or <unknown>.
+$rxTrigger = [System.Text.RegularExpressions.Regex]::new(
+    '^(?:Trigger(?: (?<Name>.+?))?|[ \t]+(?<Name>.+?))(?: FOR (?<Table>.+?))? \((?<Time>BEFORE|AFTER|ON|<unknown>) (?<Event>[^)]+)\):?[ \t]*$',
+    [System.Text.RegularExpressions.RegexOptions]::Multiline -bor [System.Text.RegularExpressions.RegexOptions]::Compiled
+)
+
 # SQL Params (param0 = ...)
 $rxParams = [System.Text.RegularExpressions.Regex]::new(
     '(?<Params>(?:^\s*param\d+\s*=\s*.+[\r\n]?)+)',
@@ -139,6 +156,12 @@ $rxPerf = [System.Text.RegularExpressions.Regex]::new(
 $script:RECORDS_FETCHED = ' records fetched'
 $script:Ordinal = [System.StringComparison]::Ordinal       # type literals resolved once, not per block
 $script:DigitsOnly = [System.Globalization.NumberStyles]::None
+
+# Open connections for ConnectionDurationMs: "<database>|<ATT number>" -> time of ATTACH_DATABASE/CREATE_DATABASE.
+# Holds only connections without DETACH so far, so memory grows with open connections, not with the file size.
+$script:OpenAttach = [System.Collections.Generic.Dictionary[string, datetime]]::new()
+$script:Invariant = [System.Globalization.CultureInfo]::InvariantCulture
+$script:TIMESTAMP_FORMAT = 'yyyy-MM-ddTHH:mm:ss.FFFFFFF'
 
 $script:TABLE_CELL_WIDTH = 10
 $script:Utf8 = [System.Text.UTF8Encoding]::new($false)
@@ -263,6 +286,44 @@ function ConvertFrom-TraceBlock {
         $entry.ApplicationPID = $m.Groups['ApplicationPID'].Value
     }
 
+    # Statement events (most blocks) carry neither a connection end nor a routine: skip both checks for them
+    $hasStatement = $block.Contains('Statement ')
+    $action = $entry.Action
+    if ($action -and -not $hasStatement) {
+        if ($action.EndsWith('_DATABASE')) {
+            # --- Connection duration: ATTACH_DATABASE -> DETACH_DATABASE of the same database and ATT number ---
+            $stamp = [datetime]::MinValue
+            if ($entry.AttachID -and [datetime]::TryParseExact($entry.Timestamp, $script:TIMESTAMP_FORMAT, $script:Invariant, 'None', [ref]$stamp)) {
+                $key = $entry.DatabasePath + '|' + $entry.AttachID
+                if ($action -eq 'ATTACH_DATABASE' -or $action -eq 'CREATE_DATABASE') { $script:OpenAttach[$key] = $stamp }
+                elseif ($action -eq 'DETACH_DATABASE' -and $script:OpenAttach.ContainsKey($key)) {
+                    $entry.ConnectionDurationMs = [long][Math]::Round(($stamp - $script:OpenAttach[$key]).TotalMilliseconds)
+                    $null = $script:OpenAttach.Remove($key)
+                }
+            }
+        }
+        elseif ($action.Contains('TRIGGER')) {
+            # --- Trigger (EXECUTE_TRIGGER_*, COMPILE_TRIGGER, also FAILED/UNAUTHORIZED) ---
+            $m = $rxTrigger.Match($block)
+            if ($m.Success) {
+                $entry.RoutineType = 'Trigger'
+                $name = $m.Groups['Name'].Value
+                if ($name -and $name -ne '<unknown>') { $entry.RoutineName = $name }
+                if ($m.Groups['Table'].Success) { $entry.TriggerTable = $m.Groups['Table'].Value }
+                $entry.TriggerTime = $m.Groups['Time'].Value
+                $entry.TriggerEvent = $m.Groups['Event'].Value
+            }
+        }
+        elseif ($action.Contains('PROCEDURE') -or $action.Contains('FUNCTION')) {
+            # --- Procedure / function ---
+            $m = $rxRoutine.Match($block)
+            if ($m.Success) {
+                $entry.RoutineType = $m.Groups['Type'].Value
+                $entry.RoutineName = $m.Groups['Name'].Value
+            }
+        }
+    }
+
     # --- Service (ATTACH/START/QUERY/DETACH_SERVICE): fills the same connection fields as the DB line ---
     if ($entry.Action -and $entry.Action.EndsWith('_SERVICE')) {
         $m = $rxService.Match($block)
@@ -314,8 +375,7 @@ function ConvertFrom-TraceBlock {
     }
 
     # --- SQL ---
-    # Cheap pre-checks: most events (transactions, attach/detach) have no statement part
-    $hasStatement = $block.Contains('Statement ')
+    # Cheap pre-check ($hasStatement above): most events (transactions, attach/detach) have no statement part
     $m = if ($hasStatement) { $rxSql.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
     if ($m.Success) {
         # Trim whitespace AND separator lines like --- if they slipped in
