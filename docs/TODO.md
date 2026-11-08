@@ -25,6 +25,77 @@ Bekannte Bugs ohne aktiven Fix: `KNOWN_ISSUES.md`.
 
 ---
 
+## Hohe Priorität
+
+Herkunft I16–I20: Entscheidung Owner 2026-11-08 — den Parser in C# neu bauen, parallel zum PowerShell-Parser, bis C#
+ihn ohne Änderung für Nutzer ersetzen kann; danach steuert PowerShell nur noch den C#-Code. Beide Parser müssen sich
+bis dahin immer gleich verhalten; der Paritätstest (ab I17) ist die Ratsche dafür. Qualitätsregeln unverändert.
+Split wegen der Größengrenze (KICKOFF Phase 2 Punkt 5): je Inkrement höchstens eine neue Entscheidung, ~400 Zeilen.
+Gebündelt wird nichts: I8 liest andere Quellen (Security-Sweep), der Refactoring-Kandidat `Show-TraceStructure.ps1`
+(`BACKLOG.md`) wird durch I20 vielleicht überflüssig — deshalb **getrennt gelassen** und erst nach I20 entschieden.
+
+### I16: C#-Parser: Entscheidung, Projektgerüst, Build in Gate und CI
+
+**Aufgaben:**
+
+- [ ] ADR-003 (Status Accepted): Bibliothek für .NET Standard 2.0 als Binär-Cmdlet, Ausgabe als `PSCustomObject`,
+  Verweis auf die Entscheidung des Owners
+- [ ] `src/FirebirdTraceParser/`: Projekt (`netstandard2.0`, `PowerShellStandard.Library` nur zum Übersetzen), Cmdlet
+  `ConvertFrom-FirebirdTrace` mit `-Path`, `-MaxBlockLines`, `-RegexTimeoutSeconds` (gleiche Prüfungen wie das
+  Skript), Lesen in 4-MB-Stücken, Kopfzeile; alle 46 Felder in Reihenfolge und mit Standardwert
+- [ ] Build in `tools/Invoke-QualityGate.ps1` (`-Gate Build`; `All` = Build, Lint, Test) und in beiden CI-Jobs;
+  `bin/` und `obj/` ignoriert, kein Binary im Repo
+- [ ] Tests: Laden unter PowerShell 7 und Windows PowerShell 5.1; Feldnamen, Reihenfolge und Standardwerte gleich wie
+  `Show-TraceStructure.ps1`; Kopfzeilen-Felder gleich auf allen Fixtures
+
+**Zusätzliche Kriterien:**
+
+- [ ] Security-Currency-Hook für die neue Abhängigkeit (NuGet-Paket, .NET SDK) → `security/DEPENDENCY_AUDIT.md`
+- [ ] `architecture/DEPENDENCIES.md`, `architecture/OVERVIEW.md`, `architecture/PROJECT_LAYOUT.md`,
+  `operations/DEPLOYMENT.md` bzw. `operations/SETUP.md` (Bauen)
+
+### I17: C#-Parser: alle Felder je Ereignis gleich wie PowerShell (Parität auf den Fixtures)
+
+**Aufgaben:**
+
+- [ ] Verbindung, Anwendung, Transaktion mit `Tx…`-Feldern, SQL, Parameter, Plan, Tabellenstatistik mit
+  `TableCounts`, `RecordsFetched`, Laufzeit und I/O, Fehlerzeilen, Service, Sweep
+- [ ] Paritätstest (Pester): beide Parser über jedes Fixture, jedes Feld jedes Objekts (Wert, Typ, `$null` gegen
+  leer, `TableCounts` je Zeile); fehlt die gebaute DLL, ist der Test rot (nicht übersprungen)
+- [ ] Mutationsprobe auf dem C#-Code (Neubau je Mutant)
+
+### I18: C#-Parser: Routinen, Verbindungsdauer und Diagnose gleich wie PowerShell (I12/I13)
+
+**Aufgaben:**
+
+- [ ] `RoutineType`, `RoutineName`, `Trigger…` (Firebird 4 und 5), `ConnectionDurationMs`
+- [ ] Warnungen mit Zeilennummer (auch über Stückgrenzen und nach gekürztem Rest), Text vor dem ersten Ereignis,
+  `-MaxBlockLines`, `-RegexTimeoutSeconds`, Zusammenfassung mit `-Verbose`
+- [ ] Paritätstest auf erzeugten Grenzfällen: CRLF/LF gemischt, lange Namen und Umlaute, Trigger FB4/FB5,
+  Sweep/Service, Fehler, gekürzte Blöcke, Zeitlimit (nur wo deterministisch); Warnungen und Verbose-Meldungen (ohne
+  Zeitangabe) müssen gleich sein; unter PowerShell 7 und 5.1
+
+### I19: `Show-TraceStructure.ps1 -Engine Auto|PowerShell|CSharp`, Standard Auto
+
+**Aufgaben:**
+
+- [ ] `-Engine`: `Auto` nimmt C#, wenn die gebaute DLL neben dem Skript oder unter `bin/` liegt, sonst PowerShell;
+  `-Verbose` nennt die gewählte Engine; gleiche Parameter, Warnungen und Verbose-Meldungen in beiden
+- [ ] Paritätstest über das Skript mit beiden Engines; Pseudonymisierer mit C#-Ausgabe (Test)
+- [ ] README en/de, `features/TRACE_PARSING.md`, `architecture/CONFIGURATION.md`
+- [ ] Messung auf kleinem Ausschnitt (synthetisch ~10–20 MB oder Ausschnitt eines echten Logs; nur Zahlen und
+  Zeiten, kein Inhalt, Ausgaben nur unter `C:\Temp`)
+
+### I20: Umstellung abschließen — PowerShell-Parsing als Referenz/Fallback behalten oder entfernen
+
+**Aufgaben:**
+
+- [ ] Entscheidung mit Belegen (ADR-003 nachtragen): Bleibt der PowerShell-Parser als Fallback für Nutzer ohne Build
+  und als Orakel des Paritätstests, oder wird er entfernt und das Skript ruft nur noch das Cmdlet?
+- [ ] Voraussetzung: I19 abgeschlossen und mindestens ein grüner CI-Lauf beider Jobs mit Build und Paritätstest
+
+---
+
 ## Niedrige Priorität
 
 ### I8: Laufzeit- und Beispielstände aus dem Security-Sweep 2026-10-23 nachziehen

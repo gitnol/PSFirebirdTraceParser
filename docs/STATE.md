@@ -4,7 +4,7 @@ Zuletzt aktualisiert: 2026-11-08
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
 **Letztes abgeschlossenes Inkrement:** I13 – Parser: Robustheit und Diagnose (2026-11-08)
-**Nächster Schritt:** I8 (Rest) mit dem Security-Sweep am 2026-11-21
+**Nächster Schritt:** I16 (C#-Parser, Entscheidung Owner 2026-11-08); I8 (Rest) mit dem Security-Sweep am 2026-11-21
 **Nächste Reflexion:** beim dritten abgeschlossenen Inkrement nach I13 (Reflexion I13 am 2026-11-08; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
@@ -30,6 +30,11 @@ I12 und I13 umgesetzt, Reflexion I13 erledigt. Offene Entscheidung des Owners: `
 
 | # | Beschreibung | Priorität |
 |---|-------------|-----------|
+| I16 | C#-Parser: Entscheidung (ADR-003), Projektgerüst, Build in Gate und CI | Hoch |
+| I17 | C#-Parser: alle Felder je Ereignis gleich wie PowerShell (Parität auf den Fixtures) | Hoch |
+| I18 | C#-Parser: Routinen, Verbindungsdauer und Diagnose gleich wie PowerShell | Hoch |
+| I19 | `Show-TraceStructure.ps1 -Engine Auto\|PowerShell\|CSharp`, Standard Auto | Hoch |
+| I20 | Umstellung abschließen: PowerShell-Parsing als Fallback behalten oder entfernen | Hoch |
 | I8 | Laufzeit- und Beispielstände aus dem Security-Sweep nachziehen | Niedrig |
 
 ---

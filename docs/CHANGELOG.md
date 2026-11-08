@@ -12,6 +12,17 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 Roadmap – C#-Parser parallel zum PowerShell-Parser (I16–I20)
+
+**Trigger-Matrix:** keine Zeile ausgelöst (nur Planung in `TODO.md`/`STATE.md`).
+
+### Changed
+- `TODO.md`/`STATE.md`: neue Inkremente I16–I20 nach der Entscheidung des Owners vom 2026-11-08 (Parser in C#
+  neu bauen, beide Parser verhalten sich gleich, bis C# den PowerShell-Parser ersetzen kann). Wegen der Größengrenze
+  in fünf Schritte geteilt: Gerüst und Build, Felder mit Paritätstest, I12/I13-Verhalten, `-Engine`-Schalter,
+  Abschluss. I8 und der Refactoring-Kandidat `Show-TraceStructure.ps1` bleiben getrennt (andere Quellen bzw. durch
+  I20 vielleicht überflüssig).
+
 ## 2026-11-08 Fix – Zeitlimit-Test wackelte
 
 **Trigger-Matrix:** keine Zeile ausgelöst (nur Test).
