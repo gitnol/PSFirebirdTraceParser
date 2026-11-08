@@ -3,8 +3,8 @@
 Zuletzt aktualisiert: 2026-11-08
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
-**Letztes abgeschlossenes Inkrement:** I16 – C#-Parser: Gerüst und Build (2026-11-08)
-**Nächster Schritt:** I17 (C#-Parser: alle Felder, Paritätstest); I8 (Rest) mit dem Security-Sweep am 2026-11-21
+**Letztes abgeschlossenes Inkrement:** I17 – C#-Parser: alle Felder (2026-11-08)
+**Nächster Schritt:** I18 (C#-Parser: Diagnose); I8 (Rest) mit dem Security-Sweep am 2026-11-21
 **Nächste Reflexion:** beim dritten abgeschlossenen Inkrement nach I13 (Reflexion I13 am 2026-11-08; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
@@ -12,7 +12,7 @@ Zuletzt aktualisiert: 2026-11-08
 
 ## Nächster Schritt
 
-I16 umgesetzt (C#-Gerüst, Build in Gate und CI, ADR-003). Als Nächstes I17 (alle Felder je Ereignis, Paritätstest auf den Fixtures), dann I18, I19, I20. Offen für den Owner: lokal .NET SDK 10 installieren (.NET 9 Supportende 2026-11-10), ersten CI-Lauf nach dem Push ansehen; `log_procedure_finish`/`log_trigger_finish` in `fbtrace50.conf` weiter offen. I8 (Rest) mit dem Security-Sweep am 2026-11-21. Empfohlenes Modell: Opus oder Sonnet, hoher Effort (Parität verlangt wörtliche Übertragung).
+I16 und I17 umgesetzt: C#-Parser liefert auf allen Fixtures und 10 Grenzfällen dieselben Objekte (Paritätstest). Als Nächstes I18 (Warnungen, Kürzen, Zeitlimit, Zusammenfassung, CRLF), dann I19 (`-Engine`), I20. Offen für den Owner: lokal .NET SDK 10 installieren (.NET 9 Supportende 2026-11-10), ersten CI-Lauf nach dem Push ansehen; `log_procedure_finish`/`log_trigger_finish` in `fbtrace50.conf` weiter offen. I8 (Rest) mit dem Security-Sweep am 2026-11-21. Empfohlenes Modell: Opus oder Sonnet, hoher Effort.
 
 ---
 
@@ -20,6 +20,7 @@ I16 umgesetzt (C#-Gerüst, Build in Gate und CI, ADR-003). Als Nächstes I17 (al
 
 | # | Titel | Datum | Commit |
 |---|-------|-------|--------|
+| I17 | C#-Parser: alle Felder je Ereignis wie das Skript (inkl. Routinen/Trigger/Verbindungsdauer aus I12), Paritätstest auf 5 Fixtures und 10 Grenzfällen; 16 Tests | 2026-11-08 | 9c90746 |
 | I16 | C#-Parser: ADR-003, Projekt `src/FirebirdTraceParser` (`net8.0`, nur PowerShell 7), Cmdlet `ConvertFrom-FirebirdTrace` mit Kopfzeile und 46 Feldern, Build in Gate und CI; 16 Tests | 2026-11-08 | 1a33b89 |
 | I13 | Parser: Robustheit und Diagnose (Warnungen mit Zeilennummer, Zusammenfassung je `Action` mit `-Verbose`, `-RegexTimeoutSeconds`, `-MaxBlockLines`; Rest ohne Zeitstempel wird gekürzt); 14 Tests | 2026-11-08 | 30b4b43 |
 | I12 | Parser: Prozeduren, Funktionen und Trigger als Ereignisse (`RoutineType`, `RoutineName`, `TriggerTable`, `TriggerTime`, `TriggerEvent`; Trigger-Zeile Firebird 4 und 5), `ConnectionDurationMs`; 16 Tests | 2026-11-08 | 263b43d |
@@ -31,8 +32,7 @@ I16 umgesetzt (C#-Gerüst, Build in Gate und CI, ADR-003). Als Nächstes I17 (al
 
 | # | Beschreibung | Priorität |
 |---|-------------|-----------|
-| I17 | C#-Parser: alle Felder je Ereignis gleich wie PowerShell (Parität auf den Fixtures) | Hoch |
-| I18 | C#-Parser: Routinen, Verbindungsdauer und Diagnose gleich wie PowerShell | Hoch |
+| I18 | C#-Parser: Diagnose (Warnungen, Kürzen, Zeitlimit, Zusammenfassung) gleich wie PowerShell | Hoch |
 | I19 | `Show-TraceStructure.ps1 -Engine Auto\|PowerShell\|CSharp`, Standard Auto | Hoch |
 | I20 | Umstellung abschließen: PowerShell-Parsing als Fallback behalten oder entfernen | Hoch |
 | I8 | Laufzeit- und Beispielstände aus dem Security-Sweep nachziehen | Niedrig |

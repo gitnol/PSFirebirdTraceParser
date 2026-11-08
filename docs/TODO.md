@@ -34,21 +34,13 @@ Split wegen der Größengrenze (KICKOFF Phase 2 Punkt 5): je Inkrement höchsten
 Gebündelt wird nichts: I8 liest andere Quellen (Security-Sweep), der Refactoring-Kandidat `Show-TraceStructure.ps1`
 (`BACKLOG.md`) wird durch I20 vielleicht überflüssig — deshalb **getrennt gelassen** und erst nach I20 entschieden.
 
-### I17: C#-Parser: alle Felder je Ereignis gleich wie PowerShell (Parität auf den Fixtures)
+### I18: C#-Parser: Diagnose gleich wie PowerShell (I13)
+
+Routinen, Trigger und Verbindungsdauer (I12) sind schon in I17 umgesetzt: die Fixtures enthalten sie, die Parität auf
+den Fixtures war sonst nicht zu erreichen.
 
 **Aufgaben:**
 
-- [ ] Verbindung, Anwendung, Transaktion mit `Tx…`-Feldern, SQL, Parameter, Plan, Tabellenstatistik mit
-  `TableCounts`, `RecordsFetched`, Laufzeit und I/O, Fehlerzeilen, Service, Sweep
-- [ ] Paritätstest (Pester): beide Parser über jedes Fixture, jedes Feld jedes Objekts (Wert, Typ, `$null` gegen
-  leer, `TableCounts` je Zeile); fehlt die gebaute DLL, ist der Test rot (nicht übersprungen)
-- [ ] Mutationsprobe auf dem C#-Code (Neubau je Mutant)
-
-### I18: C#-Parser: Routinen, Verbindungsdauer und Diagnose gleich wie PowerShell (I12/I13)
-
-**Aufgaben:**
-
-- [ ] `RoutineType`, `RoutineName`, `Trigger…` (Firebird 4 und 5), `ConnectionDurationMs`
 - [ ] Warnungen mit Zeilennummer (auch über Stückgrenzen und nach gekürztem Rest), Text vor dem ersten Ereignis,
   `-MaxBlockLines`, `-RegexTimeoutSeconds`, Zusammenfassung mit `-Verbose`
 - [ ] Paritätstest auf erzeugten Grenzfällen: CRLF/LF gemischt, lange Namen und Umlaute, Trigger FB4/FB5,

@@ -172,5 +172,11 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
   `trace_fb4_routines.log` mit `tests/Show-TraceStructure.Routines.Tests.ps1` (Prozeduren, Funktionen, Trigger in beiden
   Formaten, Verbindungsdauer); seit I13 `tests/Show-TraceStructure.Diagnostics.Tests.ps1` (Warnungen mit Zeilennummer,
   auch über 4-MB-Stücke, Zusammenfassung, Kürzen, Zeitlimit; Eingaben im TestDrive)
+- Seit I16/I17 C#-Parser (ADR-003): `tests/FirebirdTraceParser.Engine.Tests.ps1` (Laden, Parameter, Feldliste) und
+  `tests/FirebirdTraceParser.Parity.Tests.ps1` — beide Parser über jedes Fixture und erzeugte Grenzfälle (Tabellen mit
+  überlangen, unlesbaren und seltsamen Zellen wie `1e3`/`x1F`, Fehlerzeilen, IPv6/XNET/`<internal>`, Linux-Adresse,
+  Transaktionsoptionen klein geschrieben, Dienste, Verbindungsdauer mit `CREATE_DATABASE` und doppeltem Detach); jedes
+  Feld muss gleich sein (Name, Reihenfolge, Typ, Wert, `$null` gegen leer). Nur PowerShell 7. Eine Parsing-Änderung
+  ist erst fertig, wenn sie in beiden Parsern steht.
 - Kritische Testfälle: jede Property aus der Tabelle oben mit exaktem Wert; Block ohne SQL; Rolle ≠ `NONE`;
   fehlende Datei → Fehler; Zähler > Int32; leere Datei → keine Objekte

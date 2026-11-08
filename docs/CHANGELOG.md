@@ -12,6 +12,42 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 I17 – C#-Parser: alle Felder je Ereignis gleich wie PowerShell
+
+Commits `aa0393b` (Paritätstest rot), `9c90746` (Umsetzung, Grenzfälle nach der Mutationsprobe ergänzt). Über der
+Faustgrenze im Umfang (~520 Zeilen: C# ~430, Test ~95), aber eine Entscheidung und ein Zweck; ein Split hätte den
+Paritätstest auf den Fixtures halbiert. Gebündelt (Rest aus I18 vorgezogen): Routinen, Trigger, Verbindungsdauer —
+ohne sie ist die Parität auf den I12-Fixtures nicht erreichbar.
+
+**Trigger-Matrix:** neue Module → `architecture/OVERVIEW.md` (Modul-Verantwortlichkeiten, Constraint); Teststrategie →
+`features/TRACE_PARSING.md`; Roadmap (I12-Teil nach I17) → `TODO.md`, `STATE.md`. Keine neue Dependency, kein neuer
+Parameter, kein neues Feld (Vertrag unverändert).
+
+### Added
+- `TraceBlockParser.cs` (alle Abschnitte von `ConvertFrom-TraceBlock` in derselben Reihenfolge mit denselben
+  Vorprüfungen), `TableStatParser.cs`, `PowerShellSemantics.cs` (`-eq` invariant ohne Groß-/Kleinschreibung,
+  Hashtable mit `CurrentCultureIgnoreCase`, `[long]"Text"`: Ziffern direkt, sonst `LanguagePrimitives` wie der Cast).
+  Kulturabhängige Aufrufe des Skripts (`IndexOf(string)`, `EndsWith`, `StartsWith`, `LastIndexOf("\n")`) bleiben
+  kulturabhängig; die Analysator-Regeln dagegen sind mit Begründung unterdrückt.
+- `tests/FirebirdTraceParser.Parity.Tests.ps1`: DLL vorhanden, 5 Fixtures, 10 erzeugte Grenzfälle — 16 Tests.
+
+### Confidence / Ungeprüft
+- RED: 11 von 12 Tests rot gegen den I16-Stand (z. B. `'#0.DatabasePath: [C:\DATA\SAMPLE.FDB] vs [] (null)'`).
+  GREEN: 28 von 28 (Parität + Engine) unter PowerShell 7.6.9.
+- Gate: Build ✓ 0 Warnungen, PSScriptAnalyzer ✓ 0, Pester 7.6.9: 182 passed; Windows PowerShell 5.1: 149 passed,
+  33 skipped (C#-Tests, gewollt).
+- Mutationsprobe (Neubau je Mutant, Kontrolle 0): 35 Mutanten in Block-Parser, Tabellenstatistik, Semantik und Regex;
+  zuerst 7 überlebt, dafür 5 Grenzfälle ergänzt (CREATE_DATABASE/doppeltes Detach, SQL mit Leerzeichen, nur unlesbare
+  Tabellenzeilen, SQL direkt vor der Tabellenstatistik, Fehlertext mit Leerzeichen am Ende). Danach 31 rot, 4
+  äquivalent: Vorprüfung `hasStatement` vor Routinen (reine Abkürzung), `Success`-Prüfung der Leistungszähler (leere
+  Gruppe ergibt ohnehin 0), `nameWidth <= 0` (die Regex verlangt `Table\s+Natural`, Breite ist mindestens 3),
+  Routinenname gierig statt faul (das `$` erzwingt denselben Treffer).
+- Belegt: `[long]"01e3"` = 1000, `[long]"0x1F"` = 31 in PowerShell 7.6 — der Grenzfall prüft also den Weg über
+  `LanguagePrimitives`. Nicht geprüft: Unterschiede der Kultur (`CurrentCulture` de-DE lokal, CI en-US) — beide
+  Parser laufen in derselben Kultur, ein Vergleich über Kulturen hinweg ist nicht Ziel.
+- Ungeprüft: Ausnahmen auf demselben Weg — eine Zahl mit mehr als 19 Ziffern bricht in beiden ab, aber mit
+  verschiedenen Fehlertexten (Skript: Methodenaufruf, Cmdlet: `PSInvalidCastException`); kein Test.
+
 ## 2026-11-08 I16 – C#-Parser: Entscheidung, Projektgerüst, Build in Gate und CI
 
 Commits `4b2da51` (Tests rot, Stub mit Vertrag, ADR-003, Build in Gate und CI), `1a33b89` (Umsetzung, Ziel `net8.0`).
