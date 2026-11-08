@@ -20,7 +20,7 @@ I16–I19 umgesetzt: `Show-TraceStructure.ps1` nimmt unter PowerShell 7 mit geba
 
 | # | Titel | Datum | Commit |
 |---|-------|-------|--------|
-| I19 | `Show-TraceStructure.ps1 -Engine Auto|PowerShell|CSharp` (Auto = C# unter PowerShell 7 mit gebauter DLL), Paritätstests über das Skript, Pseudonymisierer mit beiden Parsern, Messung 15 MB: 1,6 s statt 13–14 s; 11 Tests | 2026-11-08 | 9965aad |
+| I19 | `Show-TraceStructure.ps1 -Engine Auto\|PowerShell\|CSharp` (Auto = C# unter PowerShell 7 mit gebauter DLL), Paritätstests über das Skript, Pseudonymisierer mit beiden Parsern, Messung 15 MB: 1,6 s statt 13–14 s; 11 Tests | 2026-11-08 | 9965aad |
 | I18 | C#-Parser: Warnungen mit Zeilennummer, Kürzen, Zeitlimit, Zusammenfassung und CRLF/LF gleich wie das Skript (Paritätstest mit Warnungen und Verbose); 24 Tests | 2026-11-08 | c33a557 |
 | I17 | C#-Parser: alle Felder je Ereignis wie das Skript (inkl. Routinen/Trigger/Verbindungsdauer aus I12), Paritätstest auf 5 Fixtures und 10 Grenzfällen; 16 Tests | 2026-11-08 | 9c90746 |
 | I16 | C#-Parser: ADR-003, Projekt `src/FirebirdTraceParser` (`net8.0`, nur PowerShell 7), Cmdlet `ConvertFrom-FirebirdTrace` mit Kopfzeile und 46 Feldern, Build in Gate und CI; 16 Tests | 2026-11-08 | 1a33b89 |
