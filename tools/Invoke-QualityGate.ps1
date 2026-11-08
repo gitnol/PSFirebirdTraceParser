@@ -8,7 +8,7 @@
     another one. Works with Windows PowerShell 5.1 and PowerShell 7.
 
 .PARAMETER Gate
-    Lint = PSScriptAnalyzer only, Test = Pester only, All = both (default).
+    Lint = PSScriptAnalyzer only, Test = Pester only, All = both, each in its own process (default).
 
 .EXAMPLE
     pwsh -File ./tools/Invoke-QualityGate.ps1
@@ -45,9 +45,20 @@ function Import-PinnedModule {
     }
 }
 
+if ($Gate -eq 'All') {
+    # Each gate in its own process: after Invoke-ScriptAnalyzer has read the tests, Pester can no longer be
+    # imported in the same process ("assembly with same name is already loaded", PowerShell 7.6.9).
+    $exe = (Get-Process -Id $PID).Path
+    & $exe -NoProfile -File $PSCommandPath -Gate Lint
+    $lint = $LASTEXITCODE
+    & $exe -NoProfile -File $PSCommandPath -Gate Test
+    $test = $LASTEXITCODE
+    exit $(if ($lint -ne 0) { $lint } else { $test })
+}
+
 $failed = 0
 
-if ($Gate -in 'Lint', 'All') {
+if ($Gate -eq 'Lint') {
     Import-PinnedModule -Name 'PSScriptAnalyzer'
     $settings = Join-Path $root 'PSScriptAnalyzerSettings.psd1'
     $findings = @(Invoke-ScriptAnalyzer -Path $root -Recurse -Settings $settings)
@@ -62,7 +73,7 @@ if ($Gate -in 'Lint', 'All') {
     }
 }
 
-if ($Gate -in 'Test', 'All') {
+if ($Gate -eq 'Test') {
     Import-PinnedModule -Name 'Pester'
     $config = New-PesterConfiguration
     $config.Run.Path = Join-Path $root 'tests'

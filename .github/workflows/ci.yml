@@ -29,9 +29,13 @@ jobs:
               -Repository PSGallery -Scope CurrentUser -Force -SkipPublisherCheck
           }
 
-      - name: Quality Gates
+      - name: Lint (PSScriptAnalyzer)
         shell: pwsh
-        run: ./tools/Invoke-QualityGate.ps1 -Gate All
+        run: ./tools/Invoke-QualityGate.ps1 -Gate Lint
+
+      - name: Tests (Pester)
+        shell: pwsh
+        run: ./tools/Invoke-QualityGate.ps1 -Gate Test
 
   winps51:
     name: Windows PowerShell 5.1 - Tests
