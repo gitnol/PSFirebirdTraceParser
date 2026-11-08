@@ -63,6 +63,22 @@ Kein `-WhatIf` (das Skript schreibt nichts). `[CmdletBinding()]` seit I6 → Sta
 | `ServiceName` | string | `$null` | seit I15: Dienstname in Anführungszeichen bei `START_SERVICE`/`QUERY_SERVICE`, z. B. `Backup Database`, `Incremental Backup Database`, `Restore Database`, `Validate Database` (Liste in Firebird `src/jrd/svc.cpp`) |
 | `ServiceID` | string | `$null` | seit I15: Adresse aus `(Service <Adresse>, …)` bei allen `*_SERVICE`-Ereignissen; Benutzer, Adresse und Programm der Dienstzeile stehen in `User`, `ProtocolInfo`/`ClientIP`/`ClientPort`, `ApplicationPath`/`ApplicationPID` |
 | `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext` | long | `$null` | seit I15: Block `Transaction counters:` bei `SWEEP_START` und `SWEEP_FINISH` (Oldest interesting/active/snapshot, Next transaction); bei `SWEEP_PROGRESS`/`SWEEP_FAILED` leer |
+| `RecordsFetched` | long | `0` | seit I11: Zeile `<n> records fetched` (gelieferte Datensätze, nicht die Seiten-Fetches in `Fetches`). Firebird schreibt sie bei Statements immer, bei Prozeduren und Funktionen nur, wenn die Zahl nicht 0 ist; deshalb wie die anderen Zähler `0` ohne Zeile — „0" heißt also auch „nicht zutreffend" (z. B. Transaktionsereignis) |
+| `TxIsolation` | string | `$null` | seit I11: aus `TransactionOptions`: `READ_COMMITTED`, `CONCURRENCY`, `CONSISTENCY` (oder `<unknown>`) |
+| `TxReadMode` | string | `$null` | seit I11: nur bei `READ_COMMITTED`: `REC_VERSION`, `NO_REC_VERSION`, `READ_CONSISTENCY` |
+| `TxWaitMode` | string | `$null` | seit I11: `WAIT` oder `NOWAIT`; `WAIT <n>` ergibt `WAIT` |
+| `TxLockTimeout` | int | `$null` | seit I11: Sekunden aus `WAIT <n>`; leer bei `NOWAIT` und bei unbegrenztem `WAIT` |
+| `TxAccessMode` | string | `$null` | seit I11: `READ_WRITE` oder `READ_ONLY` |
+| `TableCounts` | object[] | `$null` | seit I11: `TableStats` als Liste, je Tabelle ein Objekt `Table`, `Natural`, `Index`, `Update`, `Insert`, `Delete`, `Backout`, `Purge`, `Expunge` (long, leere Zelle = 0), Reihenfolge wie im Log |
+
+**Tabellenstatistik lesen (seit I11):** Firebird (`appendTableCounts`) füllt die Namensspalte auf
+max(32, längster Name in Bytes) auf (Firebird 3: fest 31) und schreibt jede Zahl rechtsbündig in 10 Zeichen, 0 als
+Leerzeichen. Der Parser liest die Breite der Namensspalte aus der Kopfzeile (`Natural` endet 10 Zeichen dahinter) und
+die Zahlen relativ dazu. Zwei Sonderfälle: Namen mit Umlauten füllt Firebird nach Bytes auf, die Zahlen beginnen dann
+um die Zahl der Zusatzbytes früher; ist ein Name länger als die Spalte, verschieben sich alle Zahlen nach rechts
+(Ausnahme: der Rest des Namens ist genau eine zehnstellige Zahl — dann füllt der Name die Spalte genau). Unlesbare
+Zeilen werden übersprungen (Meldung mit `-Verbose`). Die Transaktionsoptionen zerlegt der Parser an ` | `
+(Firebird `register_transaction`, gleich in 3, 4 und 5; die Wartezeit steht dort als `WAIT <n>`, nicht als `LOCK_TIMEOUT`).
 
 Die Schalterzeile von `START_SERVICE` (z. B. `-VERBOSE <Datenbank> <Sicherungsdatei>`) wird bewusst **nicht** gelesen:
 sie enthält Dateipfade, für die es keine Pseudonymisierung gibt. Voraussetzung im Trace: `log_sweep = true` (Abschnitt
@@ -79,6 +95,9 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
 - Regex-Objekte einmal vor der Schleife bauen (`Compiled`) — nicht pro Block.
 - Fehlende Felder sind kein Fehler: ein Objekt wird immer ausgegeben (auch für unbekannte Ereignisarten).
 - `TableStats` bewusst nicht trimmen.
+- Teure Teile nur bei Bedarf: erst `Contains`/`IndexOf`, dann Regex oder Zerlegen. Tabellenzeilen ohne
+  PowerShell-Schleife über die Spalten lesen (eine Schleife war etwa sechsmal langsamer); leere Zellen über
+  `'0' + Text` lesen — Windows PowerShell 5.1 wandelt Leerzeichen nicht in eine Zahl.
 
 ---
 
@@ -93,6 +112,10 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
 ## Bekannte Fallstricke
 
 - Ein Block ohne `Statement`-Abschnitt (z. B. Verbindungs- oder Transaktionsereignis) liefert `SqlStatement = $null` — beim Gruppieren berücksichtigen.
+- `TableCounts` ist eine Liste: `Export-Csv` schreibt dafür nur `System.Object[]`. Für CSV die Liste aufklappen oder
+  `TableStats` exportieren.
+- `RecordsFetched = 0` heißt nicht immer „0 Datensätze": ohne die Zeile (Transaktionsereignis, Prozedur mit 0) ist der
+  Wert ebenfalls 0. Für „viel gelesen, wenig geliefert" nur Statement-Ereignisse auswerten.
 
 ---
 
@@ -100,6 +123,8 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
 
 - Zugehörige Testdatei: `tests/Show-TraceStructure.Tests.ps1` (I6)
 - Pester-Beschreibung: `Describe 'Show-TraceStructure' { ... }`
-- Fixture: synthetische Trace-Datei mit **fiktiven** Werten unter `tests/fixtures/` (je Ereignisart mindestens ein Block)
+- Fixture: synthetische Trace-Datei mit **fiktiven** Werten unter `tests/fixtures/` (je Ereignisart mindestens ein Block);
+  seit I11 `trace_fb5_counts.log` mit `tests/Show-TraceStructure.Counts.Tests.ps1` (RecordsFetched, Transaktionsoptionen,
+  Tabellenstatistik mit breiter Namensspalte, Umlauten, Firebird-3-Kopf)
 - Kritische Testfälle: jede Property aus der Tabelle oben mit exaktem Wert; Block ohne SQL; Rolle ≠ `NONE`;
   fehlende Datei → Fehler; Zähler > Int32; leere Datei → keine Objekte

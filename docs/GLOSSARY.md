@@ -29,6 +29,8 @@ Commit-Messages oder in Doku verwenden.
 | Pseudonymisierung | Ersetzen identifizierender Werte durch Pseudonyme; Ergebnis bleibt personenbezogen | `Pseudonymize-FirebirdTrace.ps1`, README | Anonymisierung |
 | Literal | In einfache Anführungszeichen gesetzter Wert in einem SQL-Statement (`'…'`); numerische Werte zählen im Bestand nicht dazu | `$RxStringLiteral` | Parameter (`paramN = …`) |
 | Bulk-Redaktion | Ersetzen der (letzten) WHERE/HAVING-Klausel durch `<REDACTED_CLAUSE:…>`, wenn ein sensibles Schlüsselwort vorkommt | `-SensitiveKeywords` | Literal-Pseudonymisierung |
+| Tabellenstatistik | Block `Table … Natural Index …` eines Ereignisses (Firebird `print_perf`): je Tabelle Lesezugriffe ohne (`Natural`) und mit Index sowie Änderungen und Aufräumarbeit; im Parser als Text `TableStats` und als Liste `TableCounts` | Properties `TableStats`, `TableCounts` | Performance-Zeile (`Reads`, `Fetches` …) |
+| RecordsFetched | Zahl der Datensätze, die ein Statement geliefert hat (`N records fetched`) | Property `RecordsFetched` | `Fetches` (Seitenzugriffe im Cache) |
 | Feldabdeckung | Liste, welche Property wie pseudonymisiert wird bzw. bewusst im Klartext bleibt | `features/PSEUDONYMIZATION.md` | — |
 | Service-Manager | Firebird-Services-API-Endpunkt (`service_mgr`), über den `fbtracemgr` Traces verwaltet | Trace-Skripte | Datenbankdatei |
 

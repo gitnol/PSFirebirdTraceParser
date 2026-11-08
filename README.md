@@ -76,6 +76,9 @@ Streams the file in 4 MB chunks (memory stays bounded, independent of file size)
 *   `ErrorSource`, `ErrorCodes`, `ErrorMessages`: For `ERROR AT …` / `WARNING AT …` events (e.g. deadlocks, lock conflicts).
 *   `ServiceName`, `ServiceID`: For service events (`ATTACH_SERVICE`, `START_SERVICE`, …), e.g. `Backup Database`; user, address and program of the service are in the connection fields. Needs `log_services` (on in `fbtrace50.conf`).
 *   `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext`: Transaction counters of `SWEEP_START` / `SWEEP_FINISH`. Needs `log_sweep` (on in `fbtrace50.conf`).
+*   `RecordsFetched`: Rows returned by the statement (`N records fetched`); `Fetches` counts page fetches. `0` if the line is missing (Firebird omits it for procedures with 0 rows).
+*   `TxIsolation` (`READ_COMMITTED`, `CONCURRENCY`, `CONSISTENCY`), `TxReadMode` (`REC_VERSION`, `NO_REC_VERSION`, `READ_CONSISTENCY`; only with `READ_COMMITTED`), `TxWaitMode` (`WAIT`, `NOWAIT`), `TxLockTimeout` (seconds of `WAIT <n>`, otherwise empty), `TxAccessMode` (`READ_WRITE`, `READ_ONLY`): the parts of `TransactionOptions`.
+*   `TableCounts`: `TableStats` as a list with one object per table (`Table`, `Natural`, `Index`, `Update`, `Insert`, `Delete`, `Backout`, `Purge`, `Expunge`; empty cell = `0`). It is a list: for CSV, expand it (`$_.TableCounts | Select-Object …`) or export `TableStats`.
 
 ### The Pseudonymizer: `Pseudonymize-FirebirdTrace.ps1`
 Designed for DSGVO/GDPR compliance when sharing logs.
@@ -94,7 +97,7 @@ Designed for DSGVO/GDPR compliance when sharing logs.
 *   `-MappingFile <path>`: Optional CSV `Pseudonym;Original` for the data controller to map results back. Contains plaintext.
 
 **Pseudonymized:** `User`, `ClientIP` (also in `ProtocolInfo`), `ApplicationPath`, `DatabasePath`, `Params` values; with `-RedactLiterals` also all string and numeric literals in `SqlStatement` and values in `ErrorMessages`.
-**Not pseudonymized:** `SqlPlan`, `TableStats` and table/index names (needed for analysis), technical IDs, timestamps, counters, `ServiceName`/`ServiceID` and sweep counters.
+**Not pseudonymized:** `SqlPlan`, `TableStats`, `TableCounts` and table/index names (needed for analysis; `-SensitiveKeywords` does not hide them — leave these fields out if table names must stay private), technical IDs, timestamps, counters (also `RecordsFetched`), transaction options, `ServiceName`/`ServiceID` and sweep counters.
 
 > [!WARNING]
 > **Security Notice**: This tool uses **Pseudonymization** (keyed hashing, HMAC-SHA256), not Anonymization. Whoever has the key can verify guessed values; the data stays personal data for the data controller (GDPR). Never share the key file or the mapping file (`-MappingFile`).

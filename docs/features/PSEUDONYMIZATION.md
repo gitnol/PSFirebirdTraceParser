@@ -30,7 +30,7 @@ Trace-Daten für externe Analysen weitergegeben werden können; `-AnalyzeOnly` z
 
 ---
 
-## Feldabdeckung (Vertrag, Stand I3 2026-11-07)
+## Feldabdeckung (Vertrag, Stand I11 2026-11-08)
 
 Jedes Feld ist entschieden: pseudonymisiert oder begründet im Klartext. Neue Felder des Parsers müssen hier
 eingetragen werden, bevor sie ausgeliefert werden.
@@ -44,10 +44,11 @@ eingetragen werden, bevor sie ausgeliefert werden.
 | `Params` | Werte in `"…"` → Pseudonym, Typ bleibt | Firebird schreibt jeden Wert in Anführungszeichen (`param%d = %s, "%s"`, TracePluginImpl.cpp 5.0.4) |
 | `SqlStatement` | mit `-RedactLiterals`: alle nicht leeren Zeichenketten (auch Einzelzeichen, seit I2) und Zahlen (seit I2) → `<HASH:…>`; Ziffern in Bezeichnern bleiben; reine `%`-Muster bleiben. Mit `-SensitiveKeywords`: Literale mit Stichwort; steht das Stichwort außerhalb von Literalen, wird **alles ab der ersten** WHERE/HAVING-Klausel ersetzt (seit I2) | ohne Schalter Klartext — für Weitergabe immer `-RedactLiterals` |
 | `ErrorMessages` | mit `-RedactLiterals`: Schlüsselwerte `("SPALTE" = wert)` und Zeichenketten → Pseudonym; Constraint-/Tabellennamen bleiben | andere Wertformen in Fehlertexten nicht abgedeckt |
-| `SqlPlan`, `TableStats`, Tabellen-/Indexnamen | Klartext (Entscheidung I2) | Schema-Namen sind keine Personendaten, aber Geschäftsinterna; für die Analyse (Index-Empfehlungen) nötig. Wer sie verbergen muss: `-SensitiveKeywords` |
+| `SqlPlan`, `TableStats`, `TableCounts` (seit I11), Tabellen-/Indexnamen | Klartext (Entscheidung I2) | Schema-Namen sind keine Personendaten, aber Geschäftsinterna; für die Analyse (Index-Empfehlungen) nötig. `-SensitiveKeywords` verbirgt sie **nicht** (wirkt nur auf `SqlStatement`, geprüft 2026-11-08); wer Tabellennamen verbergen muss, lässt diese Felder vor der Weitergabe weg (`Select-Object -ExcludeProperty SqlPlan, TableStats, TableCounts`). `TableCounts` gibt der Pseudonymisierer als eigene Kopie aus, das Eingabeobjekt bleibt unverändert |
 | `ServiceName`, `ServiceID`, `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext` (seit I15) | Klartext | feste Dienstnamen von Firebird, technische Adresse und Transaktionszähler; Benutzer, IP und Programm der Dienstzeile laufen über die bestehenden Felder (Pseudonym). Die Schalterzeile mit Dateipfaden liest der Parser nicht |
 | `ClientPort`, `ProcessID`, `SessionID`, `AttachID`, `TransactionID`, `RootTxID`, `ApplicationPID`, `ErrorSource`, `ErrorCodes` | Klartext | technische IDs/Codes; erlauben Verknüpfung innerhalb des Traces, keine direkte Identifikation |
 | `Timestamp`, `Action`, `TransactionOptions`, Zähler | Klartext | Analysezweck |
+| `RecordsFetched`, `TxIsolation`, `TxReadMode`, `TxWaitMode`, `TxLockTimeout`, `TxAccessMode` (seit I11) | Klartext | Zähler und feste Firebird-Schlüsselwörter, Teile von `TransactionOptions`; keine Personendaten |
 
 Hash-Verfahren seit I3: HMAC-SHA256 mit geheimem Schlüssel, gekürzt auf `-HashLength` (ADR-001). Ohne Schlüssel nicht vorausberechenbar;
 mit Schlüssel prüfbar — Schlüssel und Zuordnungsdatei bleiben beim Verantwortlichen.

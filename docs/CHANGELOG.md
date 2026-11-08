@@ -10,6 +10,54 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 I11 – Parser: RecordsFetched, Transaktionsoptionen, Tabellenstatistik je Tabelle
+
+Commits `3d58b3f` (Tests rot, Stub mit Vertrag), `6450b79` (Umsetzung). Freigabe des Owners 2026-11-08; Zweck: der
+Bericht im Schwesterprojekt braucht `RecordsFetched` für die Prüfung „viel lesen für wenig Ergebnis“. Ein Inkrement
+statt Split: 4 Code-/Testdateien, ~330 Zeilen inkl. Tests; die drei Teile berühren dieselbe Funktion.
+
+**Trigger-Matrix:** neue Felder im Ausgabe-Vertrag → `features/TRACE_PARSING.md`, `README.md`, `README.de.md`;
+Feldabdeckung → `features/PSEUDONYMIZATION.md`; Security (Klartext-Felder, Hinweis zu `-SensitiveKeywords`) →
+`security/THREAT_MODEL.md`; neue Begriffe → `GLOSSARY.md`; `STATE.md`, `TODO.md`. Neue Hilfsfunktion
+`ConvertFrom-TableStat` liegt im Skript (kein neues Modul) → `architecture/OVERVIEW.md` nicht ausgelöst. Kein neuer
+Parameter, keine Abhängigkeit.
+
+### Added
+- `RecordsFetched` [long] aus `<n> records fetched` (Firebird 3/4/5 `TracePluginImpl.cpp`, immer Plural „records“),
+  getrennt von `Fetches` (Seitenzugriffe). Default `0` wie die anderen Zähler: Firebird schreibt die Zeile bei
+  Statements immer, bei Prozeduren/Funktionen nur, wenn die Zahl nicht 0 ist.
+- `TxIsolation`, `TxReadMode`, `TxWaitMode`, `TxLockTimeout`, `TxAccessMode` aus `TransactionOptions` (Text bleibt).
+  Die Wartezeit steht im Trace als `WAIT <n>` (nicht `LOCK_TIMEOUT`, wie `TODO.md` vermutete).
+- `TableCounts`: je Tabelle ein Objekt mit acht Zählern; Spalten relativ zur Kopfzeile, Namen mit Umlauten (Firebird
+  füllt nach Bytes auf) und überlange Namen (Zahlen nach rechts verschoben, Regel wie im Schwesterprojekt) richtig.
+  `TableStats` bleibt unverändert.
+- Fixture `tests/fixtures/trace_fb5_counts.log` (synthetisch, Werte ausgedacht, IPs aus 192.0.2.0/24) und
+  `tests/Show-TraceStructure.Counts.Tests.ps1` (21 Tests).
+
+### Changed
+- `Pseudonymize-FirebirdTrace.ps1`: `TableCounts` als eigene Kopie (`Select-Object *` kopiert nur die erste Ebene);
+  Tabellennamen bleiben Klartext wie `TableStats` (Entscheidung I2).
+- I15-Test zur Feldreihenfolge prüft die Sweep-/Service-Felder jetzt relativ zu `ErrorMessages` statt am Ende.
+- `PSEUDONYMIZATION.md`/READMEs: der Hinweis „Tabellennamen verbergen mit `-SensitiveKeywords`“ war falsch — der
+  Schalter wirkt nur auf `SqlStatement` (Probelauf 2026-11-08); jetzt: Felder vor der Weitergabe weglassen.
+
+### Confidence / Ungeprüft
+- Gate grün: PSScriptAnalyzer ohne Befund, Pester 120/120 unter PowerShell 7.6, 119 grün + 1 übersprungen (bestehender
+  7.4+-Test) unter Windows PowerShell 5.1. Rot gegen den Stub: 11 Tests mit scheiternder Assertion; der
+  Pseudonymisierer-Block lief nur unter dem Gate (Strict Mode) wegen unvollständiger Testeingabe in einen Fehler statt
+  in eine Assertion — im feat-Commit korrigiert.
+- Mutationsprobe: 19 Mutanten, 18 rot, 1 äquivalent (`return @()` statt `$null` — eine leere Rückgabe ist in
+  PowerShell ebenfalls `$null`). Die Byte-Korrektur für Umlaute überlebte zuerst (eine Verschiebung um 1 Zeichen fällt
+  bei kurzen Zahlen nicht auf); erst mit zwei Umlauten und einer neunstelligen Zahl im Fixture erkannt.
+- Laufzeit (21000 Ereignisse, 9,7 MB, 3 Läufe je Stand, abwechselnd): vorher ~5,5–5,9 s, nachher ~6,5–6,9 s
+  (etwa +15 %); das Fixture allein ~54 ms vorher und nachher. Hauptkosten: `TableCounts` (PowerShell-Arbeit je
+  Tabellenzeile) und sieben Felder mehr je Objekt. Erste Fassung mit Spalten-Schleife war ~+30 %.
+- Format nur aus dem Quellcode (v3.0, v4.0, v5.0-release), nicht an einem echten Trace geprüft: weder Umlaut-Namen
+  noch überlange Namen noch `WAIT <n>` sind in einem echten Log belegt. Überlange Namen kann Firebird 4/5 laut Quellcode
+  gar nicht erzeugen (Spalte = längster Name); die Regel stammt aus dem Schwesterprojekt.
+- Grenze: Ein überlanger Name, dessen Rest genau eine zehnstellige Zahl ist, wird als „füllt die Spalte genau“ gelesen.
+- Struktur-Check mit dem Template-Validator; Interna-Prüfung über den Hook.
+
 ## 2026-11-08 Reflexion nach I5
 
 Kein Inkrement (KICKOFF Phase 1c, `REFLECTION.md`). Begutachtet: I15, I14, I4/I5 (drittes abgeschlossenes Inkrement

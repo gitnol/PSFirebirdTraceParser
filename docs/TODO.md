@@ -27,19 +27,6 @@ Bekannte Bugs ohne aktiven Fix: `KNOWN_ISSUES.md`.
 
 ## Mittlere Priorität
 
-### I11: Parser – Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen
-
-Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).
-
-**Aufgaben:**
-
-- [ ] Transaktionsoptionen in Felder zerlegen: Isolation (`READ_COMMITTED`, `CONCURRENCY`, `CONSISTENCY`), Lesemodus
-      (`READ_CONSISTENCY`, `REC_VERSION`, `NO_REC_VERSION`), Sperrmodus inkl. `LOCK_TIMEOUT`-Wert, Zugriff
-      (`READ_WRITE`/`READ_ONLY`); `TransactionOptions` als Text bleibt (Vertrag)
-- [ ] Neues Feld `RecordsFetched` aus `N records fetched` (getrennt von den Seiten-Fetches `Fetches`)
-- [ ] Tabellenstatistik zusätzlich als Liste von Objekten je Tabelle (Natural, Index, Update, Insert, Delete, Backout,
-      Purge, Expunge) über die Spaltenpositionen der Kopfzeile; `TableStats` als Text bleibt
-
 ### I12: Parser – Verbindungen, Prozeduren und Trigger als Ereignisse
 
 Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).

@@ -21,7 +21,7 @@ Datenbankservers (Plattenplatz, Trace-Last).
 **Gefahr:** Nutzer geben die Ausgabe von `Pseudonymize-FirebirdTrace.ps1` laut README an Dritte weiter
 („safe sharing … for external analysis"). Im Ergebnis bleiben identifizierende Daten im Klartext:
 numerische Literale im SQL (`WHERE <Kundennummer> = 4711` — nur `'…'`-Literale werden behandelt,
-`$RxStringLiteral`), `DatabasePath` (Server-/Datenbank-/Kundennamen), `SqlPlan`/`TableStats` (Schema-Interna).
+`$RxStringLiteral`), `DatabasePath` (Server-/Datenbank-/Kundennamen), `SqlPlan`/`TableStats`/`TableCounts` (Schema-Interna; `-SensitiveKeywords` wirkt darauf nicht).
 Ohne `-RedactLiterals` bleiben zudem alle String-Literale stehen. Bei `-SensitiveKeywords` ersetzt die Bulk-Redaktion
 nur die **letzte** WHERE/HAVING-Klausel (gieriges `.*` im Ersetzungs-Regex), Bedingungen in Unterabfragen oder
 früheren UNION-Teilen bleiben sichtbar. Weitergegebene Daten sind nicht rückholbar.
