@@ -69,12 +69,14 @@ Servers, sehr große Dateien, abgeschnittene Blöcke), außerdem Parameter und `
 > mitgerissen wird. Abgrenzung zu [[UNTRUSTED_DOCUMENT_CONTENT]]: dort geht es um fremden
 > Inhalt im LLM-Prompt (Injection/Fälschung), hier um die Robustheit des Prozesses.
 
-- **Größen begrenzen:** Der Parser liest seit I6 in 4-MB-Stücken (K2 behoben); ein einzelner sehr großer Block bleibt
-  ganz im Speicher (Obergrenze je Block: I13).
+- **Größen begrenzen:** Der Parser liest seit I6 in 4-MB-Stücken (K2 behoben); seit I13 kürzt er ein Ereignis über
+  `-MaxBlockLines` Zeilen (Standard 100000), auch schon beim Weitertragen über Stückgrenzen (Warnung mit Zeilennummer).
 - **Eingabe-abgeleitete Zahlen prüfen:** Zähler (`DurationMs`, `Reads`, `Fetches` …) sind seit I6 `[long]`; Werte über
   `Int32.MaxValue` sind getestet.
 - **Regex auf untrusted Text:** Muster ohne verschachtelte, nicht verankerte Quantoren mit Fehlpfad; bei neuen
-  Mustern Laufzeit gegen große synthetische Blöcke testen.
+  Mustern Laufzeit gegen große synthetische Blöcke testen. Seit I13 zusätzlich ein Zeitlimit je Auswertung
+  (`-RegexTimeoutSeconds`, Standard 2 s): `RegexMatchTimeoutException` wird je Ereignis gefangen, alle anderen Ausnahmen
+  laufen weiter nach oben.
 - **Schreiben atomar:** Das Projekt schreibt selbst nur die Trace-Ausgabe (Umleitung von `fbtracemgr`) und die kleine
   Zustandsdatei `trace_session.json`; Exporte schreibt der Nutzer.
 - **Jeder Crash-Fix bringt einen kleinen synthetischen Regressionstest mit**, der vor dem
@@ -96,6 +98,9 @@ Servers, sehr große Dateien, abgeschnittene Blöcke), außerdem Parameter und `
 | Andere Ausnahme | beide | `6` | `Unerwarteter Fehler: <meldung>` | |
 | Trace-Datei fehlt | `Show-TraceStructure.ps1` | nicht-terminierender Fehler, Rückkehr ohne Objekte | `File not found: <Pfad>` | Soll: terminierender Fehler (I6) |
 | Block ohne passende Felder | `Show-TraceStructure.ps1` | Objekt mit leeren Feldern | — | kein Fehler, still |
+| Kopfzeile unlesbar, `Unknown event …`, Text vor dem ersten Ereignis | `Show-TraceStructure.ps1` | Warnung, Objekt wird trotzdem ausgegeben (Text vor dem Ereignis: übersprungen) | `Line <n>: …` | seit I13 |
+| Ereignis über `-MaxBlockLines` Zeilen | `Show-TraceStructure.ps1` | Warnung, Ereignis gekürzt gelesen | `Line <n>: event has more than … lines …` | seit I13 |
+| Regex-Zeitlimit erreicht (`RegexMatchTimeoutException`) | `Show-TraceStructure.ps1` | Warnung, restliche Felder leer, weiter mit dem nächsten Ereignis | `Line <n>: regex time limit … reached …` | seit I13 |
 | `-HashLength` außerhalb 8–64 | `Pseudonymize-FirebirdTrace.ps1` | Parameterbindungsfehler | PowerShell-Standardmeldung | `[ValidateRange(8, 64)]` |
 
 ---

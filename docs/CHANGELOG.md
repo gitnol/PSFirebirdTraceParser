@@ -10,6 +10,51 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 I13 – Parser: Robustheit und Diagnose
+
+Commits `4df3e6c` (Tests rot, Stub mit Vertrag), `30b4b43` (Umsetzung). Kein Split: 2 Code-/Testdateien, ~420 Zeilen
+(davon ~190 Tests; ~120 Zeilen sind nur neu eingerückt, `git diff -w` zeigt ~160 im Skript).
+
+**Trigger-Matrix:** neue Parameter → `README.md`, `README.de.md`, `features/TRACE_PARSING.md`,
+`architecture/CONFIGURATION.md` (Konfig-Tabelle); neue Boundary (Zeitlimit gefangen, Warnungen) →
+`architecture/ERROR_HANDLING.md` (Regeln und Tabelle); Security (Ressourcenverbrauch, Warnungen ohne Inhalt) →
+`security/THREAT_MODEL.md` Bedrohung 6; Lehre → `LESSONS_LEARNED.md` L8; `STATE.md`, `TODO.md`. Neue Hilfsfunktionen
+liegen im Skript (kein Modul) → `architecture/OVERVIEW.md` nicht ausgelöst.
+
+### Added
+- Warnungen `Line <n>: <fester Text>` für unlesbare Kopfzeilen, `Unknown event …`, Text vor dem ersten Ereignis
+  (Leerzeilen und `Trace session ID <n> started` ausgenommen), gekürzte Ereignisse und Zeitlimit. Kein Trace-Inhalt in
+  der Warnung. Das Objekt wird weiter ausgegeben (Vertrag: immer ein Objekt je Block).
+- Zusammenfassung mit `-Verbose`: `Summary: <Action> = <n>` je Action (unlesbare Kopfzeile als `(header not readable)`)
+  und `Summary: <n> warning(s)`. Opt-in über `-Verbose` statt eigenem Schalter; Pipeline-Ausgabe gleich (Test vergleicht
+  die JSON-Form mit und ohne `-Verbose`).
+- `-RegexTimeoutSeconds` (Standard 2) und `-MaxBlockLines` (Standard 100000).
+
+### Fixed
+- Eine Datei ohne Zeitstempel (oder ein riesiger Block) wurde bisher als Rest von Stück zu Stück ganz mitgenommen:
+  Speicher und Laufzeit wuchsen mit der Dateigröße. Jetzt wird der Rest ab `-MaxBlockLines` Zeilen gekürzt.
+
+### Confidence / Ungeprüft
+- Gate grün: PSScriptAnalyzer ohne Befund, Pester 150/150 unter PowerShell 7.6, 149 grün + 1 übersprungen unter
+  Windows PowerShell 5.1 (auch der Zeitlimit-Test). Rot gegen den Stub: 9 von 13 Tests mit scheiternder Assertion.
+- Mutationsprobe: 22 Mutanten; zuerst 19 rot, 3 überlebten (Kürzen im Block, Zeilenversatz nach gekürztem Rest,
+  Zwischenspeicher der Zeilenzählung) → drei Tests ergänzt, danach auch diese drei rot. Ein Kontrolllauf (ohne Mutation) war
+  einmal rot und ließ sich in 7 weiteren Läufen nicht nachstellen — Ursache unbekannt, Verdacht Zeitlimit-Test (1 ms
+  auf 3 MB) oder Last; beobachten (CI).
+- Laufzeit (21000 Ereignisse, 9,7 MB, je 3×3 Läufe abwechselnd): I12-Stand ~6,9 s, nachher ~7,0–7,1 s (etwa +2 %).
+  Gegenüber dem Stand vor I12 (~6,7 s) zusammen etwa +5 %.
+- Die Standardwerte (100000 Zeilen, 2 s) sind geschätzt, nicht an echten Traces gemessen; sie sollen nur Ausreißer
+  abfangen.
+- Der Zeitlimit-Test hängt an der Rechnergeschwindigkeit (1 ms für 3 MB Text); auf sehr schnellen Rechnern könnte er
+  ausnahmsweise grün statt rot laufen, bricht aber nicht ab (Prüfung „mindestens eine Warnung").
+- Nach einem Zeitlimit bleiben auch einfache Felder (Laufzeit) leer, weil ein `try` den ganzen Block umfasst — bewusst
+  (Laufzeit), dokumentiert in `TRACE_PARSING.md`.
+- Struktur-Check mit dem Template-Validator; Interna-Prüfung über den Hook.
+
+### Lessons Learned
+- Streaming mit Restübertrag: Ein Testfall am Dateiende prüft nur den Weg über den Rest, nicht den über die Schleife.
+  Zwei Mutanten überlebten, weil der gekürzte Block der letzte war und schon beim Weitertragen gekürzt wurde → L8.
+
 ## 2026-11-08 I12 – Parser: Prozeduren, Funktionen und Trigger als Ereignisse, Verbindungsdauer
 
 Commits `c4c2dde` (Tests rot, Stub mit Vertrag), `263b43d` (Umsetzung). Kein Split: 5 Code-/Test-/Fixture-Dateien plus

@@ -21,8 +21,12 @@ Zerlegt ein Firebird-Trace-Log in Blöcke (ein Block je Zeitstempel-Zeile) und g
 | Parameter | Typ | Pflicht | Default | Validierung | Beschreibung |
 |-----------|-----|---------|---------|-------------|-------------|
 | `-Path` | `[string]` | Ja (Position 0) | — | keine (nur `Test-Path` im Rumpf) | Pfad zur Trace-Datei |
+| `-MaxBlockLines` | `[int]` | Nein | `100000` | `[ValidateRange(1, 2147483647)]` | seit I13: Obergrenze Zeilen je Ereignis; längere Ereignisse werden auf diese Zahl gekürzt (Warnung). Begrenzt auch den Speicher, wenn eine Datei lange keinen Zeitstempel hat |
+| `-RegexTimeoutSeconds` | `[double]` | Nein | `2` | `[ValidateRange(0.001, 3600)]` | seit I13: Zeitlimit je Regex-Auswertung in einem Ereignis; danach bleiben die restlichen Felder leer (Warnung), der Parser liest das nächste Ereignis |
 
 Kein `-WhatIf` (das Skript schreibt nichts). `[CmdletBinding()]` seit I6 → Statusmeldungen mit `-Verbose`.
+Die Standardwerte ändern bei echten Traces voraussichtlich nichts: Firebird kürzt SQL (`max_sql_length`) und Parameter,
+ein Ereignis hat kaum mehr als einige tausend Zeilen, und die Regex brauchen je Ereignis Millisekunden.
 
 ---
 
@@ -30,11 +34,17 @@ Kein `-WhatIf` (das Skript schreibt nichts). `[CmdletBinding()]` seit I6 → Sta
 
 1. Datei in Stücken von 4 MB lesen (`StreamReader`), `\r` entfernen (seit I6).
 2. Jedes Stück vor jeder Zeile teilen, die mit `JJJJ-MM-TTThh:mm:ss.ffff` beginnt; der unfertige letzte Block wandert ins
-   nächste Stück. Text vor dem ersten Zeitstempel wird übersprungen.
+   nächste Stück. Text vor dem ersten Zeitstempel wird übersprungen; außer Leerzeilen und `Trace session ID <n> started`
+   meldet der Parser ihn als Warnung (seit I13). Wächst der unfertige Block über `-MaxBlockLines` Zeilen, wird er schon
+   beim Weitertragen gekürzt (Speicher).
 3. Je Block die kompilierten Regex anwenden (Header, Fehlerzeilen, Datenbank/Verbindung, Anwendung, Transaktion, SQL, Parameter,
    Plan, Tabellenstatistik, Performance); fehlende Treffer lassen das Feld leer bzw. auf dem Default.
 4. Jedes Objekt sofort in die Pipeline geben (seit I6, vorher gesammelt am Ende).
 5. Status über `Write-Verbose`, Fortschritt je Stück über `Write-Progress`.
+6. Seit I13: Warnungen (`Write-Warning`, `Line <n>: <fester Text>`) für unlesbare Kopfzeilen, `Unknown event …`, Text vor
+   dem ersten Ereignis, gekürzte Ereignisse und Zeitlimit. Die Zeilennummer wird nur beim Schreiben einer Warnung
+   gezählt. Am Ende mit `-Verbose` je `Action` eine Zeile `Summary: <Action> = <Anzahl>` (unlesbare Kopfzeile als
+   `(header not readable)`) und `Summary: <n> warning(s)`. Die Pipeline-Ausgabe bleibt gleich.
 
 ## Ausgabe-Vertrag (Properties, Reihenfolge wie im Code)
 
@@ -119,6 +129,9 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
 - `TableStats` bewusst nicht trimmen.
 - Einziger Zustand über Blöcke hinweg (seit I12): die offenen Verbindungen für `ConnectionDurationMs`; alle anderen Felder
   kommen nur aus dem eigenen Block.
+- Warnungen enthalten nur Zeilennummer und feste Texte, nie Trace-Inhalt (personenbezogen); einzige Ausnahme ist der
+  feste Firebird-Text bei `Unknown event in <Ereignis>`.
+- Zeitlimit (seit I13) für alle Regex je Ereignis, nicht für das Zerlegen der Stücke (verankert, linear).
 - Teure Teile nur bei Bedarf: erst `Contains`/`IndexOf`, dann Regex oder Zerlegen. Tabellenzeilen ohne
   PowerShell-Schleife über die Spalten lesen (eine Schleife war etwa sechsmal langsamer); leere Zellen über
   `'0' + Text` lesen — Windows PowerShell 5.1 wandelt Leerzeichen nicht in eine Zahl.
@@ -130,6 +143,8 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
 | Einschränkung | Ursache | Status |
 |---------------|---------|--------|
 | `Timestamp` ist Text, kein `[datetime]` | Regex-Gruppe ohne Konvertierung | Akzeptiert (BACKLOG) |
+| Ein gekürztes Ereignis (über `-MaxBlockLines`) hat nur die Felder aus den ersten Zeilen, meist ohne Laufzeit | Schutz des Speichers | Akzeptiert, Warnung mit Zeilennummer |
+| Nach dem Zeitlimit bleiben die restlichen Felder des Ereignisses leer, auch einfache wie die Laufzeit | ein `try` je Ereignis (Laufzeit) | Akzeptiert, Warnung mit Zeilennummer |
 
 ---
 
@@ -155,6 +170,7 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
   seit I11 `trace_fb5_counts.log` mit `tests/Show-TraceStructure.Counts.Tests.ps1` (RecordsFetched, Transaktionsoptionen,
   Tabellenstatistik mit breiter Namensspalte, Umlauten, Firebird-3-Kopf); seit I12 `trace_fb5_routines.log` und
   `trace_fb4_routines.log` mit `tests/Show-TraceStructure.Routines.Tests.ps1` (Prozeduren, Funktionen, Trigger in beiden
-  Formaten, Verbindungsdauer)
+  Formaten, Verbindungsdauer); seit I13 `tests/Show-TraceStructure.Diagnostics.Tests.ps1` (Warnungen mit Zeilennummer,
+  auch über 4-MB-Stücke, Zusammenfassung, Kürzen, Zeitlimit; Eingaben im TestDrive)
 - Kritische Testfälle: jede Property aus der Tabelle oben mit exaktem Wert; Block ohne SQL; Rolle ≠ `NONE`;
   fehlende Datei → Fehler; Zähler > Int32; leere Datei → keine Objekte

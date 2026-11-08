@@ -108,6 +108,18 @@ selten; der Stopp läuft fast immer über `-LIST`. Ein Mock bildet nur ab, was m
 
 ---
 
+## L8: Bei Streaming mit Restübertrag den Testfall nicht ans Dateiende legen
+- Inkrement: I13
+- Scope: generisch-base
+- Backport-Ziel: `base/principles/TEST_EFFECTIVENESS.md` (Mutationsprobe, Beispiele) bzw. `base/testing/UNIT_TESTS.md`
+- Gesehen mit: v37
+- Status: offen
+
+Der Parser verarbeitet Blöcke in einer Schleife und den letzten Block getrennt (Rest nach dem letzten Stück). Der Test
+für „zu langer Block wird gekürzt" legte den langen Block ans Dateiende: Er lief nur über den Rest-Weg, der schon beim
+Weitertragen kürzte. Das Kürzen in der Schleife war ungetestet; erst ein überlebender Mutant zeigte es. Ein Folgeblock
+hinter dem Testfall prüft beide Wege. Ein Fall, ein Projekt.
+
 ## Pflege
 
 - Neuer „Lessons Learned"-Block im `CHANGELOG.md` → Eintrag `## L<N>:` hier anlegen.

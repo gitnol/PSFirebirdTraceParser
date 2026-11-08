@@ -12,7 +12,7 @@ Das Projekt hat zwei getrennte Konfigurationswege:
 
 **Parser und Pseudonymisierer** (`Show-TraceStructure.ps1`, `Pseudonymize-FirebirdTrace.ps1`):
 
-1. **Skript-Parameter** (`-Path`, `-SensitiveKeywords`, `-RedactLiterals`, `-AnalyzeOnly`, `-HashLength`)
+1. **Skript-Parameter** (`-Path`, `-MaxBlockLines`, `-RegexTimeoutSeconds`, `-SensitiveKeywords`, `-RedactLiterals`, `-AnalyzeOnly`, `-HashLength`)
 2. **Code-Defaults** (z. B. `-HashLength 12`, Regex-Muster im Skript)
 
 Keine Konfigurationsdatei, keine Umgebungsvariablen.
@@ -63,6 +63,8 @@ Die Trace-Regeln selbst stehen in der Datei, die `TraceConfigFilename` benennt (
 | Schlüssel | Typ | Default | Quelle(n) | Beschreibung |
 |---|---|---|---|---|
 | `-Path` | `string` | kein (Pflicht) | Parameter | Pfad zur Trace-Datei (`Show-TraceStructure.ps1`) |
+| `-MaxBlockLines` | `int` (≥ 1) | `100000` | Parameter | Obergrenze Zeilen je Ereignis (`Show-TraceStructure.ps1`, seit I13) |
+| `-RegexTimeoutSeconds` | `double` (0,001–3600) | `2` | Parameter | Zeitlimit je Regex-Auswertung (`Show-TraceStructure.ps1`, seit I13) |
 | `-SensitiveKeywords` | `string[]` | leer | Parameter | Begriffe, deren Vorkommen Literale bzw. ganze WHERE/HAVING-Klauseln pseudonymisiert |
 | `-RedactLiterals` | `switch` | aus | Parameter | Alle String-Literale ab 2 Zeichen (ohne `%`) pseudonymisieren |
 | `-AnalyzeOnly` | `switch` | aus | Parameter | Nur Bericht über Literale/Klauseln, keine Ausgabe von Objekten |

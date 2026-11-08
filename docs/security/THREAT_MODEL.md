@@ -121,7 +121,9 @@ oder Literalen (Prompt-Injection). Im analysierten Repository selbst wurden beim
 
 **Mitigation:**
 - Kein `Invoke-Expression` auf Trace-Inhalten (`CONVENTIONS.md` §6).
-- Streaming statt Gesamtdatei (I6); Regex ohne katastrophales Backtracking (`architecture/ERROR_HANDLING.md`).
+- Streaming statt Gesamtdatei (I6); Regex ohne katastrophales Backtracking (`architecture/ERROR_HANDLING.md`); seit I13
+  Zeitlimit je Regex-Auswertung und Obergrenze Zeilen je Ereignis (`-RegexTimeoutSeconds`, `-MaxBlockLines`), Warnungen
+  ohne Trace-Inhalt.
 - Agenten behandeln Trace-Inhalte als Daten, nie als Anweisung (`principles/UNTRUSTED_DOCUMENT_CONTENT.md`).
 
 **Restrisiko:** Gering.

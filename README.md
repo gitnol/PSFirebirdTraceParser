@@ -58,7 +58,9 @@ Export-Csv "safe_trace.csv"
 ## 🛠 Usage Details
 
 ### The Parser: `Show-TraceStructure.ps1`
-Streams the file in 4 MB chunks (memory stays bounded, independent of file size) and writes one object per trace event to the pipeline as soon as the event is complete. Status messages: `-Verbose`.
+Streams the file in 4 MB chunks (memory stays bounded, independent of file size) and writes one object per trace event to the pipeline as soon as the event is complete. Status messages: `-Verbose` (at the end also a summary: number of events per `Action` and of warnings).
+
+Events that cannot be assigned (unreadable header, `Unknown event …`, text before the first event) are reported as warnings with the line number; the warning shows no trace content. Protection against very long events: `-MaxBlockLines` (default `100000`; longer events are cut, warning) and `-RegexTimeoutSeconds` (default `2` per field; when reached, the remaining fields stay empty, warning). The objects are the same as before; only these rare cases add a warning.
 
 **Output Objects Properties:**
 *   `Timestamp`: Time of event.

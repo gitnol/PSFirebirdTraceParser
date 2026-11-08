@@ -25,20 +25,6 @@ Bekannte Bugs ohne aktiven Fix: `KNOWN_ISSUES.md`.
 
 ---
 
-## Mittlere Priorität
-
-### I13: Parser – Robustheit und Diagnose
-
-Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).
-
-**Aufgaben:**
-
-- [ ] Warnungen mit Zeilennummer für Blöcke, die nicht zugeordnet werden können
-- [ ] Zusammenfassung am Ende: Anzahl Blöcke je `Action`, übersprungene/unbekannte Blöcke
-- [ ] Zeitlimit für Regex-Auswertung (Schutz vor sehr langen Blöcken), Obergrenze Zeilen je Block
-
----
-
 ## Niedrige Priorität
 
 ### I8: Laufzeit- und Beispielstände aus dem Security-Sweep 2026-10-23 nachziehen
