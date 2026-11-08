@@ -108,6 +108,22 @@ Describe 'Paritaet PowerShell- und C#-Parser: Diagnose (I18)' -Skip:($PSVersionT
         Compare-Engine $f @{ MaxBlockLines = 1000 } | Should -BeNullOrEmpty
     }
 
+    It 'liest ein Ereignis mit 300000 Zeilen in beiden Parsern schnell (K8, Standard -MaxBlockLines)' {
+        # Vor I21: Zeilensuche kulturabhaengig, Laufzeit quadratisch (gemessen ~45 s je Parser); danach Sekundenbruchteile.
+        # Grenze 15 s mit grossem Abstand zu beiden (L10).
+        $f = Join-Path $TestDrive 'many_lines.log'
+        [System.IO.File]::WriteAllText($f, '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION' + "`n" + ("xx`n" * 300000) +
+            '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION' + "`n")
+        foreach ($engine in 'PowerShell', 'CSharp') {
+            $sw = [System.Diagnostics.Stopwatch]::StartNew()
+            $r = Invoke-TraceEngine $engine $f
+            $sw.Stop()
+            $r.Objects.Count | Should -Be 2
+            $sw.Elapsed.TotalSeconds | Should -BeLessThan 15 -Because "$engine darf bei vielen Zeilen nicht quadratisch werden"
+        }
+        Compare-Engine $f | Should -BeNullOrEmpty
+    }
+
     It 'kuerzt Text ohne Zeitstempel ueber mehrere Stuecke gleich (Vorspann)' {
         $f = Join-Path $TestDrive 'huge_preamble.log'
         [System.IO.File]::WriteAllText($f, ("noise`n" * 1000000) + '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION' + "`n")
