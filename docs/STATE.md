@@ -3,8 +3,8 @@
 Zuletzt aktualisiert: 2026-11-08
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
-**Letztes abgeschlossenes Inkrement:** I21 – K8 behoben (2026-11-08)
-**Nächster Schritt:** I20 (Entscheidung Fallback oder Entfernen, nach grünem CI-Lauf); I8 (Rest) mit dem Security-Sweep am 2026-11-21
+**Letztes abgeschlossenes Inkrement:** I20 – PowerShell-Parser bleibt als Rückfall und Orakel (2026-11-08)
+**Nächster Schritt:** I22 (Verteilung der DLL, Entscheidung Owner); I8 (Rest) mit dem Security-Sweep am 2026-11-21
 **Nächste Reflexion:** beim dritten abgeschlossenen Inkrement nach I18 (Reflexion I18 am 2026-11-08; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
@@ -12,7 +12,7 @@ Zuletzt aktualisiert: 2026-11-08
 
 ## Nächster Schritt
 
-I16–I19 umgesetzt: `Show-TraceStructure.ps1` nimmt unter PowerShell 7 mit gebauter DLL den C#-Parser (`-Engine Auto`), unter 5.1 den PowerShell-Parser; Paritätstests über das Skript. I21 (K8) behoben. Als Nächstes I20 (Entscheidung: PowerShell-Parser als Fallback behalten oder entfernen; Voraussetzung grüner CI-Lauf). Offen für den Owner: Push und ersten CI-Lauf ansehen, lokal .NET SDK 10 installieren, Verteilung der DLL (Release?) entscheiden; `log_procedure_finish`/`log_trigger_finish` weiter offen. I8 (Rest) mit dem Security-Sweep am 2026-11-21. Empfohlenes Modell: Sonnet, mittlerer Effort (I21), Opus für I20.
+I16–I19 umgesetzt: `Show-TraceStructure.ps1` nimmt unter PowerShell 7 mit gebauter DLL den C#-Parser (`-Engine Auto`), unter 5.1 den PowerShell-Parser; Paritätstests über das Skript. I21 (K8) behoben. Gepusht, erster CI-Lauf mit Build grün. I20 entschieden: der PowerShell-Parser bleibt als Rückfall (5.1, ohne DLL) und Orakel der Paritätstests. Offen für den Owner: lokal .NET SDK 10 installieren, I22 Verteilung der DLL (Release?) entscheiden; `log_procedure_finish`/`log_trigger_finish` weiter offen. I8 (Rest) mit dem Security-Sweep am 2026-11-21. Empfohlenes Modell: Sonnet, mittlerer Effort (I21), Opus für I20.
 
 ---
 
@@ -20,6 +20,7 @@ I16–I19 umgesetzt: `Show-TraceStructure.ps1` nimmt unter PowerShell 7 mit geba
 
 | # | Titel | Datum | Commit |
 |---|-------|-------|--------|
+| I20 | Entscheidung: PowerShell-Parser bleibt als Rückfall und Orakel (ADR-003); nur Doku | 2026-11-08 | (dieser Commit) |
 | I21 | K8: Zeilensuche in beiden Parsern ordinal (300 000 Zeilen: 42,7 s → 1,6 s); 1 Test | 2026-11-08 | ed913e9 |
 | I19 | `Show-TraceStructure.ps1 -Engine Auto\|PowerShell\|CSharp` (Auto = C# unter PowerShell 7 mit gebauter DLL), Paritätstests über das Skript, Pseudonymisierer mit beiden Parsern, Messung 15 MB: 1,6 s statt 13–14 s; 11 Tests | 2026-11-08 | 9965aad |
 | I18 | C#-Parser: Warnungen mit Zeilennummer, Kürzen, Zeitlimit, Zusammenfassung und CRLF/LF gleich wie das Skript (Paritätstest mit Warnungen und Verbose); 24 Tests | 2026-11-08 | c33a557 |
@@ -32,7 +33,7 @@ I16–I19 umgesetzt: `Show-TraceStructure.ps1` nimmt unter PowerShell 7 mit geba
 
 | # | Beschreibung | Priorität |
 |---|-------------|-----------|
-| I20 | Umstellung abschließen: PowerShell-Parsing als Fallback behalten oder entfernen | Hoch |
+| I22 | Verteilung der DLL entscheiden (Release oder selbst bauen) | Mittel |
 | I8 | Laufzeit- und Beispielstände aus dem Security-Sweep nachziehen | Niedrig |
 
 ---

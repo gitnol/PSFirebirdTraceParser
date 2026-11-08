@@ -34,13 +34,15 @@ Split wegen der Größengrenze (KICKOFF Phase 2 Punkt 5): je Inkrement höchsten
 Gebündelt wird nichts: I8 liest andere Quellen (Security-Sweep), der Refactoring-Kandidat `Show-TraceStructure.ps1`
 (`BACKLOG.md`) wird durch I20 vielleicht überflüssig — deshalb **getrennt gelassen** und erst nach I20 entschieden.
 
-### I20: Umstellung abschließen — PowerShell-Parsing als Referenz/Fallback behalten oder entfernen
+### I22: Verteilung der DLL entscheiden
+
+Herkunft: I20 (2026-11-08) — der PowerShell-Parser bleibt als Rückfall; offen ist nur, wie Nutzer ohne .NET SDK an
+die DLL kommen.
 
 **Aufgaben:**
 
-- [ ] Entscheidung mit Belegen (ADR-003 nachtragen): Bleibt der PowerShell-Parser als Fallback für Nutzer ohne Build
-  und als Orakel des Paritätstests, oder wird er entfernt und das Skript ruft nur noch das Cmdlet?
-- [ ] Voraussetzung: I19 abgeschlossen und mindestens ein grüner CI-Lauf beider Jobs mit Build und Paritätstest
+- [ ] Entscheidung mit Owner: GitHub-Release mit gebauter DLL (Build in CI, Prüfsumme) oder weiter nur selbst bauen
+- [ ] Bei Release: `operations/DEPLOYMENT.md`, READMEs und `security/DEPENDENCY_AUDIT.md` nachziehen
 
 ---
 

@@ -13,6 +13,20 @@ und Reflexion nach I5: `changelog/ARCHIVE-CHANGELOG-I11-I15.md`.
 
 ---
 
+## 2026-11-08 I20 – Entscheidung: PowerShell-Parser bleibt
+
+Nur Doku. Owner-Entscheidung nach dem ersten grünen CI-Lauf mit Build (Lauf 42504200600, PowerShell 7 und 5.1).
+
+**Trigger-Matrix:** Architekturentscheidung → `architecture/ADR/ADR-003-parser-in-csharp.md`, `architecture/OVERVIEW.md`;
+Aufgaben → `TODO.md` (I20 erledigt, neu I22), `STATE.md`, `operations/DEPLOYMENT.md`.
+
+### Changed
+- Der PowerShell-Parser bleibt als Rückfall (Windows PowerShell 5.1, keine gebaute DLL) und als Orakel der
+  Paritätstests; jede Parser-Änderung weiter in beiden Parsern. Neu bewertet, falls 5.1 entfällt.
+- Die offene Frage der DLL-Verteilung ist jetzt eigenes Inkrement I22.
+
+---
+
 ## 2026-11-08 I21 – K8: Zeilensuche in beiden Parsern ordinal
 
 Commits `e665a72` (Test rot), `ed913e9` (Fix in beiden Parsern im selben Commit). Klein: 2 Zeilen Code, 1 Test.

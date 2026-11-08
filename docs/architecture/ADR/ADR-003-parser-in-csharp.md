@@ -59,7 +59,11 @@ Wir nehmen **A**:
   Tests des C#-Parsers und die Paritätstests laufen nur unter PowerShell 7 (unter 5.1 übersprungen).
 - `Show-TraceStructure.ps1` bekommt in I19 `-Engine Auto|PowerShell|CSharp` (Auto: C#, wenn PowerShell 7 läuft und die
   DLL gefunden wird).
-  Ob der PowerShell-Parser danach als Fallback und Orakel bleibt oder entfällt, entscheidet I20 mit Belegen.
+  **Entscheidung I20 (Owner, 2026-11-08):** Der PowerShell-Parser bleibt — als Rückfall unter Windows PowerShell 5.1
+  und ohne gebaute DLL sowie als Orakel der Paritätstests. Belege: erster CI-Lauf mit Build grün (beide Jobs,
+  Lauf 42504200600), Parität auf 5 Fixtures, 10 Grenzfällen und einem echten Log ohne Unterschied. Neu bewertet wird,
+  sobald 5.1 nicht mehr unterstützt werden soll; dann entfällt der Rückfall, und die Paritätstests brauchen ein
+  anderes Orakel (z. B. eingefrorene Soll-Ausgaben).
 - SDK: `global.json` verlangt mindestens 9.0.300 und nimmt die höchste installierte Hauptversion (`latestMajor`); CI
   baut mit .NET SDK 10 (LTS). Zur Laufzeit gilt die .NET-Version der aufrufenden PowerShell (7.6: .NET 10), nicht die
   Zielversion; das Supportende von .NET 8 am 2026-11-10 betrifft nur Nutzer, die noch PowerShell 7.4 einsetzen.
@@ -82,6 +86,6 @@ Wir nehmen **A**:
 * **Negativ/Risiken:** Zwei Implementierungen bis I20 — jede Parser-Änderung muss in beiden gemacht werden (der
   Paritätstest erzwingt das). Neuer Build-Schritt mit .NET SDK und NuGet (Lieferkette: `security/DEPENDENCY_AUDIT.md`).
   Eine geladene DLL ist bis zum Ende des Prozesses gesperrt; ein Neubau braucht einen neuen PowerShell-Prozess. Nutzer
-  ohne .NET SDK bekommen die DLL nur gebaut oder aus einem Release (Verteilung noch offen, I20). Unter Windows
+  ohne .NET SDK bekommen die DLL nur gebaut oder aus einem Release (Verteilung noch offen, I22). Unter Windows
   PowerShell 5.1 bleibt es bei der Laufzeit des PowerShell-Parsers; solange er Rückfall ist, bleiben beide Parser zu
   pflegen.

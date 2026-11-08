@@ -101,7 +101,7 @@ tests/TraceParity.ps1           → seit I16: strenger Vergleich der Objekte bei
 | Trace-Inhalte enthalten SQL-Literale, Parameter, Benutzer, IPs, Anwendungspfade | Personenbezogene/vertrauliche Daten; Weitergabe nur pseudonymisiert und mit Freigabe (`security/DATA_HANDLING.md`) |
 | Ausgabe-Properties des Parsers sind Eingabe des Pseudonymisierers und von Nutzer-Exporten | Property-Namen sind ein Vertrag (`features/TRACE_PARSING.md`) |
 | Parser und Pseudonymisierer lauffähig unter Windows PowerShell 5.1 **und** PowerShell 7 | Keine PS-7-only-Syntax (`??`, `?.`, Ternary); Encoding-Unterschiede beachten (`CONVENTIONS.md` §3); CI prüft beide (seit I14). Der C#-Parser läuft nur unter PowerShell 7.4+ (Owner: Priorität PowerShell 7, ADR-003); unter 5.1 bleibt der PowerShell-Parser |
-| Zwei Parser bis zur Umstellung (I16–I20) | Jede Parsing-Änderung in beiden; der Paritätstest `tests/FirebirdTraceParser.Parity.Tests.ps1` (seit I17) vergleicht jedes Feld (ADR-003) |
+| Zwei Parser dauerhaft (Entscheidung I20) | Jede Parsing-Änderung in beiden; der Paritätstest `tests/FirebirdTraceParser.Parity.Tests.ps1` (seit I17) vergleicht jedes Feld (ADR-003) |
 | Trace-Skripte brauchen PowerShell 7.4+ | nur dann landet die Ausgabe von `fbtracemgr` byte-genau in der Datei (ADR-002) |
 | `fbtracemgr -START` läuft im Vordergrund, bis die Session gestoppt wird | Konsole bleibt belegt; Bedienung in `features/TRACE_CAPTURE.md` |
 | Öffentliches Repository | Keine Interna in Code, Doku, Commits; Interna-Hook (`CONVENTIONS_COMMON.md` 3.1) |
