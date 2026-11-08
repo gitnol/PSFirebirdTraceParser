@@ -19,8 +19,12 @@ namespace FirebirdTraceParser
         public static bool Eq(string? left, string right) =>
             left != null && string.Compare(left, right, CultureInfo.InvariantCulture, CompareOptions.IgnoreCase) == 0;
 
-        /// <summary>A PowerShell hashtable literal (@{}): keys compared with the current culture, ignoring case.</summary>
-        public static Hashtable NewHashtable() => new Hashtable(StringComparer.CurrentCultureIgnoreCase);
+        /// <summary>
+        /// A PowerShell hashtable literal (@{}). Measured (I23): PowerShell 7.6.9 compares keys with OrdinalIgnoreCase
+        /// (Windows PowerShell 5.1 uses the current culture, but this parser only runs on PowerShell 7). Differences to the
+        /// culture comparer: the Kelvin sign U+212A equals K and the Angstrom sign U+212B equals A-ring only with the culture.
+        /// </summary>
+        public static Hashtable NewHashtable() => new Hashtable(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// PowerShell [long]"text". Plain ASCII digits are parsed directly; anything else ("1e3", "0x1F", overflow) goes
