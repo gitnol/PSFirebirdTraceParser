@@ -31,6 +31,8 @@ Commit-Messages oder in Doku verwenden.
 | Bulk-Redaktion | Ersetzen der (letzten) WHERE/HAVING-Klausel durch `<REDACTED_CLAUSE:…>`, wenn ein sensibles Schlüsselwort vorkommt | `-SensitiveKeywords` | Literal-Pseudonymisierung |
 | Tabellenstatistik | Block `Table … Natural Index …` eines Ereignisses (Firebird `print_perf`): je Tabelle Lesezugriffe ohne (`Natural`) und mit Index sowie Änderungen und Aufräumarbeit; im Parser als Text `TableStats` und als Liste `TableCounts` | Properties `TableStats`, `TableCounts` | Performance-Zeile (`Reads`, `Fetches` …) |
 | RecordsFetched | Zahl der Datensätze, die ein Statement geliefert hat (`N records fetched`) | Property `RecordsFetched` | `Fetches` (Seitenzugriffe im Cache) |
+| Routine | Prozedur, Funktion oder Trigger mit eigenem Trace-Ereignis (`EXECUTE_PROCEDURE_FINISH`, `EXECUTE_FUNCTION_FINISH`, `EXECUTE_TRIGGER_FINISH`) | Properties `RoutineType`, `RoutineName` | Statement (`EXECUTE_STATEMENT_FINISH`) |
+| Verbindungsdauer | Zeit zwischen `ATTACH_DATABASE` und `DETACH_DATABASE` derselben Verbindung (Datenbankpfad + `ATT_<n>`) in einer Trace-Datei | Property `ConnectionDurationMs` | `DurationMs` (Laufzeit eines Ereignisses) |
 | Feldabdeckung | Liste, welche Property wie pseudonymisiert wird bzw. bewusst im Klartext bleibt | `features/PSEUDONYMIZATION.md` | — |
 | Service-Manager | Firebird-Services-API-Endpunkt (`service_mgr`), über den `fbtracemgr` Traces verwaltet | Trace-Skripte | Datenbankdatei |
 

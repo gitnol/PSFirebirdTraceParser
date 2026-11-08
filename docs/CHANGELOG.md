@@ -10,6 +10,49 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 I12 – Parser: Prozeduren, Funktionen und Trigger als Ereignisse, Verbindungsdauer
+
+Commits `c4c2dde` (Tests rot, Stub mit Vertrag), `263b43d` (Umsetzung). Kein Split: 5 Code-/Test-/Fixture-Dateien plus
+`fbtrace50.conf`, ~420 Zeilen, davon ~270 Tests und Fixtures. Funktionen mitgenommen: gleiches Format wie Prozeduren, kein
+Mehraufwand.
+
+**Trigger-Matrix:** neue Felder im Ausgabe-Vertrag → `features/TRACE_PARSING.md`, `README.md`, `README.de.md`;
+Feldabdeckung → `features/PSEUDONYMIZATION.md`; Security (Schema-Namen im Klartext) → `security/THREAT_MODEL.md`;
+neue Begriffe → `GLOSSARY.md`; `STATE.md`, `TODO.md`. Kein neuer Parameter, keine neue Funktion, keine Abhängigkeit →
+`architecture/OVERVIEW.md` nicht ausgelöst; der neue Zustand über Blöcke hinweg steht in `TRACE_PARSING.md`.
+
+### Added
+- `RoutineType` (`Procedure`/`Function`/`Trigger`), `RoutineName`, `TriggerTable`, `TriggerTime`, `TriggerEvent` am Ende
+  des Vertrags (nach `TableCounts`). Laufzeit, I/O, Parameter, Plan und Tabellenstatistik über die bestehenden Felder.
+- Trigger-Zeile in beiden Formaten, geprüft an `TracePluginImpl.cpp` `v4.0-release` (`	%s (%s) ` unter der
+  Transaktionszeile, Name `<unknown>` ohne Namen) und `v5.0-release` (`Trigger %s (%s):` auf eigener Zeile, ohne Namen
+  nur `Trigger (…):`). Prozedur/Funktion: in beiden `Procedure <Name>:`, Firebird 5 ggf. mit Plan darunter.
+- `ConnectionDurationMs` bei `DETACH_DATABASE`: passt zum Streaming (Tabelle nur der offenen Verbindungen, Schlüssel
+  Datenbankpfad + `AttachID`); leer, wenn das `ATTACH_DATABASE` nicht in der Datei steht.
+- Fixtures `trace_fb5_routines.log`, `trace_fb4_routines.log` (synthetisch, IPs aus 192.0.2.0/24) und
+  `tests/Show-TraceStructure.Routines.Tests.ps1` (16 Tests).
+
+### Changed
+- `fbtrace50.conf`: `log_procedure_finish`/`log_function_finish`/`log_trigger_finish` als auskommentierte Option mit
+  Hinweis auf die Log-Größe; Kopfkommentar „Format 4.0 = 5.0" korrigiert (Trigger-Zeile unterscheidet sich).
+- I11-Test zur Feldreihenfolge prüft relativ zu `SweepNext` statt am Ende.
+
+### Confidence / Ungeprüft
+- Gate grün: PSScriptAnalyzer ohne Befund, Pester 136/136 unter PowerShell 7.6, 135 grün + 1 übersprungen (bestehender
+  7.4+-Test) unter Windows PowerShell 5.1. Rot gegen den Stub: 12 von 16 neuen Tests mit scheiternder Assertion; die 4
+  grünen prüfen Defaults (Blockzahl, leere Felder, leere Dauer, Reihenfolge) und sind über die Mutationsprobe belegt.
+- Mutationsprobe: 21 Mutanten, 19 rot, 2 äquivalent (Vorprüfung „kein Statement" ist reine Laufzeit; Leerzeichen am
+  Zeilenende nach `Procedure <Name>:` schreibt Firebird nicht). Ein Mutant (`CREATE_DATABASE` entfernt) überlebte zuerst
+  → Test ergänzt.
+- Laufzeit (21000 Ereignisse, 9,7 MB, je 3×3 Läufe abwechselnd): vorher ~6,6–6,8 s, nachher ~6,9–7,1 s (etwa +4 %);
+  die sechs Felder allein kosten nichts Messbares, die Prüfungen je Block den Rest. Erste Fassung ohne Vorprüfung ~+6 %.
+- Format nur aus dem Quellcode, kein echtes Log mit Prozedur- oder Trigger-Ereignissen: die Vorlage schaltet sie nicht ein.
+  Firebird 3 (`fbtrace30.conf`) nicht getestet; der Quellcode 3.0 schreibt Prozeduren und Trigger wie Firebird 4.
+- `COMPILE_PROCEDURE`/`COMPILE_TRIGGER` (nur Firebird 5) füllen dieselben Felder, sind aber nicht getestet.
+- Ob die Laufzeit einer Prozedur die aufgerufener Prozeduren und Trigger enthält, ist nicht geprüft (Fallstrick in
+  `TRACE_PARSING.md` als „vermutlich“).
+- Struktur-Check mit dem Template-Validator; Interna-Prüfung über den Hook.
+
 ## 2026-11-08 Trace-Benutzer in den READMEs, Entscheidung zur Git-History
 
 Kein Inkrement; zwei Ergänzungen des Owners (2026-11-08).

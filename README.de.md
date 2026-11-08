@@ -79,6 +79,9 @@ Liest die Datei in 4-MB-Stücken (Speicherbedarf begrenzt, unabhängig von der D
 *   `RecordsFetched`: Zahl der gelieferten Datensätze (`N records fetched`); `Fetches` zählt dagegen Seitenzugriffe. `0`, wenn die Zeile fehlt (Firebird lässt sie bei Prozeduren mit 0 Datensätzen weg).
 *   `TxIsolation` (`READ_COMMITTED`, `CONCURRENCY`, `CONSISTENCY`), `TxReadMode` (`REC_VERSION`, `NO_REC_VERSION`, `READ_CONSISTENCY`; nur bei `READ_COMMITTED`), `TxWaitMode` (`WAIT`, `NOWAIT`), `TxLockTimeout` (Sekunden bei `WAIT <n>`, sonst leer), `TxAccessMode` (`READ_WRITE`, `READ_ONLY`): die Teile von `TransactionOptions`.
 *   `TableCounts`: `TableStats` als Liste mit einem Objekt je Tabelle (`Table`, `Natural`, `Index`, `Update`, `Insert`, `Delete`, `Backout`, `Purge`, `Expunge`; leere Zelle = `0`). Es ist eine Liste: für CSV aufklappen (`$_.TableCounts | Select-Object …`) oder `TableStats` exportieren.
+*   `RoutineType` (`Procedure`, `Function`, `Trigger`), `RoutineName`: Bei `EXECUTE_PROCEDURE_FINISH`, `EXECUTE_FUNCTION_FINISH`, `EXECUTE_TRIGGER_FINISH` (auch `FAILED …`); Laufzeit, I/O, Parameter und Tabellenstatistik stehen in den üblichen Feldern. Filtern über `Action` oder `RoutineType`; Statements bleiben unverändert. Braucht `log_procedure_finish` / `log_function_finish` / `log_trigger_finish` (in `fbtrace50.conf` aus; Trigger können sehr viele Ereignisse erzeugen).
+*   `TriggerTable`, `TriggerTime` (`BEFORE`, `AFTER`, `ON` bei Datenbank-Triggern), `TriggerEvent` (`INSERT`, `UPDATE`, `DELETE`, `CONNECT`, …): Die Trigger-Zeile; Firebird 4 und 5 schreiben sie verschieden, beide werden gelesen.
+*   `ConnectionDurationMs`: Bei `DETACH_DATABASE` die Zeit seit dem `ATTACH_DATABASE` derselben Verbindung in dieser Datei; leer, wenn die Verbindung vor dem Trace begann.
 
 ### Der Pseudonymisierer: `Pseudonymize-FirebirdTrace.ps1`
 Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
@@ -97,7 +100,7 @@ Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
 *   `-MappingFile <pfad>`: Optionale CSV `Pseudonym;Original`, damit der Verantwortliche Ergebnisse zurückführen kann. Enthält Klartext.
 
 **Pseudonymisiert:** `User`, `ClientIP` (auch in `ProtocolInfo`), `ApplicationPath`, `DatabasePath`, Werte in `Params`; mit `-RedactLiterals` zusätzlich alle Zeichenketten und Zahlen in `SqlStatement` und Werte in `ErrorMessages`.
-**Nicht pseudonymisiert:** `SqlPlan`, `TableStats`, `TableCounts` sowie Tabellen-/Indexnamen (für die Analyse nötig; `-SensitiveKeywords` verbirgt sie nicht — müssen Tabellennamen geheim bleiben, diese Felder weglassen), technische IDs, Zeitstempel, Zähler (auch `RecordsFetched`), Transaktionsoptionen, `ServiceName`/`ServiceID` und Sweep-Zähler.
+**Nicht pseudonymisiert:** `SqlPlan`, `TableStats`, `TableCounts` sowie Tabellen-/Indexnamen (für die Analyse nötig; `-SensitiveKeywords` verbirgt sie nicht — müssen Tabellennamen geheim bleiben, diese Felder weglassen), technische IDs, Zeitstempel, Zähler (auch `RecordsFetched`, `ConnectionDurationMs`), Transaktionsoptionen, `ServiceName`/`ServiceID` und Sweep-Zähler, Namen von Prozeduren, Funktionen und Triggern (`RoutineName`, `TriggerTable`; Schema-Namen wie Tabellennamen).
 
 > [!WARNING]
 > **Sicherheitshinweis**: Dieses Werkzeug pseudonymisiert (Hash mit Schlüssel, HMAC-SHA256), es anonymisiert nicht. Wer den Schlüssel hat, kann vermutete Werte prüfen; für den Verantwortlichen bleiben die Daten personenbezogen (DSGVO). Schlüssel- und Zuordnungsdatei (`-MappingFile`) nie weitergeben.

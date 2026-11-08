@@ -27,17 +27,6 @@ Bekannte Bugs ohne aktiven Fix: `KNOWN_ISSUES.md`.
 
 ## Mittlere Priorität
 
-### I12: Parser – Verbindungen, Prozeduren und Trigger als Ereignisse
-
-Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).
-
-**Aufgaben:**
-
-- [ ] `ATTACH_DATABASE`/`DETACH_DATABASE` mit Verbindungsdaten ausgeben; Verbindungsdauer (Attach→Detach) berechnen
-- [ ] `EXECUTE_PROCEDURE_FINISH` und `EXECUTE_TRIGGER_FINISH` mit Namen (Trigger: Tabelle, Zeitpunkt, Aktion), Laufzeit, I/O
-- [ ] Format der Trigger-Zeile unterscheidet sich zwischen Firebird 4 (`\t%s (%s) `) und 5 (`%s (%s):`) — beide testen
-- [ ] Ausgabe so gestalten, dass bestehende Auswertungen (nur Statements) unverändert funktionieren (z. B. über `Action` filterbar)
-
 ### I13: Parser – Robustheit und Diagnose
 
 Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer (2026-11-07); nur Ideen, kein Code (dessen Lizenz ist nicht kommerziell).

@@ -70,6 +70,12 @@ Kein `-WhatIf` (das Skript schreibt nichts). `[CmdletBinding()]` seit I6 → Sta
 | `TxLockTimeout` | int | `$null` | seit I11: Sekunden aus `WAIT <n>`; leer bei `NOWAIT` und bei unbegrenztem `WAIT` |
 | `TxAccessMode` | string | `$null` | seit I11: `READ_WRITE` oder `READ_ONLY` |
 | `TableCounts` | object[] | `$null` | seit I11: `TableStats` als Liste, je Tabelle ein Objekt `Table`, `Natural`, `Index`, `Update`, `Insert`, `Delete`, `Backout`, `Purge`, `Expunge` (long, leere Zelle = 0), Reihenfolge wie im Log |
+| `RoutineType` | string | `$null` | seit I12: `Procedure`, `Function` oder `Trigger` bei Ereignissen mit `PROCEDURE`, `FUNCTION` bzw. `TRIGGER` im Namen (`EXECUTE_…_FINISH`, `…_START`, `FAILED …`, `UNAUTHORIZED …`) |
+| `RoutineName` | string | `$null` | seit I12: Name aus `Procedure <Name>:` / `Function <Name>:` bzw. der Trigger-Zeile; leer, wenn Firebird keinen Namen kennt (Firebird 4 schreibt dann `<unknown>`) |
+| `TriggerTable` | string | `$null` | seit I12: Tabelle aus `FOR <Tabelle>`; leer bei Datenbank-Triggern |
+| `TriggerTime` | string | `$null` | seit I12: `BEFORE`, `AFTER`, `ON` (Datenbank-Trigger) oder `<unknown>` |
+| `TriggerEvent` | string | `$null` | seit I12: `INSERT`, `UPDATE`, `DELETE`, `CONNECT`, `DISCONNECT`, `TRANSACTION_START`, `TRANSACTION_COMMIT`, `TRANSACTION_ROLLBACK`, `DDL` |
+| `ConnectionDurationMs` | long | `$null` | seit I12: nur bei `DETACH_DATABASE`: Millisekunden seit `ATTACH_DATABASE`/`CREATE_DATABASE` derselben Verbindung (Datenbankpfad + `AttachID`) in dieser Datei; leer, wenn die Verbindung vor dem Trace begann |
 
 **Tabellenstatistik lesen (seit I11):** Firebird (`appendTableCounts`) füllt die Namensspalte auf
 max(32, längster Name in Bytes) auf (Firebird 3: fest 31) und schreibt jede Zahl rechtsbündig in 10 Zeichen, 0 als
@@ -79,6 +85,22 @@ um die Zahl der Zusatzbytes früher; ist ein Name länger als die Spalte, versch
 (Ausnahme: der Rest des Namens ist genau eine zehnstellige Zahl — dann füllt der Name die Spalte genau). Unlesbare
 Zeilen werden übersprungen (Meldung mit `-Verbose`). Die Transaktionsoptionen zerlegt der Parser an ` | `
 (Firebird `register_transaction`, gleich in 3, 4 und 5; die Wartezeit steht dort als `WAIT <n>`, nicht als `LOCK_TIMEOUT`).
+
+**Prozeduren, Funktionen, Trigger (seit I12):** Laufzeit, I/O, `RecordsFetched`, Parameter, Plan und Tabellenstatistik
+stehen in den bestehenden Feldern; Auswertungen nur über Statements filtern wie bisher über `Action`. Firebird 4 und 5
+schreiben die Trigger-Zeile verschieden (geprüft an `TracePluginImpl.cpp`, Zweige `v4.0-release` und `v5.0-release`):
+Firebird 5 `Trigger <Name> FOR <Tabelle> (<Zeitpunkt> <Aktion>):` auf eigener Zeile (ggf. mit Plan darunter), Firebird 4
+`<TAB><Name> FOR <Tabelle> (<Zeitpunkt> <Aktion>) ` direkt unter der Transaktionszeile. Prozedur und Funktion stehen in
+beiden als `Procedure <Name>:` bzw. `Function <Name>:`; Firebird 5 schreibt darunter den Plan (mit `print_plan`, nur beim
+ersten Auftreten je Routine), Firebird 4 nie.
+Voraussetzung im Trace: `log_procedure_finish`, `log_function_finish`, `log_trigger_finish` (Firebird-Standard `false`;
+in `fbtrace50.conf` als auskommentierte Option, weil Trigger je Datensatz feuern und das Log sehr groß machen können).
+
+**Verbindungsdauer (seit I12):** Der Parser merkt sich je offener Verbindung (Datenbankpfad + `AttachID`) die Zeit des
+`ATTACH_DATABASE` und rechnet beim `DETACH_DATABASE`; danach fällt der Eintrag weg. Das passt zum Streaming: der Speicher
+wächst mit der Zahl gleichzeitig offener Verbindungen, nicht mit der Dateigröße. Grenzen: Verbindungen, die vor dem Trace
+begannen, bleiben leer; wer eine Datei in Teilen liest, verliert Paare über die Teilgrenze. Die Datenbank gehört zum
+Schlüssel, weil jede Datenbank ihre `ATT`-Nummern selbst zählt.
 
 Die Schalterzeile von `START_SERVICE` (z. B. `-VERBOSE <Datenbank> <Sicherungsdatei>`) wird bewusst **nicht** gelesen:
 sie enthält Dateipfade, für die es keine Pseudonymisierung gibt. Voraussetzung im Trace: `log_sweep = true` (Abschnitt
@@ -95,6 +117,8 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
 - Regex-Objekte einmal vor der Schleife bauen (`Compiled`) — nicht pro Block.
 - Fehlende Felder sind kein Fehler: ein Objekt wird immer ausgegeben (auch für unbekannte Ereignisarten).
 - `TableStats` bewusst nicht trimmen.
+- Einziger Zustand über Blöcke hinweg (seit I12): die offenen Verbindungen für `ConnectionDurationMs`; alle anderen Felder
+  kommen nur aus dem eigenen Block.
 - Teure Teile nur bei Bedarf: erst `Contains`/`IndexOf`, dann Regex oder Zerlegen. Tabellenzeilen ohne
   PowerShell-Schleife über die Spalten lesen (eine Schleife war etwa sechsmal langsamer); leere Zellen über
   `'0' + Text` lesen — Windows PowerShell 5.1 wandelt Leerzeichen nicht in eine Zahl.
@@ -114,6 +138,10 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
 - Ein Block ohne `Statement`-Abschnitt (z. B. Verbindungs- oder Transaktionsereignis) liefert `SqlStatement = $null` — beim Gruppieren berücksichtigen.
 - `TableCounts` ist eine Liste: `Export-Csv` schreibt dafür nur `System.Object[]`. Für CSV die Liste aufklappen oder
   `TableStats` exportieren.
+- `ConnectionDurationMs` steht am `DETACH_DATABASE`-Objekt, nicht am `ATTACH_DATABASE`-Objekt (Streaming: beim Attach ist das
+  Ende noch unbekannt).
+- Ruft eine Prozedur weitere Prozeduren auf oder löst Trigger aus, steckt deren Zeit vermutlich auch in ihrer Laufzeit
+  (nicht geprüft). Summen über `RoutineType` können deshalb doppelt zählen.
 - `RecordsFetched = 0` heißt nicht immer „0 Datensätze": ohne die Zeile (Transaktionsereignis, Prozedur mit 0) ist der
   Wert ebenfalls 0. Für „viel gelesen, wenig geliefert" nur Statement-Ereignisse auswerten.
 
@@ -125,6 +153,8 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
 - Pester-Beschreibung: `Describe 'Show-TraceStructure' { ... }`
 - Fixture: synthetische Trace-Datei mit **fiktiven** Werten unter `tests/fixtures/` (je Ereignisart mindestens ein Block);
   seit I11 `trace_fb5_counts.log` mit `tests/Show-TraceStructure.Counts.Tests.ps1` (RecordsFetched, Transaktionsoptionen,
-  Tabellenstatistik mit breiter Namensspalte, Umlauten, Firebird-3-Kopf)
+  Tabellenstatistik mit breiter Namensspalte, Umlauten, Firebird-3-Kopf); seit I12 `trace_fb5_routines.log` und
+  `trace_fb4_routines.log` mit `tests/Show-TraceStructure.Routines.Tests.ps1` (Prozeduren, Funktionen, Trigger in beiden
+  Formaten, Verbindungsdauer)
 - Kritische Testfälle: jede Property aus der Tabelle oben mit exaktem Wert; Block ohne SQL; Rolle ≠ `NONE`;
   fehlende Datei → Fehler; Zähler > Int32; leere Datei → keine Objekte

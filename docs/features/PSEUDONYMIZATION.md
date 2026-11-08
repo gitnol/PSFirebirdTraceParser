@@ -30,7 +30,7 @@ Trace-Daten für externe Analysen weitergegeben werden können; `-AnalyzeOnly` z
 
 ---
 
-## Feldabdeckung (Vertrag, Stand I11 2026-11-08)
+## Feldabdeckung (Vertrag, Stand I12 2026-11-08)
 
 Jedes Feld ist entschieden: pseudonymisiert oder begründet im Klartext. Neue Felder des Parsers müssen hier
 eingetragen werden, bevor sie ausgeliefert werden.
@@ -49,6 +49,8 @@ eingetragen werden, bevor sie ausgeliefert werden.
 | `ClientPort`, `ProcessID`, `SessionID`, `AttachID`, `TransactionID`, `RootTxID`, `ApplicationPID`, `ErrorSource`, `ErrorCodes` | Klartext | technische IDs/Codes; erlauben Verknüpfung innerhalb des Traces, keine direkte Identifikation |
 | `Timestamp`, `Action`, `TransactionOptions`, Zähler | Klartext | Analysezweck |
 | `RecordsFetched`, `TxIsolation`, `TxReadMode`, `TxWaitMode`, `TxLockTimeout`, `TxAccessMode` (seit I11) | Klartext | Zähler und feste Firebird-Schlüsselwörter, Teile von `TransactionOptions`; keine Personendaten |
+| `RoutineName`, `TriggerTable` (seit I12) | Klartext (wie Tabellennamen, Entscheidung I2) | Schema-Namen von Prozeduren, Funktionen, Triggern und Tabellen: keine Personendaten, aber Geschäftsinterna; `-SensitiveKeywords` verbirgt sie nicht. Wer sie verbergen muss, lässt sie weg (`-ExcludeProperty RoutineName, TriggerTable`) |
+| `RoutineType`, `TriggerTime`, `TriggerEvent`, `ConnectionDurationMs` (seit I12) | Klartext | feste Firebird-Schlüsselwörter und eine Dauer; keine Personendaten. Benutzer, IP und Programm dieser Ereignisse laufen über die bestehenden Felder (Pseudonym) |
 
 Hash-Verfahren seit I3: HMAC-SHA256 mit geheimem Schlüssel, gekürzt auf `-HashLength` (ADR-001). Ohne Schlüssel nicht vorausberechenbar;
 mit Schlüssel prüfbar — Schlüssel und Zuordnungsdatei bleiben beim Verantwortlichen.
