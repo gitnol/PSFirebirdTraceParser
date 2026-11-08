@@ -4,15 +4,15 @@ Zuletzt aktualisiert: 2026-11-08
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
 **Letztes abgeschlossenes Inkrement:** I18 – C#-Parser: Diagnose (2026-11-08)
-**Nächster Schritt:** Reflexion (fällig), dann I19 (`-Engine`); I8 (Rest) mit dem Security-Sweep am 2026-11-21
-**Nächste Reflexion:** beim dritten abgeschlossenen Inkrement nach I13 (Reflexion I13 am 2026-11-08; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
+**Nächster Schritt:** I19 (`-Engine`, Standard Auto); I8 (Rest) mit dem Security-Sweep am 2026-11-21
+**Nächste Reflexion:** beim dritten abgeschlossenen Inkrement nach I18 (Reflexion I18 am 2026-11-08; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
 ---
 
 ## Nächster Schritt
 
-I16–I18 umgesetzt: C#-Parser liefert auf allen Fixtures und Grenzfällen dieselben Objekte, Warnungen und Verbose-Meldungen (Paritätstests). Fällig: Reflexion (drittes Inkrement nach I13), dann I19 (`-Engine`, Standard Auto, Messung) und I20. Offen für den Owner: lokal .NET SDK 10 installieren (.NET 9 Supportende 2026-11-10), ersten CI-Lauf nach dem Push ansehen; `log_procedure_finish`/`log_trigger_finish` in `fbtrace50.conf` weiter offen. I8 (Rest) mit dem Security-Sweep am 2026-11-21. Empfohlenes Modell: Opus oder Sonnet, hoher Effort.
+I16–I18 umgesetzt: C#-Parser liefert auf allen Fixtures und Grenzfällen dieselben Objekte, Warnungen und Verbose-Meldungen (Paritätstests). Reflexion I18 erledigt. Als Nächstes I19 (`-Engine`, Standard Auto, Messung) und I20. Offen für den Owner: lokal .NET SDK 10 installieren (.NET 9 Supportende 2026-11-10), ersten CI-Lauf nach dem Push ansehen; `log_procedure_finish`/`log_trigger_finish` in `fbtrace50.conf` weiter offen. I8 (Rest) mit dem Security-Sweep am 2026-11-21. Empfohlenes Modell: Opus oder Sonnet, hoher Effort.
 
 ---
 

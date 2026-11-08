@@ -29,7 +29,7 @@ Bekannte Bugs ohne aktiven Fix: `KNOWN_ISSUES.md`.
 
 Herkunft I16–I20: Entscheidung Owner 2026-11-08 — den Parser in C# neu bauen, parallel zum PowerShell-Parser, bis C#
 ihn ohne Änderung für Nutzer ersetzen kann; danach steuert PowerShell nur noch den C#-Code. Beide Parser müssen sich
-bis dahin immer gleich verhalten; der Paritätstest (ab I17) ist die Ratsche dafür. Qualitätsregeln unverändert.
+bis dahin immer gleich verhalten; der Paritätstest (seit I17) ist die Ratsche dafür. Qualitätsregeln unverändert.
 Split wegen der Größengrenze (KICKOFF Phase 2 Punkt 5): je Inkrement höchstens eine neue Entscheidung, ~400 Zeilen.
 Gebündelt wird nichts: I8 liest andere Quellen (Security-Sweep), der Refactoring-Kandidat `Show-TraceStructure.ps1`
 (`BACKLOG.md`) wird durch I20 vielleicht überflüssig — deshalb **getrennt gelassen** und erst nach I20 entschieden.

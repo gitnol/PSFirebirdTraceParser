@@ -13,6 +13,38 @@ und Reflexion nach I5: `changelog/ARCHIVE-CHANGELOG-I11-I15.md`.
 
 ---
 
+## 2026-11-08 Reflexion nach I18
+
+Kein Inkrement (KICKOFF Phase 1c, `REFLECTION.md`). Begutachtet: I16, I17, I18 (drittes abgeschlossenes Inkrement nach
+I13).
+
+### Advocatus Diaboli
+- **Positiv:** Die Gleichheit ist geprüft, nicht behauptet: Paritätstests über 5 Fixtures, 10 Feld-Grenzfälle und
+  24 Diagnose-Fälle (Objekte, Warnungen, Verbose); Mutationsproben je Inkrement (I16 16, I17 35, I18 23 Mutanten),
+  überlebende Mutanten führten jedes Mal zu neuen Grenzfällen (I17 5, I18 3). Die Korrektur des Owners (Priorität
+  PowerShell 7) kam mitten in I16 und wurde sofort umgesetzt (`net8.0`, Tests unter 5.1 übersprungen, ADR-003).
+- **Negativ:** I17 lag mit ~520 Zeilen über der Faustgrenze (im CHANGELOG begründet). Der C#-Code überträgt das Skript
+  wörtlich, auch Eigenheiten, die man sonst nicht bauen würde (kulturabhängige Suche, `LanguagePrimitives` für
+  Tabellenzellen); das ist gewollt (ADR-003), macht den Code aber für C#-Leser fremd. Noch kein End-to-End-Konsument:
+  Nutzer erreichen den C#-Parser erst mit `-Engine` (I19). Ungeprüft: Laden unter PowerShell 7.4/7.5 und der erste
+  CI-Lauf mit Build. Die Diagnose-Paritätstests dauern lange (mehrere 5-MB-Dateien, ~60 s je Lauf), was die
+  Mutationsprobe auf ~1 min je Mutant bringt.
+- **Lehren-Filter:** L9 und L10 je ein Fall in einem Projekt (L10: zweiter Fall im selben Projekt). L4–L8 unverändert
+  offen.
+
+### Changed
+- `TODO.md`: Verweis „ab I17" auf „seit I17" (Health-Check). `STATE.md`: Reflexions-Marker auf das dritte Inkrement
+  nach I18; I11–I13 nach `changelog/ARCHIVE-STATE.md`, CHANGELOG-Einträge vor I13 nach
+  `changelog/ARCHIVE-CHANGELOG-I11-I15.md` (Rotation, eigener Commit).
+
+### Confidence / Ungeprüft
+- Health-Check: ein Treffer („ab I17", behoben); Validator OK. Interna-Scan gegen `.internal-terms` über alle
+  versionierten Dateien: 0 Treffer; Suche mit Wortgrenzen für kurze Namen nicht gemacht.
+- Hotspots seit der Reflexion I13: nur neue C#-Dateien und Tests (je 2–4 Commits, größte `TraceBlockParser.cs` mit
+  ~370 Zeilen) — keine Kandidaten. Der Kandidat `Show-TraceStructure.ps1` in `BACKLOG.md` bleibt bis zur Entscheidung in
+  I20 zurückgestellt (wird der PowerShell-Parser entfernt, entfällt er).
+- Roadmap: nächste drei Inkremente I19, I20, I8 (Rest, mit dem Sweep am 2026-11-21); nichts zu bündeln.
+
 ## 2026-11-08 I18 – C#-Parser: Diagnose gleich wie PowerShell
 
 Commits `7784857` (Paritätstests für Diagnose rot), `c33a557` (Umsetzung, Grenzfälle nach der Mutationsprobe ergänzt).
