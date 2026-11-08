@@ -128,6 +128,17 @@ Startet und stoppt eine Firebird-Trace-Sitzung (Firebird 4.0 / 5.0) mit `fbtrace
 | `OutputDirectory` | Ziel der Logdatei `trace_output_<Zeitstempel>.log` (`%VAR%` erlaubt) |
 | `SessionName` | Präfix des Sitzungsnamens; `trace_stop.ps1` findet die Sitzung über diesen Namen |
 
+#### Eigener Trace-Benutzer statt SYSDBA (Firebird 4/5)
+Ein normaler Benutzer darf fremde Verbindungen tracen, wenn eine Rolle mit dem Systemrecht `TRACE_ANY_ATTACHMENT` aktiv ist. Als SYSDBA, verbunden mit der Datenbank, die aufgezeichnet werden soll (Namen sind Beispiele):
+
+```sql
+CREATE USER TRACE_USER PASSWORD '<neues Passwort>';
+CREATE ROLE TRACER SET SYSTEM PRIVILEGES TO TRACE_ANY_ATTACHMENT;
+GRANT DEFAULT TRACER TO USER TRACE_USER;
+```
+
+Danach in `config.json`: `"Username": "TRACE_USER"`, `"Role": "TRACER"` und das Passwort von `TRACE_USER` in die Passwortdatei (oder `"UseTrustedAuth": true`). Stand das SYSDBA-Passwort je auf einer Befehlszeile (z. B. `fbtracemgr -PASS`), das Passwort ändern. Ausführlich: [docs/operations/SETUP.md](docs/operations/SETUP.md).
+
 Exit-Codes: 0 ok, 1 `config.json` fehlt, 2 Konfiguration ungültig (alle Fehler werden genannt; auch, wenn noch ein Schlüssel `Password` drinsteht), 3 keine Sitzung gefunden, 4 mehrere Sitzungen passen, 5 Fehler von `fbtracemgr`, 6 unerwarteter Fehler.
 
 ---

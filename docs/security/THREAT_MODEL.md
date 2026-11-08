@@ -105,9 +105,10 @@ oder Doku könnten erneut echte Trace-Auszüge enthalten.
 - Interna-Hook (`tools/git-hooks/`, Denylist `.internal-terms`) in jedem Klon aktivieren (`CONVENTIONS_COMMON.md` 3.1);
   im Arbeitsklon des Owners seit 2026-11-08 aktiv. Er prüft nur neue Commits, nicht die History.
 - Fixtures und Beispiele nur mit fiktiven Werten (`CONVENTIONS.md` §6).
-- Owner-Entscheidung zur History-Bereinigung (`docs/TODO.md` → Owner-Aufgaben).
+- Owner-Entscheidung 2026-11-08: History **nicht** bereinigen (zwei interne Begriffe in je zwei Commits, kein echtes
+  Passwort; ein Force-Push bräche Klone, Caches und Forks behielten die alten Stände). Ausgleich: SYSDBA-Passwort ändern.
 
-**Restrisiko:** Mittel – bereits veröffentlichte History ist ohne Bereinigung weiter abrufbar.
+**Restrisiko:** Mittel, akzeptiert (2026-11-08) – die veröffentlichte History bleibt abrufbar.
 
 ---
 

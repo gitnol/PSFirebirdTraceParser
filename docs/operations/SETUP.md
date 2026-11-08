@@ -76,16 +76,31 @@ Nach der Aufzeichnung löschen. Nie ins Repo legen. Das früher in `config.json`
 
 ### Optional: Trace-Benutzer statt SYSDBA
 
-Ab Firebird 4.0 darf ein normaler Benutzer fremde Verbindungen tracen, wenn er eine Rolle mit dem Systemrecht
-`TRACE_ANY_ATTACHMENT` benutzt. Als SYSDBA in der Datenbank (Namen fiktiv):
+Ab Firebird 4.0 darf ein normaler Benutzer fremde Verbindungen tracen, wenn eine Rolle mit dem Systemrecht
+`TRACE_ANY_ATTACHMENT` aktiv ist. Als SYSDBA, verbunden mit der Datenbank, die aufgezeichnet werden soll (Namen fiktiv):
 
 ```sql
+CREATE USER TRACE_USER PASSWORD '<neues Passwort>';
 CREATE ROLE TRACER SET SYSTEM PRIVILEGES TO TRACE_ANY_ATTACHMENT;
-GRANT TRACER TO TRACE_USER;   -- TRACE_USER vorher mit CREATE USER anlegen
+GRANT DEFAULT TRACER TO USER TRACE_USER;
 ```
 
-In `config.json`: `"Username": "TRACE_USER"`, `"Role": "TRACER"`. So beschreibt es die Firebird-Dokumentation; mit
-diesen Skripten gegen einen echten Server noch nicht geprüft (bisher SYSDBA ohne Rolle).
+Erklärung:
+
+- `CREATE USER` legt den Benutzer an (in der Sicherheitsdatenbank). Das Passwort danach in die Passwortdatei (oben)
+  schreiben, nirgends sonst.
+- Die Rolle gibt nur dieses eine Systemrecht, keine Rechte an Tabellen. Sie liegt in der Datenbank, in der sie angelegt
+  wurde — bei mehreren Datenbanken dort jeweils anlegen und zuweisen.
+- `GRANT DEFAULT` (ab Firebird 4.0) macht die Rolle zur Standardrolle: Sie ist beim Anmelden aktiv, auch ohne
+  Rollenangabe. Die Skripte geben sie mit `"Role"` ohnehin mit (`-ROLE`).
+
+In `config.json`: `"Username": "TRACE_USER"`, `"Role": "TRACER"`, dazu `PasswordFile` mit dem Passwort von `TRACE_USER`
+oder `"UseTrustedAuth": true`. So machen es die Firebird-QA-Tests (`tests/functional/syspriv/test_trace_any_attachment.py`,
+ab 4.0: Rolle in der Testdatenbank, `grant default`, Trace mit Benutzer und Rolle); mit diesen Skripten gegen einen
+echten Server noch nicht geprüft (bisher SYSDBA ohne Rolle).
+
+Stand das SYSDBA-Passwort je auf einer Befehlszeile (früher `fbtracemgr -PASS`, sichtbar in Prozesslisten und in der
+Befehlshistorie der Shell), das SYSDBA-Passwort ändern: `ALTER USER SYSDBA PASSWORD '<neues Passwort>';`
 
 ### Optional: Windows-Anmeldung
 

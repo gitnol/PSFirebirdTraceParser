@@ -66,7 +66,3 @@ erste Punkt (Vorlage versionsneutral) ist mit I4/I5 erledigt.
 **Zusätzliche Kriterien:**
 
 - [ ] Kein Interna-Treffer im Diff (öffentliches Repo, `CONVENTIONS_COMMON.md` 3.1)
-
-### Ohne Inkrement-Nummer (Owner-Aufgaben)
-
-- [ ] Branch-History nach `CONVENTIONS_COMMON.md` 3.1 prüfen; Befund und Optionen in `docs/local/ENVIRONMENT.md` (Entscheidung Repo-Owner: History-Bereinigung oder dokumentierte Akzeptanz)

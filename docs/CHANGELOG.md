@@ -10,6 +10,28 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 Trace-Benutzer in den READMEs, Entscheidung zur Git-History
+
+Kein Inkrement; zwei Ergänzungen des Owners (2026-11-08).
+
+**Trigger-Matrix:** Einrichtung → `README.md`, `README.de.md` (neuer Abschnitt Trace-Benutzer), `operations/SETUP.md`;
+Risiko entschieden → `STATE.md` („akzeptiert“), `security/THREAT_MODEL.md` (Bedrohung 5), `TODO.md` (Owner-Aufgabe
+entfernt). Kein Entscheidungslog (`architecture/ADR/DECISIONS.md`) vorhanden; Betriebsentscheidung ohne eigenes ADR.
+
+### Changed
+- READMEs: eigener Trace-Benutzer mit Rolle statt SYSDBA (`CREATE USER`, `CREATE ROLE … TRACE_ANY_ATTACHMENT`,
+  `GRANT DEFAULT`), Passwortdatei bzw. `UseTrustedAuth`, Hinweis zum Ändern des SYSDBA-Passworts, Verweis auf `SETUP.md`.
+- `SETUP.md`: `CREATE USER` ergänzt, `GRANT TRACER TO TRACE_USER` → `GRANT DEFAULT TRACER TO USER TRACE_USER`,
+  Erklärung (Rolle je Datenbank, Standardrolle), Befehl zum Ändern des SYSDBA-Passworts.
+- Git-History wird nicht bereinigt (Begründung in `STATE.md` → Risiken); Owner-Aufgabe in `TODO.md` entfernt.
+
+### Confidence / Ungeprüft
+- Befehle mit den Firebird-QA-Tests abgeglichen (`test_trace_any_attachment.py`, ab 4.0: Rolle in der Testdatenbank,
+  `grant default`, Trace mit Benutzer und Rolle), nicht gegen einen echten Server mit diesen Skripten.
+- Dass die Rolle in der aufgezeichneten Datenbank (nicht in der Sicherheitsdatenbank) liegen muss, folgt nur aus dem
+  QA-Test; mehrere Datenbanken ungeprüft.
+- History-Befund vom Owner übernommen, hier nicht erneut geprüft.
+
 ## 2026-11-08 I11 – Parser: RecordsFetched, Transaktionsoptionen, Tabellenstatistik je Tabelle
 
 Commits `3d58b3f` (Tests rot, Stub mit Vertrag), `6450b79` (Umsetzung). Freigabe des Owners 2026-11-08; Zweck: der

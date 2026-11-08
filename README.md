@@ -128,6 +128,17 @@ Start and stop a Firebird trace session (Firebird 4.0 / 5.0) with `fbtracemgr`. 
 | `OutputDirectory` | Where the log `trace_output_<timestamp>.log` goes (`%VAR%` allowed) |
 | `SessionName` | Prefix of the session name; `trace_stop.ps1` finds the session by this name |
 
+#### Own trace user instead of SYSDBA (Firebird 4/5)
+A normal user may trace other connections if a role with the system privilege `TRACE_ANY_ATTACHMENT` is active. As SYSDBA, connected to the database you want to trace (names are examples):
+
+```sql
+CREATE USER TRACE_USER PASSWORD '<new password>';
+CREATE ROLE TRACER SET SYSTEM PRIVILEGES TO TRACE_ANY_ATTACHMENT;
+GRANT DEFAULT TRACER TO USER TRACE_USER;
+```
+
+Then in `config.json`: `"Username": "TRACE_USER"`, `"Role": "TRACER"` and the password of `TRACE_USER` in the password file (or `"UseTrustedAuth": true`). If the SYSDBA password was ever typed on a command line (for example `fbtracemgr -PASS`), change it. Details: [docs/operations/SETUP.md](docs/operations/SETUP.md) (German).
+
 Exit codes: 0 ok, 1 `config.json` missing, 2 configuration invalid (all errors listed; also when a `Password` key is still there), 3 no session found, 4 several sessions match, 5 `fbtracemgr` error, 6 unexpected error.
 
 ---
