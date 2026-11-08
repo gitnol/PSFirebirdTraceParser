@@ -27,3 +27,6 @@ _archive
 # Oeffentliches Repo: interne Umgebungsdoku und Interna-Denylist (docs/CONVENTIONS_COMMON.md 3.1)
 /docs/local/
 /.internal-terms
+# C# parser (ADR-003): build output and intermediate files are never versioned
+/bin/
+obj/
