@@ -12,6 +12,48 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 I18 – C#-Parser: Diagnose gleich wie PowerShell
+
+Commits `7784857` (Paritätstests für Diagnose rot), `c33a557` (Umsetzung, Grenzfälle nach der Mutationsprobe ergänzt).
+Umfang: C# ~250 Zeilen (neu `TraceDiagnostics.cs`), Tests ~190 Zeilen.
+
+**Trigger-Matrix:** neues Modul → `architecture/OVERVIEW.md`; Boundary (Zeitlimit im C#-Parser) →
+`architecture/ERROR_HANDLING.md`; Teststrategie → `features/TRACE_PARSING.md`; Lehren → `LESSONS_LEARNED.md` L9, L10.
+Kein neuer Parameter, keine neue Dependency.
+
+### Added
+- `TraceDiagnostics.cs`: Warnungen `Line <n>: …` mit derselben Zeilenzählung (Zwischenspeicher je Stück, Verschiebung
+  nach gekürztem Rest), Vorspann, Zählung je `Action` in einer Hashtable ohne Groß-/Kleinschreibung, Zusammenfassung
+  sortiert wie `Sort-Object` (Anzahl absteigend, Name nach aktueller Kultur ohne Groß-/Kleinschreibung).
+- Block-Parser: `-MaxBlockLines` (auch für schon beim Weitertragen gekürzte Blöcke), `RegexMatchTimeoutException`
+  je Ereignis gefangen; Stück-Schleife kürzt den Rest wie das Skript. Zahl im Zeitlimit-Text wie PowerShell
+  (`LanguagePrimitives`, geprüft: `0.30000000000000004` → `0.3`).
+- `tests/TraceParity.ps1`: `Invoke-TraceEngine`, `Compare-TraceRun` (Objekte, Warnungen, Verbose in Reihenfolge; Zeit
+  und Startzeile ausgenommen). Der Paritätstest aus I17 vergleicht damit auch Warnungen und Verbose.
+- `tests/FirebirdTraceParser.Diagnostics.Parity.Tests.ps1`: 24 Tests — Eingaben der Diagnose-Tests, kleine
+  `UNKNOWN`/Startzeile, Sortierung mit Unterstrich, alle Fixtures mit CRLF und gemischt, zwei Warnungen in zwei Stücken,
+  Kürzen über Stückgrenzen (mit Block, ohne Zeitstempel, Zählung Stücke später), Zeitlimit.
+
+### Confidence / Ungeprüft
+- RED: 35 von 36 Tests rot gegen den I17-Stand (z. B. `'Warnings[0]: [Line 6: event header not readable, fields left
+  empty] vs []'`). GREEN: 52 von 52 der C#-Testdateien.
+- Gate: Build ✓, PSScriptAnalyzer ✓ 0, Pester 7.6.9: 206 passed; Windows PowerShell 5.1: 149 passed, 57 skipped
+  (C#-Tests, gewollt).
+- Mutationsprobe (Neubau je Mutant, Kontrolle 0): 23 Mutanten, 1 kompilierte nicht. Zuerst 4 überlebt, dafür 3 Fälle
+  ergänzt (Sortierung `TEST_A`/`TESTB`, zwei Warnungen in zwei Stücken, Warnung Stücke nach dem gekürzten Block).
+  Danach 20 rot, 2 äquivalent: Vorprüfung `carry.Length > MaxBlockLines` verdoppelt (der Block wird dann im
+  Block-Parser gekürzt, gleiche Ausgabe — nur der Speicherschutz greift später) und `cut ||` in der Vorprüfung des
+  Block-Parsers (ein gekürzter Block hat mindestens so viele Zeichen wie Zeilen; nur bei lauter Leerzeilen anders).
+- Zeitlimit-Test: bei 1 ms lief in 1 von 3 Läufen auch der kleine Folgeblock ins Limit (gemessen) — Test auf 0,5 s
+  gegen eine Suche, die Sekunden braucht (L10). Nicht geprüft: Verhalten bei Zeitlimit in einer anderen Regex als der
+  Anwendungszeile.
+- Ungeprüft: `Write-Progress` (nicht verglichen; nur Anzeige).
+
+### Lessons Learned
+- Nachbau in zweiter Sprache: die stille Semantik der ersten (Hashtable ohne Groß-/Kleinschreibung, `-eq`, `[long]`-Cast,
+  kulturabhängige Suche) als eigene Funktionen nachbauen und mit Grenzfällen prüfen → `LESSONS_LEARNED.md` L9.
+- Zeitlimit-Tests mit großem Abstand zwischen Limit und Laufzeit, sobald zwei Läufe gleich sein müssen → L10.
+
 ## 2026-11-08 I17 – C#-Parser: alle Felder je Ereignis gleich wie PowerShell
 
 Commits `aa0393b` (Paritätstest rot), `9c90746` (Umsetzung, Grenzfälle nach der Mutationsprobe ergänzt). Über der

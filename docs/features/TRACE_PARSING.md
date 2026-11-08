@@ -176,7 +176,11 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
   `tests/FirebirdTraceParser.Parity.Tests.ps1` — beide Parser über jedes Fixture und erzeugte Grenzfälle (Tabellen mit
   überlangen, unlesbaren und seltsamen Zellen wie `1e3`/`x1F`, Fehlerzeilen, IPv6/XNET/`<internal>`, Linux-Adresse,
   Transaktionsoptionen klein geschrieben, Dienste, Verbindungsdauer mit `CREATE_DATABASE` und doppeltem Detach); jedes
-  Feld muss gleich sein (Name, Reihenfolge, Typ, Wert, `$null` gegen leer). Nur PowerShell 7. Eine Parsing-Änderung
+  Feld muss gleich sein (Name, Reihenfolge, Typ, Wert, `$null` gegen leer). Seit I18 auch Warnungen und
+  Verbose-Meldungen (ohne Zeitangabe), dazu `tests/FirebirdTraceParser.Diagnostics.Parity.Tests.ps1`: die Eingaben der
+  Diagnose-Tests, alle Fixtures mit CRLF und mit gemischten Zeilenenden, Kürzen über Stückgrenzen (auch ohne
+  Zeitstempel), Zeitlimit (0,5 s gegen eine Suche, die viel länger braucht — bei 1 ms laufen auch kleine Blöcke
+  zufällig ins Limit). Nur PowerShell 7. Eine Parsing-Änderung
   ist erst fertig, wenn sie in beiden Parsern steht.
 - Kritische Testfälle: jede Property aus der Tabelle oben mit exaktem Wert; Block ohne SQL; Rolle ≠ `NONE`;
   fehlende Datei → Fehler; Zähler > Int32; leere Datei → keine Objekte

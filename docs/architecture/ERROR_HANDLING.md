@@ -76,7 +76,8 @@ Servers, sehr große Dateien, abgeschnittene Blöcke), außerdem Parameter und `
 - **Regex auf untrusted Text:** Muster ohne verschachtelte, nicht verankerte Quantoren mit Fehlpfad; bei neuen
   Mustern Laufzeit gegen große synthetische Blöcke testen. Seit I13 zusätzlich ein Zeitlimit je Auswertung
   (`-RegexTimeoutSeconds`, Standard 2 s): `RegexMatchTimeoutException` wird je Ereignis gefangen, alle anderen Ausnahmen
-  laufen weiter nach oben.
+  laufen weiter nach oben. Der C#-Parser (seit I18, ADR-003) fängt genau dieselbe Ausnahme an derselben Stelle und
+  schreibt dieselbe Warnung; andere Ausnahmen beenden das Cmdlet (im Skript: beenden das Skript).
 - **Schreiben atomar:** Das Projekt schreibt selbst nur die Trace-Ausgabe (Umleitung von `fbtracemgr`) und die kleine
   Zustandsdatei `trace_session.json`; Exporte schreibt der Nutzer.
 - **Jeder Crash-Fix bringt einen kleinen synthetischen Regressionstest mit**, der vor dem

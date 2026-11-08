@@ -86,6 +86,7 @@ src/FirebirdTraceParser/        → seit I16: C#-Parser (ADR-003), wörtliche Ü
   PowerShellSemantics.cs            → was PowerShell still macht, ausdrücklich: -eq ohne Groß-/Kleinschreibung, [long]"Text", Hashtable-Schlüssel (seit I17).
   TracePatterns.cs                  → Regex, Muster und Optionen wie im Skript.
   TraceField.cs                     → die 46 Felder in Vertrags-Reihenfolge mit Standardwerten → PSCustomObject.
+  TraceDiagnostics.cs               → Warnungen mit Zeilennummer, Vorspann, Zählung je Action und Zusammenfassung (seit I18).
 tests/TraceParity.ps1           → seit I16: strenger Vergleich der Objekte beider Parser (Namen, Reihenfolge, Typ, Wert).
 ```
 

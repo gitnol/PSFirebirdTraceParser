@@ -34,19 +34,6 @@ Split wegen der Größengrenze (KICKOFF Phase 2 Punkt 5): je Inkrement höchsten
 Gebündelt wird nichts: I8 liest andere Quellen (Security-Sweep), der Refactoring-Kandidat `Show-TraceStructure.ps1`
 (`BACKLOG.md`) wird durch I20 vielleicht überflüssig — deshalb **getrennt gelassen** und erst nach I20 entschieden.
 
-### I18: C#-Parser: Diagnose gleich wie PowerShell (I13)
-
-Routinen, Trigger und Verbindungsdauer (I12) sind schon in I17 umgesetzt: die Fixtures enthalten sie, die Parität auf
-den Fixtures war sonst nicht zu erreichen.
-
-**Aufgaben:**
-
-- [ ] Warnungen mit Zeilennummer (auch über Stückgrenzen und nach gekürztem Rest), Text vor dem ersten Ereignis,
-  `-MaxBlockLines`, `-RegexTimeoutSeconds`, Zusammenfassung mit `-Verbose`
-- [ ] Paritätstest auf erzeugten Grenzfällen: CRLF/LF gemischt, lange Namen und Umlaute, Trigger FB4/FB5,
-  Sweep/Service, Fehler, gekürzte Blöcke, Zeitlimit (nur wo deterministisch); Warnungen und Verbose-Meldungen (ohne
-  Zeitangabe) müssen gleich sein; unter PowerShell 7 (unter 5.1 bleibt die PowerShell-Engine)
-
 ### I19: `Show-TraceStructure.ps1 -Engine Auto|PowerShell|CSharp`, Standard Auto
 
 **Aufgaben:**

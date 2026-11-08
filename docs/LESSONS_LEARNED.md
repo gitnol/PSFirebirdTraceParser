@@ -121,6 +121,37 @@ für „zu langer Block wird gekürzt" legte den langen Block ans Dateiende: Er 
 Weitertragen kürzte. Das Kürzen in der Schleife war ungetestet; erst ein überlebender Mutant zeigte es. Ein Folgeblock
 hinter dem Testfall prüft beide Wege. Ein Fall, ein Projekt.
 
+---
+
+## L9: Beim Nachbau in einer zweiten Sprache die stille Semantik der ersten ausdrücklich machen
+- Inkrement: I17
+- Scope: generisch-base
+- Backport-Ziel: `base/principles/ORACLE_AND_RATCHET.md` (Abschnitt Orakel = Bestandssystem) bzw. ein Stack-Hinweis in `stacks/csharp-*/CONVENTIONS.md`
+- Gesehen mit: v37
+- Status: offen
+
+Der C#-Nachbau des PowerShell-Parsers war nur gleich, weil das, was PowerShell nebenbei tut, als eigene Funktionen
+nachgebaut wurde: Hashtable-Schlüssel ohne Groß-/Kleinschreibung (`@{}`), `-eq` ohne Groß-/Kleinschreibung,
+`[long]"Text"` (wandelt auch `1e3` und `0x1F` um), kulturabhängiges `IndexOf(string)`. Der Grenzfall mit `1e3` in
+einer Tabellenzelle und Transaktionsoptionen in Kleinbuchstaben belegte es (Mutation `CurrentCultureIgnoreCase` →
+`Ordinal` und `LanguagePrimitives` → `long.Parse` wurden je rot). Ohne Paritätstest über erzeugte Grenzfälle hätten die
+Fixtures (nur saubere Werte) die Unterschiede nicht gezeigt. Ein Fall, ein Projekt.
+
+---
+
+## L10: Zeitlimit-Tests mit großem Abstand zwischen Limit und Laufzeit bauen
+- Inkrement: I18
+- Scope: generisch-base
+- Backport-Ziel: `base/principles/TEST_EFFECTIVENESS.md` (nicht-deterministische Tests) bzw. `base/testing/UNIT_TESTS.md`
+- Gesehen mit: v37
+- Status: offen
+
+Ein Regex-Zeitlimit von 1 ms traf in 1 von 3 Läufen auch einen kleinen Block (gemessen) — der Vergleich zweier Parser
+wäre dann rot geworden, ohne dass sie sich unterscheiden. Mit 0,5 s gegen eine Suche, die Sekunden braucht, ist der
+Ausgang fest. Regel: Limit weit über der Laufzeit aller normalen Fälle, Testfall weit darüber; „mindestens eine
+Warnung" ist kein Ersatz, sobald zwei Läufe gleich sein müssen. Zweiter Fall im Projekt (vorher: Fix „Zeitlimit-Test
+wackelte", 2026-11-08), ein Projekt.
+
 ## Pflege
 
 - Neuer „Lessons Learned"-Block im `CHANGELOG.md` → Eintrag `## L<N>:` hier anlegen.
