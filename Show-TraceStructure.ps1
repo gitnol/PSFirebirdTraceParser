@@ -24,6 +24,10 @@
 
     Status messages go to the verbose stream (-Verbose), not to the console.
 
+    Engine (-Engine, ADR-003): Auto uses the C# parser (cmdlet ConvertFrom-FirebirdTrace in FirebirdTraceParser.dll next to
+    this script or in bin/) when PowerShell 7 runs and the DLL exists, else the PowerShell parser in this script. Both
+    give the same objects, warnings and verbose messages (parity tests).
+
 .OUTPUTS
     [PSCustomObject] - one per trace event, streamed
 #>
@@ -50,9 +54,32 @@ if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
     return
 }
 
-# Contract stub (I19): always the PowerShell parser, -Engine is not evaluated yet
-$null = $Engine
-Write-Verbose 'Engine: PowerShell'
+# Engine (I19, ADR-003): the C# parser runs only under PowerShell 7 (owner: priority PowerShell 7) and only when built
+$script:ASSEMBLY_NAME = 'FirebirdTraceParser.dll'
+$csharpDll = $null
+if ($Engine -ne 'PowerShell') {
+    foreach ($candidate in [System.IO.Path]::Combine($PSScriptRoot, $script:ASSEMBLY_NAME), [System.IO.Path]::Combine($PSScriptRoot, 'bin', $script:ASSEMBLY_NAME)) {
+        if (-not $csharpDll -and (Test-Path -LiteralPath $candidate -PathType Leaf)) { $csharpDll = $candidate }
+    }
+}
+$isCore = $PSVersionTable.PSEdition -eq 'Core'
+if ($Engine -eq 'CSharp' -and -not $isCore) {
+    Write-Error 'Engine CSharp needs PowerShell 7.4 or later; Windows PowerShell 5.1 uses -Engine PowerShell.'
+    return
+}
+if ($Engine -eq 'CSharp' -and -not $csharpDll) {
+    Write-Error "Engine CSharp: $($script:ASSEMBLY_NAME) not found next to the script or in bin/ (build: tools/Invoke-QualityGate.ps1 -Gate Build)."
+    return
+}
+$useCSharp = $isCore -and $null -ne $csharpDll
+Write-Verbose "Engine: $(if ($useCSharp) { 'CSharp' } else { 'PowerShell' })"
+if ($useCSharp) {
+    # Same parameters, objects, warnings and verbose messages as the PowerShell parser below (parity tests)
+    Write-Verbose "Streaming analysis started: $Path"
+    Import-Module -Name $csharpDll -Verbose:$false -ErrorAction Stop
+    FirebirdTraceParser\ConvertFrom-FirebirdTrace -Path (Resolve-Path -LiteralPath $Path).ProviderPath -MaxBlockLines $MaxBlockLines -RegexTimeoutSeconds $RegexTimeoutSeconds
+    return
+}
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 # Time limit per match of the block regexes (I13). The chunk splitter below has none: it is anchored and linear.

@@ -58,7 +58,8 @@ Describe 'Show-TraceStructure: -Engine (I19)' {
         @(& $copy -Path $script:Fixture 3>$null).Count | Should -Be 7
         $out = @(& $copy -Path $script:Fixture -Engine CSharp -ErrorVariable err -ErrorAction SilentlyContinue)
         $out.Count | Should -Be 0
-        $err[0].Exception.Message | Should -Match 'FirebirdTraceParser\.dll'
+        # Windows PowerShell 5.1 refuses CSharp before looking for the DLL
+        $err[0].Exception.Message | Should -Match $(if ($script:IsCore) { 'FirebirdTraceParser\.dll' } else { 'PowerShell 7' })
     }
 
     It 'findet die DLL auch direkt neben dem Skript (eigener Prozess)' -Skip:(-not $script:IsCore) {
