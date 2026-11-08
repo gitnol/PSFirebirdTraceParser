@@ -4,15 +4,15 @@ Zuletzt aktualisiert: 2026-11-08
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
 **Letztes abgeschlossenes Inkrement:** I4 + I5 – Trace-Skripte für Firebird 5 ohne Klartext-Passwort (2026-11-08)
-**Nächster Schritt:** Reflexion (drittes Inkrement nach I3), danach I11
-**Nächste Reflexion:** beim dritten abgeschlossenen Inkrement nach I3 (bisher I15, I14; voraussichtlich I4/I5; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
+**Nächster Schritt:** I11 – Parser: Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen
+**Nächste Reflexion:** beim dritten abgeschlossenen Inkrement nach I5 (voraussichtlich I13, Reihenfolge `TODO.md`: I11, I12, I13; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
 ---
 
 ## Nächster Schritt
 
-I4 und I5 gemeinsam umgesetzt (Entwurf des Owners für Firebird 5.0.4 übernommen, ADR-002). Fällig ist die Reflexion (drittes abgeschlossenes Inkrement nach I3: I15, I14, I4/I5); danach I11–I13 und I8. Empfohlenes Modell: Sonnet, mittlerer Effort.
+I4 und I5 gemeinsam umgesetzt (Entwurf des Owners für Firebird 5.0.4 übernommen, ADR-002); Reflexion nach I5 durchgeführt. Als Nächstes I11–I13; I8 (Rest) zusammen mit dem Security-Sweep am 2026-11-21. Vorher sinnvoll: einmal `trace_start.ps1`/`trace_stop.ps1` gegen den Testserver laufen lassen und den ersten CI-Lauf nach dem Push ansehen. Empfohlenes Modell: Sonnet, mittlerer Effort.
 
 ---
 

@@ -10,6 +10,37 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 Reflexion nach I5
+
+Kein Inkrement (KICKOFF Phase 1c, `REFLECTION.md`). Begutachtet: I15, I14, I4/I5 (drittes abgeschlossenes Inkrement
+nach I3). Vorher im selben Lauf: Doku-Abgleich mit dem Code-Stand (`30d3522`).
+
+### Advocatus Diaboli
+- **Positiv:** CI-Gate rot/grün belegt (Exit 1 mit 21 Befunden auf dem Code vor `ca1edc9`, Exit 2 mit absichtlich
+  falschem Test); kein Passwort in den Argumenten an `fbtracemgr` (Test und Ersatzprogramm-Protokoll); Tests laufen
+  jetzt auch unter 5.1 — vorher war die Zusage „5.1" unbelegt (L5).
+- **Negativ:** I4/I5 hat die Größengrenze gerissen (7 Dateien, ~800 Zeilen) — begründet, aber die Grenze war vor
+  Phase 2 bekannt. `-Gate All` lief in `c26fb8b` mit einem Fehler aus (Pester nach dem Linter nicht ladbar), gefunden
+  erst durch die neuen Tests mit `Mock` (`ada07b5`). `SupportsShouldProcess` an `Start-`/`Stop-TraceSession` dient nur
+  der Analyzer-Regel; die Skripte bieten kein `-WhatIf` an. Stopp-Bestätigung über den Meldungstext und das Format
+  von `-LIST` sind nur gegen Ersatzprogramme getestet. Vermutung ohne Beleg: Kürzt `fbtracemgr -LIST` lange Namen,
+  findet der Stopp die Sitzung nicht und löscht die Zustandsdatei (Exit 3) — beim ersten echten Lauf prüfen.
+- **Lehren-Filter:** L5, L6, L7 sind je ein Fall in einem Projekt (so vermerkt); L6 betrifft nur Pester. L3, L4 bleiben offen.
+
+### Changed
+- `BACKLOG.md`: Datenbankfilter-Idee zusammengeführt (zwei Einträge zu `include_filter`), Passwortdatei-Prüfung zu
+  den Ideen, neuer Refactoring-Kandidat `TraceCommon.ps1`/`Read-TraceConfig` (Hotspot), `#Requires` angepasst.
+- `STATE.md`: Reflexions-Marker auf das dritte Inkrement nach I5; Nächster Schritt I11.
+
+### Confidence / Ungeprüft
+- Health-Check, Struktur-Checks: Validator OK. Interna-Scan gegen `.internal-terms` über alle versionierten Dateien:
+  0 Treffer; Suche mit Wortgrenzen für kurze Namen nicht gemacht (keine Liste in `docs/local/` geprüft).
+- Hotspots seit `5305266`: keine Datei mit mehr als 2 Commits; einziger Kandidat nach Größe `TraceCommon.ps1`.
+- Testgüte der seit `5305266` geänderten Kern-Dateien: Mutationsproben in I15 (6/6), I14 (3/3), I4/I5 (16/16).
+- Roadmap: I11, I12, I13 in dieser Reihenfolge (Parser, bauen aufeinander nicht auf; I13 zuletzt, weil seine
+  Zusammenfassung die Ereignisarten aus I12 mitzählen soll); I8-Rest zum Security-Sweep (2026-11-21), weil beide
+  dieselben Quellen lesen. Keine Änderung an `TODO.md` nötig außer dem Hinweis bei I8 (eigener Commit).
+
 ## 2026-11-08 I4 + I5 – Trace-Skripte für Firebird 5 ohne Klartext-Passwort
 
 Commits `266d6a4` (Tests rot, Stub mit Vertrag), `d9a2a8b` (Umsetzung), dazu `ada07b5` (Gate-Fix aus I14, beim Lauf
