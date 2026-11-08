@@ -30,7 +30,15 @@
 [CmdletBinding()]
 param (
     [Parameter(Mandatory = $true, Position = 0)]
-    [string]$Path
+    [string]$Path,
+
+    # Upper limit of lines per block; a longer block is cut to this many lines (warning). Protects memory.
+    [ValidateRange(1, 2147483647)]
+    [int]$MaxBlockLines = 100000,
+
+    # Time limit per regex evaluation in a block; when reached, the remaining fields stay empty (warning).
+    [ValidateRange(0.001, 3600)]
+    [double]$RegexTimeoutSeconds = 2
 )
 
 if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
