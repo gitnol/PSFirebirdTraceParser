@@ -8,13 +8,15 @@ Parser und Pseudonymisierer arbeiten ohne Credentials.
 
 ---
 
-## Ist-Zustand (Init, 2026-10-11)
+## Ist-Zustand (seit I4, 2026-11-08, ADR-002)
 
 | Credential | Ablage | Übergabe an `fbtracemgr` | Bewertung |
 |---|---|---|---|
-| Firebird-Benutzer + Passwort (Vorlage: SYSDBA) | `config.json` im Skriptverzeichnis, Klartext, gitignored | Kommandozeile `-USER … -PASS …` | **nicht konform**: Klartext auf Platte, Passwort in der Prozess-Kommandozeile sichtbar, höchstprivilegierter Benutzer |
+| Firebird-Benutzer + Passwort | Benutzer in `config.json`; Passwort in einer Passwortdatei außerhalb des Repos (`PasswordFile`, Rechte nur eigenes Konto) | `-USER <name> -FETCH_PASSWORD <datei>` — nur der Pfad in der Befehlszeile | konform mit Restrisiko: Datei ist Klartext, Schutz über Dateirechte |
+| keins (Windows-Anmeldung) | — | `-TRUSTED` | konform; Server braucht `Win_Sspi` |
 
-Bedrohung 3 in `security/THREAT_MODEL.md`; Ablösung in I4 (`docs/TODO.md`).
+Bis I4 standen Benutzer und Passwort im Klartext in `config.json` und gingen per `-PASS` in die Befehlszeile
+(Bedrohung 3 in `security/THREAT_MODEL.md`).
 
 ---
 
@@ -22,8 +24,8 @@ Bedrohung 3 in `security/THREAT_MODEL.md`; Ablösung in I4 (`docs/TODO.md`).
 
 | Credential-Typ | Empfohlener Store | Bemerkung |
 |---|---|---|
-| Firebird-Passwort des Trace-Benutzers | DPAPI-Datei (`Export-Clixml`) oder `SecretManagement` | an den ausführenden Windows-Benutzer gebunden |
-| Übergabe an `fbtracemgr` | Option `-fetch <datei>` (Passwort aus Datei, ACL nur ausführender Benutzer, nach Gebrauch löschen) **oder** `-trusted` (Windows-Authentifizierung, falls serverseitig konfiguriert) | Optionen laut Firebird-4.0-Manpage von `fbtracemgr`; Auswahl in ADR-002 (I4) |
+| Firebird-Passwort des Trace-Benutzers | Passwortdatei mit Rechten nur für den ausführenden Benutzer (ADR-002); nach der Aufzeichnung löschen | DPAPI + kurzlebige Datei geprüft und verworfen (ADR-002: Start blockiert während der ganzen Aufzeichnung) |
+| Übergabe an `fbtracemgr` | `-FETCH_PASSWORD <datei>` **oder** `-TRUSTED` (Windows-Authentifizierung, falls serverseitig konfiguriert) | umgesetzt in `TraceCommon.ps1` (`Get-TraceAuthArgumentList`) |
 | Pseudonymisierungs-Schlüssel (seit I3, ADR-001) | Schlüsseldatei `-KeyFile` (Base64, Rechte nur aktueller Benutzer) oder Zufallsschlüssel nur im Speicher des Laufs | nie in Exporten, Logs, Zuordnungsdatei oder `config.json` |
 
 `.dpapi`-/`*.secret`-Dateien stehen in `.gitignore`.
@@ -50,37 +52,32 @@ ist auf anderen Konten/Rechnern nicht lesbar.
 
 Ab Firebird 4 kann ein normaler Benutzer fremde Verbindungen tracen, wenn er eine Rolle mit dem Systemprivileg
 `TRACE_ANY_ATTACHMENT` besitzt (Firebird-Doku „Trace configuration"; ohne das Privileg nur eigene Verbindungen).
-Damit braucht `fbtracemgr` kein SYSDBA-Passwort. Einrichtung (Rolle anlegen, als Default-Rolle zuweisen) wird
-in I4 in `operations/SETUP.md` beschrieben und gegen die eingesetzte Firebird-Version geprüft.
+Damit braucht `fbtracemgr` kein SYSDBA-Passwort. Einrichtung: `operations/SETUP.md`; die Skripte geben die Rolle
+mit `-ROLE` weiter (`Role` in `config.json`). Gegen einen echten Server noch nicht geprüft.
 
 ---
 
 ## Anti-Pattern
 
 ```powershell
-# Verboten: Passwort als Kommandozeilenargument (Bestand trace_start.ps1/trace_stop.ps1)
-& "$MyPfad\fbtracemgr" -SE service_mgr -USER $MyUser -PASS $MyPass -START …
+# Verboten: Passwort als Kommandozeilenargument (früher in trace_start.ps1/trace_stop.ps1)
+& $exe -SE service_mgr -USER $user -PASS $pass -START …
 
-# Verboten: Klartext-Passwort in einer Konfigurationsdatei (Bestand config.json)
-# Verboten: bekanntes Standardpasswort in Vorlagen (Bestand config.sample.json)
+# Verboten: Klartext-Passwort in config.json (seit I4: Abbruch mit Exit 2)
+# Verboten: bekanntes Standardpasswort in Vorlagen
 ```
 
 ---
 
-## Pattern: `[PSCredential]` durchreichen
+## Pattern: nur den Pfad durchreichen
 
 ```powershell
-function Invoke-FbTraceManager {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)] [pscredential]$Credential,
-        [Parameter(Mandatory)] [string[]]$Arguments
-    )
-    # Passwort erst unmittelbar vor dem Aufruf in die kurzlebige -fetch-Datei schreiben, danach löschen
-}
+# TraceCommon.ps1 (gekürzt): das Passwort selbst liest kein Skript, nur fbtracemgr
+$list.AddRange([string[]]@('-USER', $Config.Username, '-FETCH_PASSWORD', $Config.PasswordFile))
 ```
 
-`[pscredential]` hält das Passwort als `SecureString` — niemals als Klartext-String durch die Skripte reichen.
+Braucht ein Skript künftig das Passwort selbst, als `[pscredential]` (`SecureString`) durchreichen — niemals als
+Klartext-String.
 
 ---
 
@@ -96,11 +93,11 @@ function Invoke-FbTraceManager {
 | Credential | Intervall | Trigger außerplanmäßig |
 |---|---|---|
 | Firebird-Passwort des Trace-Benutzers | nach Policy des DB-Betriebs, mindestens jährlich | Passwort stand in einer Kommandozeile/Log, Personalwechsel |
-| SYSDBA-Passwort | nach Policy | wurde bisher mit den Trace-Skripten genutzt (Kommandozeile) → nach Umstellung (I4) rotieren |
+| SYSDBA-Passwort | nach Policy | wurde früher mit den Trace-Skripten über die Kommandozeile genutzt → jetzt rotieren |
 
 ---
 
 ## Pflege
 
-Trigger: neue Credential-Quelle / Rotation durchgeführt / Umstellung in I4 →
+Trigger: neue Credential-Quelle / Rotation durchgeführt →
 hier eintragen und in `docs/operations/SECRETS_MANAGEMENT.md` referenzieren.

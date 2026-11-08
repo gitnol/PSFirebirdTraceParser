@@ -34,12 +34,13 @@ Commit-Pflicht pro Inkrement: `docs/KICKOFF.md` Phase 3b. Stack-spezifisch nur:
   `[CmdletBinding()]` landen unbekannte Parameter still in `$args` — ein Tippfehler oder ein noch nicht gebauter
   Schalter wirkt dann wie ein erfolgreicher Aufruf (Gegenstück im Test: `testing/UNIT_TESTS.md` 7.11).
   *Bestand:* nur `Pseudonymize-FirebirdTrace.ps1` erfüllt das; `Show-TraceStructure.ps1` hat `param()` ohne
-  `[CmdletBinding()]`, die Trace-Skripte haben keinen `param()`-Block (TODO I5/I6).
+  `[CmdletBinding()]`; die Trace-Skripte und `TraceCommon.ps1` erfüllen es seit I5.
 - **Approved Verbs:** Nur [genehmigte PowerShell-Verben](https://docs.microsoft.com/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands) für Skript- und Funktionsnamen
   (`Show-`, `Get-`, `Start-`, `Stop-` …). *Bestand:* `trace_start.ps1`/`trace_stop.ps1` folgen dem Schema nicht —
   Umbenennung nur zusammen mit README und Hinweistexten (BACKLOG).
 - **Fehlerbehandlung:** `$ErrorActionPreference = 'Stop'` am Scriptbeginn. `try/catch` für alle externen Aufrufe
-  (`fbtracemgr.exe`, Dateizugriffe). Kein leeres `catch {}` ohne Logging. *Bestand:* nirgends gesetzt (TODO I5).
+  (`fbtracemgr.exe`, Dateizugriffe). Kein leeres `catch {}` ohne Logging. *Bestand:* in den Trace-Skripten seit I5,
+  in Parser und Pseudonymisierer nicht gesetzt.
 - **Strict Mode:** `Set-StrictMode -Version 3.0` direkt danach — im Script bzw. am Anfang einer künftigen `.psm1`
   (gilt dann im Modul-Scope, nicht beim Aufrufer). Ohne Strict Mode liefern nicht initialisierte Variablen,
   Tippfehler in Eigenschaftsnamen und Indizes außerhalb des Arrays still `$null`. Feste Version statt `Latest`: `Latest` wird mit neuen
@@ -61,12 +62,13 @@ Commit-Pflicht pro Inkrement: `docs/KICKOFF.md` Phase 3b. Stack-spezifisch nur:
 - **Eingabevalidierung:** `[ValidateNotNullOrEmpty()]`, `[ValidateRange()]`, `[ValidateSet()]` in `param()` Blöcken.
   Fail-Fast vor Business-Logik (Beispiel im Bestand: `-HashLength` mit `[ValidateRange(8, 64)]`).
 - **Keine Magic Strings:** Konstanten als `$script:CONSTANT_NAME = ...` am Scriptbeginn (z. B. Pfad zu `fbtracemgr`,
-  Ausgabeverzeichnis). *Bestand:* `E:\` fest im Code beider Trace-Skripte (TODO I5).
+  Ausgabeverzeichnis). *Bestand:* seit I5 in `TraceCommon.ps1` (`$script:SERVICE_MANAGER`, `$script:EXIT_*`).
 - **Regex-Objekte einmal bauen:** `[regex]::new(…, Compiled)` außerhalb der Schleife bzw. im `begin`-Block — wie im
   Bestand; neue Muster mit Beispielzeile aus einer **fiktiven** Trace im Kommentar dokumentieren.
 - **Pipeline-Ausgabe ist das Ergebnis:** Statusmeldungen über `Write-Verbose`/`Write-Information`/`Write-Progress`,
   nie über den Output-Stream. `Write-Host` nur für interaktive Hinweise. *Bestand:* `Show-TraceStructure.ps1` meldet Status seit I6 über
-  `Write-Verbose`/`Write-Progress`; `Write-Host` steht noch in den Trace-Skripten (I5) und im `-AnalyzeOnly`-Bericht.
+  `Write-Verbose`/`Write-Progress`, die Trace-Skripte seit I5 über `Write-Information`; `Write-Host` steht nur noch im
+  `-AnalyzeOnly`-Bericht (begründete Ausnahme im Code).
 - **Eingabeobjekte nicht mutieren:** Pipeline-Filter arbeiten auf einer Kopie (`$InputObject | Select-Object *`), wie
   `Pseudonymize-FirebirdTrace.ps1`.
 - **Keine automatischen Variablen überschreiben** (`$matches`, `$input`, `$args`, `$_` …) — PSScriptAnalyzer-Regel
@@ -135,7 +137,7 @@ finally {
 ## 5. Pfade & Dateisystem
 
 - **Pfade immer als `[System.IO.Path]`-Methoden** oder `Join-Path` — nie String-Konkatenation mit `\`
-  (*Bestand:* `"$MyPfad\fbtracemgr"` in beiden Trace-Skripten, TODO I5).
+  (*Bestand:* seit I5 erfüllt).
 - **`Test-Path` vor Zugriff:** Eingabedatei, `fbtracemgr.exe`, Trace-Konfiguration und Ausgabeverzeichnis vor Verwendung prüfen.
 - **Große Eingabedateien:** Trace-Logs können mehrere GB groß sein — zeilenweise lesen (StreamReader) statt
   `Get-Content -Raw` (*Bestand:* `-Raw`, KNOWN_ISSUES K2).
@@ -146,7 +148,7 @@ finally {
 
 - [ ] Keine Hardcoded-Credentials — ausschließlich über Credential Store / ACL-geschützte Datei (`architecture/CREDENTIAL_STRATEGY.md`)
 - [ ] `config.json` und andere Konfigurationsdateien mit Credentials in `.gitignore` (Stand: `config*.json`, `/config.ps1`)
-- [ ] Kein Passwort als Kommandozeilenargument an externe Programme (`fbtracemgr -PASS`) — *Bestand verletzt das, TODO I4*
+- [ ] Kein Passwort als Kommandozeilenargument an externe Programme (`fbtracemgr -PASS`) — seit I4 `-FETCH_PASSWORD`/`-TRUSTED` (ADR-002)
 - [ ] Kein `Invoke-Expression` mit nicht-validierten Strings (Command-Injection)
 - [ ] Logging/Statusausgaben: keine Passwörter, keine Trace-Inhalte (SQL-Texte, Parameter) in Meldungen
 - [ ] Test-Fixtures und Beispiele enthalten nur **fiktive** Trace-Daten (keine echten Benutzer, Hosts, IPs, Datenbankpfade)
@@ -158,7 +160,7 @@ finally {
 
 ### 6.1.1 Defense-in-Depth für Konfig-Credentials (3 Schichten)
 
-`config.json` enthält heute das Firebird-Passwort im Klartext (bis I4). Ein `.gitignore`-Eintrag allein reicht
+`config.json` enthält seit I4 kein Passwort mehr (nur den Pfad der Passwortdatei), bleibt aber lokal. Ein `.gitignore`-Eintrag allein reicht
 nicht; drei Schichten zusammen machen versehentliche Commits praktisch unmöglich:
 
 1. **Statisch (Prevention):** `.gitignore` enthält `config*.json` (mit Ausnahme `!/config.sample.json`) und ist vor

@@ -36,17 +36,20 @@ $Error[0] | Format-List * -Force
 aus dem Internet geladene Dateien mit `Unblock-File` entsperren.
 
 ### `trace_start.ps1` / `trace_stop.ps1` endet mit Exit 1 oder 2
-→ `config.json` fehlt (1) bzw. ist kein gültiges JSON (2). Aus `config.sample.json` anlegen bzw. Syntax prüfen
-(`Get-Content config.json -Raw | ConvertFrom-Json`).
+→ 1: `config.json` fehlt (aus `config.sample.json` anlegen). 2: Konfiguration ungültig — die Meldung nennt alle
+Fehler auf einmal (Pfad, Passwortdatei, `Password`-Schlüssel noch vorhanden, Sitzungsname). Beim Start bedeutet 2 auch:
+`trace_session.json` ist noch da (voriger Trace nicht gestoppt) → `trace_stop.ps1` aufrufen.
 
 ### `trace_stop.ps1` endet mit Exit 3 oder 4
-→ 3: keine `*.log` unter `E:\`. 4: Die neueste `*.log` unter `E:\` ist nicht die Trace-Ausgabe (andere Logdatei dort)
-oder die Session ist nicht gestartet. Workaround: laufende Sessions mit `fbtracemgr -SE service_mgr -LIST …`
-anzeigen und gezielt mit `-STOP -ID <n>` stoppen (Anmeldung wie in `security/AUTHENTICATION.md`); K4.
+→ 3: keine laufende Sitzung mit dem gemerkten Namen bzw. dem `SessionName`-Präfix (schon beendet?). 4: mehrere passende
+Sitzungen — die Meldung listet sie; gezielt `trace_stop.ps1 -Id <n>`. Alle Sitzungen von Hand:
+`fbtracemgr -SE service_mgr -USER <name> -FETCH_PASSWORD <datei> -LIST`.
 
-### Trace-Datei bleibt leer bzw. enthält nur eine Fehlermeldung
-→ Bei `trace_start.ps1` wird nur stdout von `fbtracemgr` in die Trace-Datei umgeleitet; Fehlermeldungen können dort oder
-(über stderr) auf der Konsole stehen — beides prüfen. Meldung lesen (Benutzer/Passwort, Pfad zu `fbtrace30.conf`, Rechte für Traces auf fremde Verbindungen).
+### Exit 5 oder Trace-Datei bleibt leer
+→ 5: `fbtracemgr` meldet einen Fehler (Anmeldung, Rechte, Server nicht erreichbar) oder bestätigt den Stopp nicht;
+die Meldung steht auf der Konsole. Eine leere Datei während der Aufzeichnung ist normal (gepuffert); nach dem Stopp
+leer: keine Statements über `time_threshold` → in der Trace-Konfiguration senken.
+`-TRUSTED` scheitert: der Server erlaubt keine Windows-Anmeldung (`AuthServer = Srp256, Win_Sspi` in `firebird.conf`).
 
 ### Parser bricht mit OutOfMemory ab oder braucht sehr lange
 → Die Datei wird komplett in den Speicher geladen (K2). 64-Bit-PowerShell mit genug RAM nutzen oder die Datei vorher
@@ -55,16 +58,17 @@ an Blockgrenzen (Zeilen mit Zeitstempel) teilen; Streaming folgt in I6.
 ### Felder `DatabasePath`, `User`, `ClientIP` sind leer
 → Verbindungszeile passt nicht zum Regex (Rolle ≠ `NONE`, Endung `.fdb` klein, Nicht-TCP-Verbindung) — K3.
 
-### Umlaute in Meldungen der Trace-Skripte falsch dargestellt
-→ Windows PowerShell 5.1 liest die BOM-losen UTF-8-Skripte als ANSI (K5); mit PowerShell 7 ausführen.
+### Trace-Skripte melden, dass PowerShell 7.4 nötig ist
+→ Die Trace-Skripte brauchen PowerShell 7.4+ (ADR-002): `pwsh -File .\trace_start.ps1`.
 
 ---
 
 ## Deployment-Checkliste (Einsatz auf einem Datenbankserver)
 
-- [ ] PowerShell ≥ 5.1 vorhanden, besser 7.6 LTS
-- [ ] Skripte und `fbtrace30.conf` in ein Verzeichnis mit eingeschränkten NTFS-Rechten kopiert
-- [ ] `config.json` angelegt, Zugriff nur für Administratoren; kein Standardpasswort
-- [ ] Laufwerk `E:\` vorhanden, freier Platz geprüft (`operations/MONITORING.md`)
+- [ ] PowerShell 7.6 LTS vorhanden (Trace-Skripte brauchen ≥ 7.4)
+- [ ] Skripte, `TraceCommon.ps1` und `fbtrace50.conf` in ein Verzeichnis mit eingeschränkten NTFS-Rechten kopiert
+- [ ] `config.json` angelegt (ohne `Password`), Passwortdatei nur für das eigene Konto lesbar (`operations/SETUP.md`)
+- [ ] Ausgabeordner (`OutputDirectory`) vorhanden, freier Platz geprüft (`operations/MONITORING.md`)
 - [ ] Trace-Dauer und Verantwortlichen für Stopp und Löschung festgelegt
-- [ ] Nach Abschluss: Session gestoppt (`-LIST` leer), Rohdatei gelöscht oder in geschützten Bereich verschoben
+- [ ] Nach Abschluss: Session gestoppt (`-LIST` leer), Rohdatei gelöscht oder in geschützten Bereich verschoben,
+      Passwortdatei gelöscht

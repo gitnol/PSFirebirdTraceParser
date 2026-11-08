@@ -12,10 +12,13 @@ Commit-Messages oder in Doku verwenden.
 
 | Begriff | Bedeutung | Wo verwendet | Nicht zu verwechseln mit |
 |---|---|---|---|
-| Trace-Session | Vom Firebird-Server geführte Protokollierung, gestartet per `fbtracemgr -START`, identifiziert durch die Trace-Session-ID | `trace_start.ps1`, `trace_stop.ps1` | Datenbankverbindung (Attachment); Property `SessionID` |
-| Trace-Session-ID | Nummer aus der ersten Zeile der Trace-Ausgabe (`Trace session ID <n> started`), nötig für `-STOP -ID` | `trace_stop.ps1` (`$MyTraceId`) | Property `SessionID` der Trace-Objekte |
-| Trace-Konfiguration | Datei mit Regeln, was der Server protokolliert (`fbtrace30.conf`) | `config.json` → `TraceConfigFilename` | `config.json` (Skript-Konfiguration) |
-| Trace-Log | Textdatei mit der Ausgabe einer Trace-Session (Rohdaten, vertraulich) | `E:\trace_output_*.log`, Parameter `-Path` | Konsolenmeldungen der Skripte |
+| Trace-Session | Vom Firebird-Server geführte Protokollierung, gestartet per `fbtracemgr -START -NAME <sitzungsname>`, identifiziert durch die Trace-Session-ID | `trace_start.ps1`, `trace_stop.ps1` | Datenbankverbindung (Attachment); Property `SessionID` |
+| Trace-Session-ID | Nummer der Sitzung beim Server (erste Zeile der Ausgabe `Trace session ID <n> started`, auch in `fbtracemgr -LIST`), nötig für `-STOP -ID` | `Stop-TraceSession` (`TraceCommon.ps1`) | Property `SessionID` der Trace-Objekte |
+| Sitzungsname | Name der Trace-Session, `<SessionName>_<yyyyMMdd_HHmmss>`; darüber findet der Stopp die Sitzung | `config.json` → `SessionName`, `trace_session.json` | Trace-Session-ID |
+| Zustandsdatei | `trace_session.json` neben den Skripten: Sitzungsname, Logdatei und Startzeit der laufenden Sitzung | `Start-TraceSession`, `Stop-TraceSession` | `config.json` |
+| Passwortdatei | Datei mit dem Firebird-Passwort in der ersten Zeile; `fbtracemgr` liest sie selbst (`-FETCH_PASSWORD`) | `config.json` → `PasswordFile` | Schlüsseldatei (`-KeyFile`) des Pseudonymisierers |
+| Trace-Konfiguration | Datei mit Regeln, was der Server protokolliert (`fbtrace50.conf`, älter `fbtrace30.conf`) | `config.json` → `TraceConfigFilename` | `config.json` (Skript-Konfiguration) |
+| Trace-Log | Textdatei mit der Ausgabe einer Trace-Session (Rohdaten, vertraulich) | `<OutputDirectory>\trace_output_*.log`, Parameter `-Path` | Konsolenmeldungen der Skripte |
 | Trace-Block | Abschnitt eines Trace-Logs von einer Zeitstempel-Zeile bis vor die nächste; ein Ereignis | `Show-TraceStructure.ps1` (`$logBlocks`) | Zeile; Statement |
 | Trace-Objekt | `PSCustomObject`, das der Parser je Trace-Block ausgibt; Property-Namen sind Vertrag | `features/TRACE_PARSING.md` | Rohtext des Blocks |
 | Action | Ereignisname der Kopfzeile eines Blocks (z. B. Ende eines Statements, Transaktionsstart) | Property `Action` | Skript-Aktion (Start/Stopp) |

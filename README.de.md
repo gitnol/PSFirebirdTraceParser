@@ -22,6 +22,7 @@ Firebird Trace Logs sind textbasiert und durch ihre Blockstruktur schwer program
 
 1.  **Parsen (`Show-TraceStructure.ps1`)**: Liest rohe Trace Logs (auch mehrere GB) und konvertiert sie in strukturierte PowerShell-Objekte (`[PSObject]`).
 2.  **Pseudonymisieren (`Pseudonymize-FirebirdTrace.ps1`)**: Hasht sensible Daten (Benutzernamen, IP-Adressen, SQL Strings) sicher, um Logs für externe Analysen teilbar zu machen.
+3.  **Aufzeichnen (`trace_start.ps1`, `trace_stop.ps1`)**: Startet und stoppt eine benannte Trace-Sitzung mit `fbtracemgr`, ohne Passwort in der Befehlszeile.
 
 ---
 
@@ -95,6 +96,34 @@ Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
 
 > [!WARNING]
 > **Sicherheitshinweis**: Dieses Werkzeug pseudonymisiert (Hash mit Schlüssel, HMAC-SHA256), es anonymisiert nicht. Wer den Schlüssel hat, kann vermutete Werte prüfen; für den Verantwortlichen bleiben die Daten personenbezogen (DSGVO). Schlüssel- und Zuordnungsdatei (`-MappingFile`) nie weitergeben.
+
+---
+
+### Trace aufzeichnen: `trace_start.ps1` / `trace_stop.ps1`
+Startet und stoppt eine Firebird-Trace-Sitzung (Firebird 4.0 / 5.0) mit `fbtracemgr`. Braucht **PowerShell 7.4+** (die Logdatei wird byte-genau geschrieben).
+
+1. `config.sample.json` nach `config.json` kopieren (bleibt lokal, von git ignoriert) und anpassen. In `config.json` steht kein Passwort:
+   entweder `PasswordFile` (Datei, deren erste Zeile das Passwort ist; `fbtracemgr` liest sie selbst, die Befehlszeile zeigt nur den Pfad) oder `"UseTrustedAuth": true` (Windows-Anmeldung).
+2. Passwortdatei anlegen und auf das eigene Konto beschränken:
+   ```powershell
+   $dir = Join-Path $env:LOCALAPPDATA 'PSFirebirdTraceParser'; $null = New-Item -ItemType Directory -Force $dir
+   $pw = Read-Host 'Firebird-Passwort' -MaskInput
+   Set-Content -Path (Join-Path $dir 'firebird-trace.pass') -Value $pw -NoNewline -Encoding ascii; Remove-Variable pw
+   icacls (Join-Path $dir 'firebird-trace.pass') /inheritance:r /grant:r "$($env:USERNAME):(R,W)"
+   ```
+3. Fenster 1: `pwsh -File .\trace_start.ps1` (bleibt belegt, solange der Trace läuft). Fenster 2: `pwsh -File .\trace_stop.ps1` (oder `-Id <n>`).
+
+| Schlüssel (`Firebird.…`) | Bedeutung |
+|---|---|
+| `FirebirdPath` | Ordner mit `fbtracemgr.exe` |
+| `Username` / `PasswordFile` | Firebird-Benutzer und Passwortdatei (`%VAR%` erlaubt) |
+| `UseTrustedAuth` | `true` = Windows-Anmeldung statt Benutzer und Passwortdatei |
+| `Role` | Optional: Rolle mit dem Systemrecht `TRACE_ANY_ATTACHMENT` (statt SYSDBA) |
+| `TraceConfigFilename` | Trace-Regeln neben den Skripten, z. B. `fbtrace50.conf` (alle Fehler, Sweeps, Services) |
+| `OutputDirectory` | Ziel der Logdatei `trace_output_<Zeitstempel>.log` (`%VAR%` erlaubt) |
+| `SessionName` | Präfix des Sitzungsnamens; `trace_stop.ps1` findet die Sitzung über diesen Namen |
+
+Exit-Codes: 0 ok, 1 `config.json` fehlt, 2 Konfiguration ungültig (alle Fehler werden genannt; auch, wenn noch ein Schlüssel `Password` drinsteht), 3 keine Sitzung gefunden, 4 mehrere Sitzungen passen, 5 Fehler von `fbtracemgr`, 6 unerwarteter Fehler.
 
 ---
 

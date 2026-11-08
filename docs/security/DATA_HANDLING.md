@@ -50,10 +50,12 @@ personenbezogen (EDPB-Leitlinien 01/2025) und damit **Vertraulich**.
 
 | Datei | Inhalt | Sensitivität |
 |-------|--------|-------------|
-| `E:\trace_output_<Zeitstempel>.log` | Trace-Rohdaten: SQL-Texte, Parameter, Benutzer, IPs, Pfade | Vertraulich (ggf. Streng vertraulich) |
+| `<OutputDirectory>\trace_output_<Zeitstempel>.log` | Trace-Rohdaten: SQL-Texte, Parameter, Benutzer, IPs, Pfade | Vertraulich (ggf. Streng vertraulich) |
 | CSV-/Excel-Export aus `Show-TraceStructure.ps1` | wie oben, strukturiert | Vertraulich (ggf. Streng vertraulich) |
 | Export nach `Pseudonymize-FirebirdTrace.ps1` | pseudonymisiert, Klartext-Reste laut Feldabdeckung | Vertraulich |
-| `config.json` | Firebird-Zugangsdaten im Klartext (bis I4) | Streng vertraulich (Secret) |
+| `config.json` | Firebird-Pfad, Benutzer, Pfad der Passwortdatei (seit I4 kein Passwort) | Intern |
+| Passwortdatei (`PasswordFile`) | Firebird-Passwort im Klartext, außerhalb des Repos | Streng vertraulich (Secret) |
+| `trace_session.json` | Name und Logpfad der laufenden Sitzung | Intern |
 
 - Rohdaten nur auf dem Datenbankserver bzw. einem zugriffsgeschützten Analyseplatz, nicht auf Netzlaufwerken mit
   breitem Zugriff, nie im Repository.
@@ -63,8 +65,8 @@ personenbezogen (EDPB-Leitlinien 01/2025) und damit **Vertraulich**.
 
 ## 4. Zugriffsschutz
 
-- Trace-Start/-Stopp nur durch Datenbank-Administration; künftig mit dediziertem Trace-Benutzer statt SYSDBA
-  (`architecture/CREDENTIAL_STRATEGY.md`).
+- Trace-Start/-Stopp nur durch Datenbank-Administration; möglichst mit Trace-Benutzer und Rolle statt SYSDBA
+  (`architecture/CREDENTIAL_STRATEGY.md`, seit I4 per `Role` möglich).
 - Ausgabeverzeichnis mit NTFS-Rechten nur für Administratoren/Analysten.
 - Least Privilege: Analysten erhalten pseudonymisierte Exporte, nicht die Rohdatei.
 - Secret-Speicherung und Rotation: siehe `docs/operations/SECRETS_MANAGEMENT.md`

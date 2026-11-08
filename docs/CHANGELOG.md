@@ -10,6 +10,69 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 I4 + I5 – Trace-Skripte für Firebird 5 ohne Klartext-Passwort
+
+Commits `266d6a4` (Tests rot, Stub mit Vertrag), `d9a2a8b` (Umsetzung), dazu `ada07b5` (Gate-Fix aus I14, beim Lauf
+gefunden). Freigabe des Owners 2026-11-08. Gebündelt, weil beide Punkte dieselben drei Dateien neu schreiben; die
+Größengrenze (~5 Dateien, ~400 Zeilen) ist damit überschritten (7 Dateien, ~800 Zeilen inkl. Tests) — bewusst, ein
+Split hätte die Skripte zweimal umgebaut. Grundlage ist der Entwurf des Owners für Firebird 5.0.4, mit dem drei echte
+Traces aufgezeichnet wurden (nur gezählt: jede Datei beginnt mit `Trace session ID … started`; Anmeldung dort per
+Passwortdatei mit SYSDBA, ohne Rolle). Übernommen ohne Umgebungswerte: `config.json` des Entwurfs nur als Struktur.
+
+**Trigger-Matrix:** Architekturentscheidung → `architecture/ADR/ADR-002-trace-anmeldung.md`; neue Konfiguration →
+`README.md`, `README.de.md`, `features/TRACE_CAPTURE.md`, `architecture/CONFIGURATION.md`; neue Funktionen/Datei →
+`architecture/OVERVIEW.md` (Datenfluss, Module), `architecture/PROJECT_LAYOUT.md`, `KICKOFF.md` (Dateitabelle);
+Auth/Secrets → `security/AUTHENTICATION.md`, `architecture/CREDENTIAL_STRATEGY.md`, `operations/SECRETS_MANAGEMENT.md`,
+`security/THREAT_MODEL.md` (Bedrohung 3 und 4), `security/DATA_HANDLING.md`; neue Exception/Exit-Codes →
+`architecture/ERROR_HANDLING.md`, `operations/MONITORING.md`, `operations/RUNBOOK.md`; Einrichtung →
+`operations/SETUP.md`; Binary-Nutzung → `architecture/DEPENDENCIES.md`; Begriffe → `GLOSSARY.md`; K4 behoben →
+`KNOWN_ISSUES.md`; Bestand-Hinweise → `CONVENTIONS.md`, `principles/LOGGING.md`, `testing/UNIT_TESTS.md`; Reste →
+`BACKLOG.md`; Risiko → `STATE.md`; Lesson → `LESSONS_LEARNED.md` L7. Keine neue Abhängigkeit (Security-Currency:
+kein Ereignis; Kadenz-Sweep erst 2026-11-21 fällig).
+
+### Added
+- `TraceCommon.ps1`: `Read-TraceConfig`, `Get-TraceAuthArgumentList`, `Start-TraceSession`, `Stop-TraceSession`,
+  `Get-TraceSessionList`, `Invoke-FbTraceMgr` (einziger Aufruf von `fbtracemgr`), `Resolve-TraceExitCode`,
+  Klasse `TraceException`.
+- `fbtrace50.conf`: Firebird 4.0/5.0, ohne `include_gds_codes` (alle Fehler), mit `log_sweep` und Abschnitt `services`
+  (`log_services`) — passend zu den Sweep- und Service-Feldern des Parsers (I15). `fbtrace30.conf` bleibt unverändert.
+- `config.json`-Schlüssel `PasswordFile`, `UseTrustedAuth`, `Role`, `OutputDirectory`, `SessionName`; `%VAR%` in Pfaden.
+- `trace_stop.ps1 -Id <n>`.
+- 32 Tests (`tests/TraceCommon.Tests.ps1`).
+
+### Changed
+- `trace_start.ps1`/`trace_stop.ps1` neu: PowerShell 7.4+, `[CmdletBinding()]`, `Stop` + Strict Mode, ASCII, Status
+  über `Write-Information`, Exit-Codes 0–6 (vorher 1–4, `fbtracemgr`-Fehler nicht ausgewertet).
+- Stopp findet die Sitzung über `trace_session.json` und den Sitzungsnamen statt über die neueste `*.log` auf `E:\`.
+- `config.sample.json`: kein Passwort, `TRACE_USER`/`TRACER` statt SYSDBA, `Firebird_5_0` statt `Firebird_4_0_3`
+  (I8, erster Punkt).
+
+### Fixed
+- K4: falsche Logdatei beim Stopp; Hinweis nannte `trace-stop.ps1`.
+
+### Security
+- Kein Passwort mehr in Befehlszeile und `config.json`; ein verbliebener `Password`-Schlüssel bricht ab (Test).
+- Test: `config.json` ist nicht in git (Schicht 3 aus `CONVENTIONS.md` 6.1.1), `trace_session.json` wird ignoriert.
+
+### Confidence / Ungeprüft
+- **Kein Lauf gegen einen echten Server mit diesen Skripten.** Geprüft: 99 Tests grün unter PowerShell 7.6.9, unter
+  5.1 98 grün + 1 übersprungen (byte-genaue Datei nur ab 7.4); Mutationsprobe 16 Mutanten, 15 erkannt, nach einem
+  zusätzlichen Test 16/16; Lauf mit einem selbst kompilierten Ersatz-`fbtracemgr` (Start, Zweitstart abgelehnt mit
+  Exit 2, Stopp über `-LIST` und über `-Id`, Logdatei byte-genau mit UTF-8-Umlaut, Parser liest sie, Passwort in keinem
+  Argument).
+- Ungeprüft übernommen: Format von `fbtracemgr -LIST` (`Session ID:` / `name:`) und die Stopp-Bestätigung
+  `Trace session ID <n> stopped` — aus dem Entwurf, nur gegen Ersatzprogramme getestet. `-TRUSTED` und `-ROLE` gegen
+  keinen Server geprüft. Ob `log_sweep`/`services` unter Firebird 4.0 genauso wirken, nicht geprüft.
+- Beim Lauf mit dem Ersatzprogramm war die Logdatei während der Aufzeichnung leer (gepuffert); der Weg über die erste
+  Logzeile greift deshalb selten, `-LIST` ist der Normalfall (`features/TRACE_CAPTURE.md`).
+- Die Entwurfsdateien wurden gelesen (Skripte, README, `fbtrace50.conf`); von `config.json` des Owners nur Schlüssel und
+  drei Ja/Nein-Werte, von den Logs nur Zeilenzahl und ob die erste Zeile passt.
+- Abweichung von `CONVENTIONS.md` §3 (gemeinsame Logik als Modul): `TraceCommon.ps1` per Dot-Sourcing, in ADR-002 und
+  `PROJECT_LAYOUT.md` begründet.
+
+### Lessons Learned
+- Ersatzprogramm statt nur Mock deckte die Pufferung der Logdatei auf → L7.
+
 ## 2026-11-08 I14 – CI mit PSScriptAnalyzer und Pester
 
 Commits `8c75645` (Tests: Charakterisierung `-AnalyzeOnly`, lauffähig unter 5.1), `ca1edc9` (Analyzer-Befunde

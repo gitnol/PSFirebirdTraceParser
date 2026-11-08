@@ -25,37 +25,7 @@ Bekannte Bugs ohne aktiven Fix: `KNOWN_ISSUES.md`.
 
 ---
 
-## Aktuell (Hohe Priorität)
-
-### I4: Trace-Credentials härten
-
-Bedrohung 3 in `security/THREAT_MODEL.md`.
-
-**Aufgaben:**
-
-- [ ] Passwort nicht mehr per `-PASS` übergeben: Variante in ADR-002 festlegen (`fbtracemgr -fetch <datei>` mit
-      ACL-geschützter Datei, `-trusted` mit Windows-Authentifizierung oder Credential-Store + kurzlebige Passwortdatei)
-- [ ] Passwort nicht mehr im Klartext in `config.json` (`architecture/CREDENTIAL_STRATEGY.md`)
-- [ ] Dedizierten Trace-Benutzer mit Rolle `TRACE_ANY_ATTACHMENT` statt SYSDBA dokumentieren (`operations/SETUP.md`)
-- [ ] `config.sample.json` ohne bekanntes Standardpasswort (fiktiver Platzhalterwert, Hinweis auf Credential-Store)
-- [ ] Hinweis 2026-11-07: Eine für Firebird 5.0.4 überarbeitete Fassung von `trace_start.ps1`/`trace_stop.ps1` liegt als
-      Entwurf beim Owner vor (`-FETCH_PASSWORD`, `-TRUSTED`, `-ROLE`, `-NAME`; mit Ersatz-`fbtracemgr` getestet). Nach einem
-      erfolgreichen Lauf gegen einen echten Server hier übernehmen — deckt I4 und I5 weitgehend ab.
-
----
-
 ## Mittlere Priorität
-
-### I5: Trace-Skripte robust machen
-
-**Aufgaben:**
-
-- [ ] Ausgabeverzeichnis aus `config.json` statt fest `E:\` (beide Skripte)
-- [ ] `trace_stop.ps1` ermittelt die Session über eine beim Start abgelegte ID bzw. `fbtracemgr -LIST` statt über „neueste `*.log` auf `E:\`"
-- [ ] Hinweistext in `trace_start.ps1` nennt den richtigen Skriptnamen `trace_stop.ps1` (K4)
-- [ ] `[CmdletBinding()]`, `$ErrorActionPreference = 'Stop'`, Existenzprüfung für `fbtracemgr.exe` und Trace-Konfiguration
-- [ ] Encoding: Skripte ASCII bzw. UTF-8 mit BOM (K5); Ausgabe-Encoding der Trace-Datei unter Windows PowerShell 5.1 prüfen und festlegen
-- [ ] Unit-Tests mit gemocktem `fbtracemgr`-Wrapper (`testing/UNIT_TESTS.md` 8.5)
 
 ### I11: Parser – Transaktionsoptionen, RecordsFetched, Tabellenstatistik als Zahlen
 
@@ -101,7 +71,6 @@ Herkunft: `security/DEPENDENCY_AUDIT.md` → Kadenz-Sweep 2026-10-23.
 
 **Aufgaben:**
 
-- [ ] `config.sample.json`: `FirebirdPath` versionsneutral (Platzhalter statt `Firebird_4_0_3`), damit die Vorlage keinen verwundbaren Server-Stand (< 4.0.7 / 5.0.4) suggeriert; `operations/SETUP.md` Konfigurationstabelle angleichen
 - [ ] Prüfen und entscheiden (YAGNI): Trace-Skripte warnen unter PowerShell 7 bei einer Version unter 7.6.7 / 7.5.12 / 7.4.21 oder auf 7.4/7.5 nach dem Supportende 2026-11-10 — sonst als bewusst dokumentiertes Restrisiko in `security/DEPENDENCY_AUDIT.md`
 - [ ] MSRC Security Update Guide (Oktober 2026) auf Windows PowerShell 5.1 filtern und den Befund im Sweep-Protokoll nachtragen
 

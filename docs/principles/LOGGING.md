@@ -32,7 +32,8 @@ Jeder Log-Eintrag muss ohne Kontextwissen verständlich und filterbar sein.
 
 - **Genutzt:** kein Logging-Framework, kein Event Log. Meldungen nur an die Konsole: `Write-Host` (Status, Hinweise),
   `Write-Error` (Fehler), `Write-Progress` (Fortschritt im Parser alle 5000 Blöcke, im Pseudonymisierer alle 1000 Objekte).
-  Ziel (I5/I6): Status über `Write-Verbose`/`Write-Information`, damit die Pipeline-Ausgabe sauber bleibt.
+  Seit I6 (Parser) und I5 (Trace-Skripte: `Write-Information`) Status nicht mehr über `Write-Host`; `Write-Host` nur noch
+  im interaktiven `-AnalyzeOnly`-Bericht.
 - **Debug-Modus:** keiner. Nach Einführung von `[CmdletBinding()]` in allen Skripten über `-Verbose`.
 - **Nie ausgeben oder protokollieren:** Firebird-Passwort, Kommandozeile mit `-PASS`, Inhalte von Trace-Blöcken
   (SQL-Texte, Parameter, Benutzer, IPs) in Status- oder Fehlermeldungen. Ausnahme bewusst: `-AnalyzeOnly` zeigt

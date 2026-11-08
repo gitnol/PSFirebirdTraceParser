@@ -100,22 +100,22 @@ Describe 'Pseudonymize-FirebirdTrace' {
 
 ## 4. Mock-Pattern: Externe Calls
 
-`fbtracemgr` ist ein natives Programm und lässt sich nicht direkt mocken. Deshalb ab I5 eine Wrapper-Funktion
-(z. B. `Invoke-FbTraceManager`) einführen und im Test ersetzen:
+`fbtracemgr` ist ein natives Programm und lässt sich nicht direkt mocken. Seit I5 laufen alle Aufrufe über die
+Funktion `Invoke-FbTraceMgr` in `TraceCommon.ps1`; der Test lädt die Datei per Dot-Sourcing und ersetzt nur sie
+(Beispiel aus `tests/TraceCommon.Tests.ps1`, gekürzt):
 
 ```powershell
-Describe 'trace_stop' {
-    BeforeEach {
-        Mock Invoke-FbTraceManager { $global:LASTEXITCODE = 0 }
-    }
+BeforeAll { . ([System.IO.Path]::Combine($PSScriptRoot, '..', 'TraceCommon.ps1')) }
 
-    It 'stoppt die Session aus der Kopfzeile' {
-        Set-Content -Path TestDrive:/trace_output_20260101_000000.log -Value 'Trace session ID 7 started'
-        # … Skript mit TestDrive-Ausgabeverzeichnis aufrufen (konfigurierbar ab I5) …
-        Should -Invoke Invoke-FbTraceManager -Times 1 -Exactly -ParameterFilter { $Arguments -contains '7' }
-    }
+It 'nimmt die ID aus der ersten Zeile der gemerkten Logdatei' {
+    Mock Invoke-FbTraceMgr { [pscustomobject]@{ ExitCode = 0; Output = [string[]]@('Trace session ID 12 stopped') } }
+    $r = Stop-TraceSession -Config $config -ScriptRoot $root
+    Should -Invoke Invoke-FbTraceMgr -Times 1 -Exactly -ParameterFilter { $ArgumentList -contains '-STOP' }
 }
 ```
+
+Die Skripte selbst laden `TraceCommon.ps1` neu und sehen den Mock nicht; sie werden nur als Prozess
+(`pwsh -File`) auf Exit-Codes geprüft, und zwar nur mit Konfigurationsfehlern, die vor jedem Aufruf abbrechen.
 
 ---
 

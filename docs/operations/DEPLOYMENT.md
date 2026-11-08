@@ -27,7 +27,7 @@ Unterschiede zwischen Einsätzen werden ausschließlich über `config.json` und 
 (kein Build — die .ps1-Dateien werden direkt ausgeführt)
 ```
 
-Auslieferungsartefakt: Git-Commit bzw. -Tag des Repositories (Skripte, `fbtrace30.conf`, `config.sample.json`, READMEs).
+Auslieferungsartefakt: Git-Commit bzw. -Tag des Repositories (Skripte, `TraceCommon.ps1`, `fbtrace50.conf`/`fbtrace30.conf`, `config.sample.json`, READMEs).
 
 **Reproduzierbar:**
 - [ ] Entwickler-Module gepinnt (`tests/RequiredModules.psd1`, seit I9)

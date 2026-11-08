@@ -26,7 +26,9 @@ Wenn ein Backlog-Punkt für ein Inkrement vorgesehen wird → Verschiebung von
 
 ## Refactoring-Kandidaten
 
-- Konfig-Laden ist in `trace_start.ps1` und `trace_stop.ps1` dupliziert — bei der nächsten Änderung an beiden in eine gemeinsame Funktion/Modul ziehen (I4/I5)
+- Trace-Konfiguration: Datenbankfilter (`include_filter`) als Option dokumentieren, damit eine Sitzung nicht alle
+  Datenbanken des Servers protokolliert (Rest aus I5, `security/THREAT_MODEL.md` Bedrohung 4)
+- Trace-Skripte: Rechte der Passwortdatei prüfen und warnen, wenn andere Konten sie lesen dürfen (Idee aus I4, ADR-002)
 - Skriptnamen `trace_start.ps1`/`trace_stop.ps1` auf genehmigte Verben umstellen (`Start-FirebirdTrace.ps1`/`Stop-FirebirdTrace.ps1`) — bricht Nutzer-Gewohnheiten, nur mit README-Hinweis
 - `#Requires -Version 5.1` in allen Skripten
 - `Pseudonymize-FirebirdTrace.ps1` (3 Commits seit 2026-10-11, 395 Zeilen): der `process`-Block hat rund 175 Zeilen

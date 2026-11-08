@@ -39,9 +39,11 @@ flowchart TD
 PSFirebirdTraceParser/
 ├── Show-TraceStructure.ps1         # Parser
 ├── Pseudonymize-FirebirdTrace.ps1  # Pseudonymisierer (Pipeline-Filter)
-├── trace_start.ps1                 # Trace-Session starten
+├── trace_start.ps1                 # Trace-Session starten (PowerShell 7.4+)
 ├── trace_stop.ps1                  # Trace-Session stoppen
-├── fbtrace30.conf                  # Trace-Konfiguration für fbtracemgr
+├── TraceCommon.ps1                 # seit I4/I5: gemeinsame Funktionen beider Trace-Skripte (Dot-Sourcing)
+├── fbtrace50.conf                  # seit I4/I5: Trace-Konfiguration Firebird 4.0/5.0 (Vorlage)
+├── fbtrace30.conf                  # ältere Trace-Konfiguration
 ├── config.sample.json              # Vorlage; lokale config.json ist gitignored
 ├── README.md / README.de.md        # Nutzerdoku (englisch/deutsch)
 ├── AGENTS.md / CLAUDE.md           # Einstieg für Agenten → docs/KICKOFF.md
@@ -58,8 +60,8 @@ PSFirebirdTraceParser/
 ## Regeln
 
 - **Ein Skript pro Aufgabe** im Repo-Root; neue Aufgaben als neues Skript mit genehmigtem Verb (`CONVENTIONS.md` §2).
-- **Gemeinsam genutzte Logik** (heute: Konfig-Laden in beiden Trace-Skripten, doppelt vorhanden) erst bei einem
-  zweiten echten Nutzer in eine `.psm1` auslagern (`CONVENTIONS.md` §3, [[DRY]] vs. [[YAGNI]]).
+- **Gemeinsam genutzte Logik** der Trace-Skripte liegt in `TraceCommon.ps1` (Dot-Sourcing, kein Modul; ADR-002). Ein
+  Modul (`.psm1` mit Manifest) erst, wenn Code außerhalb dieses Ordners die Funktionen braucht ([[DRY]] vs. [[YAGNI]]).
 - **Tests parallel zur Quellstruktur:** `tests/<Skriptname>.Tests.ps1`.
 - **Keine Laufzeitdaten im Repo:** Trace-Logs, Exporte und `config.json` bleiben außerhalb der Versionierung
   (`.gitignore`: `**/*.log`, `trace_output*`, `/*.csv`, `config*.json`).

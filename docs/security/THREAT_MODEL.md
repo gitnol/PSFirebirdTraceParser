@@ -65,32 +65,33 @@ in zentralen Logs. Die Vorlage
 `config.sample.json` setzt den höchstprivilegierten Benutzer und das allgemein bekannte Firebird-Standardpasswort ein —
 das ermutigt zu Standard-Zugangsdaten. `config.json` ist zwar gitignored, liegt aber unverschlüsselt im Skriptverzeichnis.
 
-**Mitigation:**
-- I4: `fbtracemgr -fetch <datei>` (ACL-geschützt, kurzlebig) oder `-trusted` statt `-PASS`; Passwort aus Credential
-  Store/DPAPI (`architecture/CREDENTIAL_STRATEGY.md`).
-- I4: dedizierter Trace-Benutzer mit Rolle `TRACE_ANY_ATTACHMENT` statt SYSDBA (Firebird ≥ 4).
-- I4: Vorlage ohne bekanntes Standardpasswort.
+**Mitigation (seit I4, ADR-002):**
+- `fbtracemgr -FETCH_PASSWORD <datei>` oder `-TRUSTED` statt `-PASS`: Die Befehlszeile enthält nur den Pfad der
+  Passwortdatei (Test: das Passwort erscheint in keinem Argument). Ein `Password`-Schlüssel in `config.json` bricht ab.
+- Optional Trace-Benutzer mit Rolle `TRACE_ANY_ATTACHMENT` statt SYSDBA (`-ROLE`, Firebird ≥ 4; `operations/SETUP.md`).
+- Vorlage ohne Passwort und ohne SYSDBA.
 - Nach der Umstellung das bisher genutzte Passwort rotieren (`operations/SECRETS_MANAGEMENT.md`).
 
-**Restrisiko:** Hoch – bis I4 (voller DB-Zugriff bei Abgriff); danach Gering.
+**Restrisiko:** Gering bis Mittel – die Passwortdatei ist Klartext, geschützt nur durch Dateirechte; im echten Einsatz
+bisher mit SYSDBA ohne Rolle (voller DB-Zugriff, wenn die Datei abfließt). Mit Trace-Benutzer und Rolle: Gering.
 
 ---
 
 ## 4. Unkontrollierte Trace-Rohdaten auf dem Server
 
-**Gefahr:** Die Trace-Session protokolliert **alle** Datenbanken des Servers (`fbtrace30.conf`: `database` ohne
-Filter) inklusive SQL-Texten bis 65 000 Zeichen und Parametern; die Ausgabe liegt unverschlüsselt und ohne
-Aufbewahrungsregel als `E:\trace_output_*.log`. Eine vergessene Session schreibt unbegrenzt weiter (Plattenplatz,
-Server-Last). `trace_stop.ps1` stoppt die Session anhand der **neuesten** `*.log` auf `E:\` — eine andere Logdatei dort
-lässt den Stopp scheitern oder zielt auf die falsche Session.
+**Gefahr:** Die Trace-Session protokolliert **alle** Datenbanken des Servers (`fbtrace50.conf`/`fbtrace30.conf`:
+`database` ohne Filter) inklusive SQL-Texten bis 65 000 Zeichen und Parametern; die Ausgabe liegt unverschlüsselt und
+ohne Aufbewahrungsregel als `<OutputDirectory>\trace_output_*.log`. Eine vergessene Session schreibt unbegrenzt weiter
+(Plattenplatz, Server-Last).
 
 **Mitigation:**
 - Trace nur zeitlich begrenzt; Stopp und Löschung der Rohdatei als Teil des Ablaufs (`operations/RUNBOOK.md`).
 - Retention und Zugriffsschutz der Rohdateien: `security/DATA_HANDLING.md` §3/§5.
-- I5: Ausgabeverzeichnis konfigurierbar, Stopp über gespeicherte Session-ID; Datenbankfilter in der Trace-Konfiguration
-  als Option dokumentieren.
+- Seit I5: Ausgabeordner aus `config.json`, Stopp über den gemerkten Sitzungsnamen (nicht mehr „neueste Logdatei");
+  ein zweiter Start wird abgelehnt, solange eine Sitzung gemerkt ist.
+- Offen: Datenbankfilter (`include_filter`) in der Trace-Konfiguration als Option dokumentieren (`BACKLOG.md`).
 
-**Restrisiko:** Mittel – organisatorisch beherrschbar, technisch erst mit I5 entschärft.
+**Restrisiko:** Mittel – organisatorisch beherrschbar; vergessene Sitzungen und Rohdateien bleiben ein Ablaufthema.
 
 ---
 

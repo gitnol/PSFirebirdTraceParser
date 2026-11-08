@@ -9,47 +9,44 @@ arbeiten ohne Anmeldung auf lokalen Dateien bzw. Pipeline-Objekten.
 
 | Ziel | Verfahren | Secret-Ablageort | Anlage |
 |------|-----------|-----------------|--------|
-| Firebird-Service-Manager (`service_mgr`, lokal) | Firebird-Benutzer + Passwort (Legacy/SRP je nach Serverkonfiguration), übergeben als `fbtracemgr -USER … -PASS …` | `config.json` im Skriptverzeichnis, Klartext, gitignored | Einmalig manuell (Kopie von `config.sample.json`) |
+| Firebird-Service-Manager (`service_mgr`, lokal) | Firebird-Benutzer + Passwortdatei (`fbtracemgr -USER … -FETCH_PASSWORD <datei>`) oder Windows-Anmeldung (`-TRUSTED`), optional `-ROLE` | Passwortdatei außerhalb des Repos, Rechte nur eigenes Konto | Einmalig manuell (`operations/SETUP.md`) |
 
-Die Gefährdung durch dieses Verfahren steht in `security/THREAT_MODEL.md` (Bedrohung 3), die Ablösung in I4.
+Entscheidung: `architecture/ADR/ADR-002-trace-anmeldung.md` (seit I4). Bedrohung 3 in `security/THREAT_MODEL.md`.
 
 ---
 
-## 1. Firebird-Benutzer/Passwort (Ist)
+## 1. Ablauf (Ist, seit I4)
 
 ```powershell
-# Bestand (trace_start.ps1 / trace_stop.ps1), gekürzt
-$Config = Get-Content -Path $ConfigPath -Raw | ConvertFrom-Json
-& "$MyPfad\fbtracemgr" -SE service_mgr -USER $Config.Firebird.Username -PASS $Config.Firebird.Password -START -CONFIG $TraceConfig
+# TraceCommon.ps1, gekürzt: nur der Pfad der Passwortdatei geht an fbtracemgr
+$arguments = @('-SE', 'service_mgr') + (Get-TraceAuthArgumentList -Config $config) + @('-START', '-NAME', $name, '-CONFIG', $conf)
+Invoke-FbTraceMgr -FilePath $config.FbTraceMgr -ArgumentList $arguments -OutFile $logFile
 ```
 
 | Datei | Inhalt | Ablageort | Anlage-Account |
 |-------|--------|-----------|---------------|
-| `config.json` | Benutzer + Passwort für den Firebird-Service-Manager, Firebird-Pfad, Trace-Konfiguration | Skriptverzeichnis (`$PSScriptRoot`) | der Administrator, der Traces startet |
+| `config.json` | Benutzer, Pfad der Passwortdatei, Rolle, Firebird-Pfad, Ausgabeordner, Sitzungsname | Skriptverzeichnis (`$PSScriptRoot`) | der Administrator, der Traces startet |
+| Passwortdatei | Passwort in der ersten Zeile | z. B. `%LOCALAPPDATA%\PSFirebirdTraceParser\` | derselbe Benutzer; Rechte nur für ihn |
 
-**Schwächen:** Passwort im Klartext auf der Platte; Passwort in der Prozess-Kommandozeile; Vorlage mit
-höchstprivilegiertem Benutzer und bekanntem Standardpasswort.
+**Restschwäche:** Die Passwortdatei ist Klartext (Schutz über Dateirechte). Bis I4: Passwort in `config.json` und in der
+Befehlszeile, Vorlage mit SYSDBA und Standardpasswort.
 
 ---
 
-## 2. Soll-Varianten (Entscheidung in ADR-002, I4)
-
-Optionen laut Firebird-4.0-Manpage von `fbtracemgr` (Verbindungsparameter `-user`, `-password`, `-fetch`, `-trusted`):
+## 2. Varianten
 
 | Variante | Secret-Ablage | Vorteil | Voraussetzung |
 |---|---|---|---|
-| `-fetch <datei>` | Passwort aus DPAPI/`SecretManagement` (`architecture/CREDENTIAL_STRATEGY.md`), nur für den Aufruf in eine ACL-geschützte Temp-Datei geschrieben und danach gelöscht | kein Passwort in der Kommandozeile | Schreib-/Löschdisziplin, ACL nur ausführender Benutzer |
-| `-trusted` | keins (Windows-Anmeldung) | kein Firebird-Passwort | Server mit Windows-Authentifizierung (`Win_Sspi`) und Benutzer-Mapping |
-| beide + Trace-Benutzer | wie oben | kein SYSDBA | Firebird ≥ 4, Rolle mit `TRACE_ANY_ATTACHMENT` |
-
-Vor der Umsetzung gegen `fbtracemgr -?` der eingesetzten Firebird-Version prüfen (Schreibweise und Verhalten der Optionen).
+| `-FETCH_PASSWORD <datei>` (genutzt mit echten Traces, Firebird 5.0.4) | Passwortdatei, Rechte nur ausführender Benutzer | kein Passwort in der Befehlszeile | Datei anlegen, nach Gebrauch löschen |
+| `-TRUSTED` (ungeprüft gegen einen Server) | keins (Windows-Anmeldung) | kein Firebird-Passwort | `AuthServer = Srp256, Win_Sspi`, Benutzer-Mapping |
+| eine davon + `-ROLE` (ungeprüft gegen einen Server) | wie oben | kein SYSDBA | Firebird ≥ 4, Rolle mit `TRACE_ANY_ATTACHMENT` |
 
 ---
 
 ## Security-Checkliste
 
-- [ ] Kein Plaintext-Passwort im Quellcode oder in versionierten Konfigurationsdateien (`config.sample.json` ohne echtes oder Standardpasswort — offen, I4)
+- [ ] Kein Plaintext-Passwort im Quellcode oder in versionierten Konfigurationsdateien (`config.sample.json` ohne Passwort, seit I4; Test)
 - [ ] `config.json` und Credential-Dateien (`*.dpapi`, `*.secret`, `*.clixml` außerhalb des Repos) nicht versioniert
-- [ ] Kein Passwort als Kommandozeilenargument (offen, I4)
-- [ ] Dedizierter Trace-Benutzer mit minimalen Rechten statt SYSDBA (offen, I4)
+- [ ] Kein Passwort als Kommandozeilenargument (seit I4; Test)
+- [ ] Dedizierter Trace-Benutzer mit minimalen Rechten statt SYSDBA (möglich über `Role`; im Einsatz noch SYSDBA)
 - [ ] Bei Personal- oder Rollenwechsel bzw. nach der Umstellung: Passwort rotieren, DPAPI-Dateien neu anlegen

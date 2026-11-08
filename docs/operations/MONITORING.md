@@ -21,11 +21,13 @@ weil sie unbegrenzt Daten schreibt und den Datenbankserver belastet.
 
 | Code | Bedeutung |
 |------|-----------|
-| `0` | Durchlauf ohne erkannten Fehler (Fehler von `fbtracemgr` werden nicht ausgewertet, I5) |
+| `0` | Trace beendet bzw. gestoppt |
 | `1` | `config.json` fehlt |
-| `2` | `config.json` ist kein gültiges JSON |
-| `3` | `trace_stop.ps1`: keine `*.log` unter `E:\` |
-| `4` | `trace_stop.ps1`: keine Session-ID in der ersten Zeile |
+| `2` | Konfiguration ungültig (alle Fehler in der Meldung) oder beim Start: Sitzung noch gemerkt |
+| `3` | `trace_stop.ps1`: keine passende laufende Sitzung |
+| `4` | `trace_stop.ps1`: mehrere passende Sitzungen (dann `-Id`) |
+| `5` | `fbtracemgr` meldet einen Fehler bzw. bestätigt den Stopp nicht |
+| `6` | unerwarteter Fehler |
 
 ---
 

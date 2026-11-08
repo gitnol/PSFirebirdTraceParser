@@ -227,8 +227,9 @@ eine abgearbeitete; erst die Zeile im CHANGELOG macht nachprüfbar, ob die Matri
 | `Show-TraceStructure.ps1` | Parser: Trace-Log → ein `PSCustomObject` je Trace-Block (`features/TRACE_PARSING.md`) |
 | `Pseudonymize-FirebirdTrace.ps1` | Pipeline-Filter: hasht Benutzer, IP, Anwendungspfad, Parameter, SQL-Literale (`features/PSEUDONYMIZATION.md`) |
 | `trace_start.ps1` / `trace_stop.ps1` | Trace-Session per `fbtracemgr` starten/stoppen (`features/TRACE_CAPTURE.md`) |
-| `fbtrace30.conf` | Trace-Konfiguration (Schwellwert, geloggte Ereignisse) für `fbtracemgr -CONFIG` |
-| `config.sample.json` | Vorlage für die lokale, ignorierte `config.json` (Firebird-Pfad, Benutzer, Trace-Konfiguration) |
+| `TraceCommon.ps1` | Gemeinsame Funktionen der Trace-Skripte (Konfiguration, Anmeldung ohne Passwort, Start/Stopp, `Invoke-FbTraceMgr`) |
+| `fbtrace50.conf` / `fbtrace30.conf` | Trace-Konfiguration (Schwellwert, geloggte Ereignisse) für `fbtracemgr -CONFIG`; Vorlage nutzt `fbtrace50.conf` |
+| `config.sample.json` | Vorlage für die lokale, ignorierte `config.json` (Firebird-Pfad, Benutzer, Passwortdatei, Ausgabeordner, Sitzungsname) |
 | `README.md` / `README.de.md` | Öffentliche Nutzerdoku (englisch/deutsch) — bei Parameter-/Feature-Änderungen mitziehen |
 
 ### Kritische Patterns (IMMER beachten)

@@ -94,6 +94,20 @@ Aufruf grün. Lösung: Pester in einem Kindbereich mit den Standard-Einstellunge
 
 ---
 
+## L7: Natives Programm einmal durch ein kleines Ersatzprogramm ersetzen, nicht nur mocken
+- Inkrement: I4/I5
+- Scope: generisch-stack
+- Backport-Ziel: `stacks/powershell-automation/testing/UNIT_TESTS.md` (Mock-Pattern für externe Programme)
+- Gesehen mit: v37
+- Status: offen
+
+Die Unit-Tests ersetzten `fbtracemgr` über eine Wrapper-Funktion und waren grün. Erst ein Lauf mit einem in zwei
+Minuten kompilierten Ersatzprogramm (`csc.exe`, schreibt Startzeile, wartet auf Stopp) zeigte: Während der Aufzeichnung
+ist die umgeleitete Logdatei leer (PowerShell puffert), der geplante Hauptweg „ID aus der ersten Logzeile" greift also
+selten; der Stopp läuft fast immer über `-LIST`. Ein Mock bildet nur ab, was man schon weiß. Ein Fall, ein Projekt.
+
+---
+
 ## Pflege
 
 - Neuer „Lessons Learned"-Block im `CHANGELOG.md` → Eintrag `## L<N>:` hier anlegen.

@@ -59,9 +59,10 @@ Workflow: `.github/workflows/ci.yml`; Befehle: `tools/Invoke-QualityGate.ps1` (`
 
 | Binary | Pfad | Zweck | Fehler-Verhalten |
 |--------|------|-------|-----------------|
-| `fbtracemgr.exe` | `<Firebird.FirebirdPath>\fbtracemgr` aus `config.json` (Vorlage: Firebird-4.0-Installationsverzeichnis) | Trace-Session starten (`-START -CONFIG`) und stoppen (`-STOP -ID`) über den Service-Manager | Keine Vorabprüfung; fehlt das Binary, bricht der Aufruf mit PowerShell-Fehler ab, Exit-Code nicht definiert (TODO I5) |
+| `fbtracemgr.exe` | `<Firebird.FirebirdPath>\fbtracemgr.exe` aus `config.json` (Vorlage: Firebird-5.0-Installationsordner) | Trace-Session starten (`-START -CONFIG`) und stoppen (`-STOP -ID`) über den Service-Manager | Keine Vorabprüfung; fehlt das Binary, bricht der Aufruf mit PowerShell-Fehler ab, Exit-Code nicht definiert (TODO I5) |
 
-Der Pfad wird per String-Konkatenation gebaut (`"$MyPfad\fbtracemgr"`), nicht als `$script:`-Konstante (TODO I5).
+Seit I5: Pfad per `Join-Path`, Existenz vor dem ersten Aufruf geprüft (Exit 2), Exit-Code jedes Aufrufs ausgewertet
+(Exit 5); Anmeldung per `-FETCH_PASSWORD`/`-TRUSTED`, `-ROLE`, Sitzungsname per `-NAME` (ADR-002).
 
 ---
 
@@ -84,15 +85,19 @@ Service-Manager: `security/AUTHENTICATION.md`.
 | Windows | Windows mit Windows PowerShell 5.1 oder PowerShell 7 | Laufzeit; Trace-Skripte nutzen Windows-Pfade (`E:\`) |
 | PowerShell | ≥ 5.1 (nicht deklariert; Code nutzt `::new()`, `[ordered]`, `[CmdletBinding()]`) | Sprache; ein `#Requires -Version 5.1` fehlt (BACKLOG) |
 | Firebird-Server | Trace-Format ab Firebird 3 (Zeitstempel `…T…ffff`); Vorlage: Firebird 4.0 | Quelle der Trace-Logs |
-| Laufwerk `E:\` | fest im Code | Ablage der Trace-Ausgabe (`trace_output_*.log`) — muss existieren und genug Platz haben |
+| Ausgabeordner | `OutputDirectory` in `config.json` (seit I5) | Ablage der Trace-Ausgabe (`trace_output_*.log`) — muss existieren und genug Platz haben |
+| PowerShell 7.4+ | nur für die Trace-Skripte (`#Requires -Version 7.4`, ADR-002) | byte-genaue Umleitung der `fbtracemgr`-Ausgabe |
 
 ---
 
 ## Upgrade-Hinweise
 
 - **PowerShell 7:** 7.4 und 7.5 erreichen laut Microsoft-Lebenszyklus am 2026-11-10 das Supportende; 7.6 ist die
-  aktuelle LTS (`security/DEPENDENCY_AUDIT.md`). Skripte müssen unter 5.1 lauffähig bleiben.
+  aktuelle LTS (`security/DEPENDENCY_AUDIT.md`). Parser und Pseudonymisierer müssen unter 5.1 lauffähig bleiben (CI-Job);
+  die Trace-Skripte brauchen 7.4+.
 - **Firebird:** Das Trace-Ausgabeformat kann sich zwischen Hauptversionen ändern (Zeitstempel, Verbindungszeile) —
   nach einem Server-Upgrade Parser gegen eine neue synthetische/anonymisierte Probe prüfen.
-- **`fbtracemgr`:** Optionen (`-fetch`, `-trusted`) und Exit-Codes vor I4 gegen `fbtracemgr -?` der eingesetzten Version prüfen.
+- **`fbtracemgr`:** genutzt werden `-SE`, `-USER`, `-FETCH_PASSWORD`, `-TRUSTED`, `-ROLE`, `-START -NAME -CONFIG`, `-LIST`,
+  `-STOP -ID` (Firebird 5.0.4, Entwurf des Owners mit echten Traces). Ausgabe von `-LIST` und Stopp-Bestätigung sind nur
+  gegen ein Ersatzprogramm getestet — bei einem Server-Upgrade einmal von Hand prüfen.
 - **Pester:** Wechsel 5.x → 6.x kann Test-Syntax brechen — Version pinnen und Wechsel als eigenes Inkrement.

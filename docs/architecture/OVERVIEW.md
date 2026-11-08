@@ -44,11 +44,14 @@ Architekturentscheidungen nachvollziehbar.
 
 ```mermaid
 flowchart TD
-    CFG[config.json<br/>lokal, gitignored:<br/>Firebird-Pfad, Benutzer, Passwort,<br/>Trace-Konfigurationsname] --> START
-    TCONF[fbtrace30.conf<br/>Trace-Regeln] --> START
-    START[trace_start.ps1] -->|"fbtracemgr -START<br/>(Passwort als Argument)"| FB[(Firebird-Server<br/>Service-Manager)]
-    FB -->|Trace-Ausgabe, stdout-Umleitung| LOG[Trace-Log<br/>E:\trace_output_Zeitstempel.log]
-    STOP[trace_stop.ps1] -->|liest erste Zeile der<br/>neuesten *.log auf E:| LOG
+    CFG[config.json<br/>lokal, gitignored:<br/>Firebird-Pfad, Benutzer, Pfad der Passwortdatei,<br/>Ausgabeordner, Sitzungsname] --> START
+    PW[Passwortdatei<br/>außerhalb des Repos] -.->|"liest fbtracemgr selbst<br/>(-FETCH_PASSWORD)"| FB
+    TCONF[fbtrace50.conf<br/>Trace-Regeln] --> START
+    START[trace_start.ps1<br/>+ TraceCommon.ps1] -->|"fbtracemgr -START -NAME<br/>(ohne Passwort)"| FB[(Firebird-Server<br/>Service-Manager)]
+    START -->|Name, Logdatei| STATE[trace_session.json]
+    FB -->|Trace-Ausgabe, byte-genau| LOG[Trace-Log<br/>OutputDirectory/trace_output_Zeitstempel.log]
+    STATE --> STOP[trace_stop.ps1<br/>+ TraceCommon.ps1]
+    STOP -->|"erste Logzeile oder<br/>fbtracemgr -LIST nach Name"| FB
     STOP -->|"fbtracemgr -STOP -ID n"| FB
     CFG --> STOP
     LOG --> PARSE[Show-TraceStructure.ps1 -Path<br/>4-MB-Stücke → Split je Zeitstempel → Regex je Feld]
@@ -67,9 +70,12 @@ flowchart TD
 ```
 Show-TraceStructure.ps1         → Zerlegt eine Trace-Datei in Blöcke (Zeitstempel-Trenner) und mappt Felder per Regex auf ein Objekt je Block.
 Pseudonymize-FirebirdTrace.ps1  → Ersetzt identifizierende Werte der Parser-Objekte durch gekürzte HMAC-SHA256-Pseudonyme; -AnalyzeOnly zeigt nur, was ersetzt würde.
-trace_start.ps1                 → Lädt config.json und startet eine Trace-Session mit fbtrace30.conf; Ausgabe in eine Datei mit Zeitstempel.
-trace_stop.ps1                  → Liest die Session-ID aus der Kopfzeile der neuesten Trace-Datei und stoppt die Session.
-fbtrace30.conf                  → Legt fest, was Firebird protokolliert (Schwellwert 100 ms, Statements, Pläne, Performance, Transaktionen, Fehler).
+trace_start.ps1                 → Prüft config.json und startet eine benannte Trace-Session; Ausgabe byte-genau in eine Datei mit Zeitstempel (PowerShell 7.4+).
+trace_stop.ps1                  → Findet die gemerkte Session (erste Logzeile, sonst fbtracemgr -LIST nach Name) und stoppt sie; -Id für gezielten Stopp.
+TraceCommon.ps1                 → Gemeinsame Funktionen der Trace-Skripte: Konfiguration prüfen, Anmeldeargumente ohne Passwort, Start/Stopp, Invoke-FbTraceMgr als einziger Aufruf von fbtracemgr, Exit-Codes.
+fbtrace50.conf                  → Trace-Regeln für Firebird 4.0/5.0 (Schwellwert 100 ms, Statements, Pläne, Performance, Transaktionen, alle Fehler, Sweeps, Services).
+fbtrace30.conf                  → Ältere Trace-Regeln (Fehler nur lock_conflict/deadlock über include_gds_codes); bleibt für bestehende Installationen.
+tools/Invoke-QualityGate.ps1    → Linter und Tests, lokal und in CI gleich (seit I14).
 ```
 
 ---
