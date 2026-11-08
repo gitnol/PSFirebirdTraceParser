@@ -1,0 +1,56 @@
+Trace session ID 13 started
+
+2026-11-08T13:00:00.0000 (4321:000001A2B3C4D5E0) ATTACH_DATABASE
+	C:\DATA\SAMPLE.FDB (ATT_41, APPUSER:NONE, UTF8, TCPv4:192.0.2.60/50700)
+	C:\Program Files\SampleApp\app.exe:5678
+
+2026-11-08T13:00:01.0000 (4321:000001A2B3C4D5E0) EXECUTE_PROCEDURE_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_41, APPUSER:NONE, UTF8, TCPv4:192.0.2.60/50700)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_701, READ_COMMITTED | REC_VERSION | WAIT | READ_WRITE)
+
+Procedure CALC_ORDER_TOTAL:
+param0 = integer, "4712"
+
+30 records fetched
+    160 ms, 14 read(s), 360 fetch(es)
+
+Table                              Natural     Index    Update    Insert    Delete   Backout     Purge   Expunge
+****************************************************************************************************************
+ORDER_LINE                                        30                                                            
+
+2026-11-08T13:00:02.0000 (4321:000001A2B3C4D5E0) EXECUTE_FUNCTION_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_41, APPUSER:NONE, UTF8, TCPv4:192.0.2.60/50700)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_701, READ_COMMITTED | REC_VERSION | WAIT | READ_WRITE)
+
+Function CALC_TAX:
+param0 = numeric(18,2), "200.00"
+
+returns:
+param0 = numeric(18,2), "38.00"
+
+      3 ms, 5 fetch(es)
+
+2026-11-08T13:00:03.0000 (4321:000001A2B3C4D5E0) EXECUTE_TRIGGER_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_41, APPUSER:NONE, UTF8, TCPv4:192.0.2.60/50700)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_702, READ_COMMITTED | REC_VERSION | WAIT | READ_WRITE)
+	TRG_STOCK_AU FOR STOCK (AFTER UPDATE) 
+    110 ms, 2 read(s), 44 fetch(es), 1 mark(s)
+
+Table                              Natural     Index    Update    Insert    Delete   Backout     Purge   Expunge
+****************************************************************************************************************
+STOCK                                              1         1                                                  
+
+2026-11-08T13:00:04.0000 (4321:000001A2B3C4D5E0) EXECUTE_TRIGGER_FINISH
+	C:\DATA\SAMPLE.FDB (ATT_41, APPUSER:NONE, UTF8, TCPv4:192.0.2.60/50700)
+	C:\Program Files\SampleApp\app.exe:5678
+		(TRA_703, READ_COMMITTED | REC_VERSION | WAIT | READ_WRITE)
+	<unknown> (ON CONNECT) 
+    102 ms, 6 fetch(es)
+
+2026-11-08T13:00:05.0000 (4321:000001A2B3C4D5E0) DETACH_DATABASE
+	C:\DATA\SAMPLE.FDB (ATT_41, APPUSER:NONE, UTF8, TCPv4:192.0.2.60/50700)
+	C:\Program Files\SampleApp\app.exe:5678
+

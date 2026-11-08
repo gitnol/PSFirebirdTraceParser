@@ -186,8 +186,8 @@ Describe 'Show-TraceStructure: Tabellenstatistik je Tabelle (I11)' {
 
     It 'haengt die neuen Felder hinten an den Ausgabe-Vertrag an (nach SweepNext)' {
         $names = @($script:R[0].PSObject.Properties.Name)
-        $names[-7..-1] | Should -Be @('RecordsFetched', 'TxIsolation', 'TxReadMode', 'TxWaitMode', 'TxLockTimeout', 'TxAccessMode', 'TableCounts')
-        $names.IndexOf('SweepNext') | Should -Be ($names.Count - 8)
+        $start = $names.IndexOf('SweepNext') + 1
+        $names[$start..($start + 6)] | Should -Be @('RecordsFetched', 'TxIsolation', 'TxReadMode', 'TxWaitMode', 'TxLockTimeout', 'TxAccessMode', 'TableCounts')
     }
 }
 

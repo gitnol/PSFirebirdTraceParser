@@ -216,6 +216,9 @@ function ConvertFrom-TraceBlock {
         RecordsFetched = [long]0; # "N records fetched" (rows), not the page fetches in Fetches
         TxIsolation = $null; TxReadMode = $null; TxWaitMode = $null; TxLockTimeout = $null; TxAccessMode = $null; # from TransactionOptions
         TableCounts = $null; # TableStats as one object per table
+        RoutineType = $null; RoutineName = $null; # EXECUTE_PROCEDURE/FUNCTION/TRIGGER events
+        TriggerTable = $null; TriggerTime = $null; TriggerEvent = $null; # trigger line
+        ConnectionDurationMs = $null; # DETACH_DATABASE: time since ATTACH_DATABASE of the same connection
     }
 
     # --- Header ---
