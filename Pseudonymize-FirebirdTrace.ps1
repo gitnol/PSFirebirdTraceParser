@@ -270,6 +270,11 @@ process {
 
     # CRITICAL: Create a copy to avoid modifying the original list by reference
     $item = $InputObject | Select-Object *
+    # Select-Object copies only the first level: give the per-table objects (I11) their own copies, so changes to the
+    # output never reach the input. Table names and counters stay plain text, like TableStats (decision I2).
+    if ($item.PSObject.Properties['TableCounts'] -and $item.TableCounts) {
+        $item.TableCounts = @($item.TableCounts | ForEach-Object { $_ | Select-Object * })
+    }
     
     # 1. User
     if ($item.User) {

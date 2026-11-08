@@ -15,6 +15,9 @@
     - ErrorSource/ErrorCodes/ErrorMessages: ERROR AT / WARNING AT events
     - ServiceName/ServiceID: *_SERVICE events (log_services); user, address and program go to the usual fields
     - SweepOIT/SweepOAT/SweepOST/SweepNext: transaction counters of SWEEP_START / SWEEP_FINISH (log_sweep)
+    - RecordsFetched: "N records fetched" (rows; Fetches are page fetches)
+    - TxIsolation/TxReadMode/TxWaitMode/TxLockTimeout/TxAccessMode: parts of TransactionOptions
+    - TableCounts: TableStats as one object per table (Table, Natural, Index, Update, Insert, Delete, Backout, Purge, Expunge)
 
     Status messages go to the verbose stream (-Verbose), not to the console.
 
@@ -131,6 +134,67 @@ $rxPerf = [System.Text.RegularExpressions.Regex]::new(
 )
 
 
+# Rows read by the statement: "1234 records fetched" on a line of its own (Firebird prints it for statements always,
+# for procedures and functions only when not 0). Not the same as Fetches (page fetches of the performance line).
+$script:RECORDS_FETCHED = ' records fetched'
+$script:Ordinal = [System.StringComparison]::Ordinal       # type literals resolved once, not per block
+$script:DigitsOnly = [System.Globalization.NumberStyles]::None
+
+$script:TABLE_CELL_WIDTH = 10
+$script:Utf8 = [System.Text.UTF8Encoding]::new($false)
+
+# Parts of the transaction line (Firebird TracePluginImpl::register_transaction) -> field; "WAIT <n>" is a lock timeout.
+$script:TX_OPTION_FIELD = @{
+    'READ_COMMITTED' = 'TxIsolation'; 'CONCURRENCY' = 'TxIsolation'; 'CONSISTENCY' = 'TxIsolation'; '<unknown>' = 'TxIsolation'
+    'REC_VERSION' = 'TxReadMode'; 'NO_REC_VERSION' = 'TxReadMode'; 'READ_CONSISTENCY' = 'TxReadMode'
+    'WAIT' = 'TxWaitMode'; 'NOWAIT' = 'TxWaitMode'
+    'READ_WRITE' = 'TxAccessMode'; 'READ_ONLY' = 'TxAccessMode'
+}
+
+function ConvertFrom-TableStat {
+    # Table statistics -> one object per table. Firebird (appendTableCounts) pads the name column to
+    # max(32, longest name in bytes) (Firebird 3: fixed 31) and writes each counter right-aligned in 10 characters,
+    # 0 as blanks. The name column width is read from the header ("Natural" ends 10 characters after it).
+    # Non-ASCII names are padded by bytes, so the cells start earlier in characters. A name longer than the
+    # column shifts all numbers to the right.
+    param([string]$TableStats)
+    $lines = $TableStats.Split("`n")
+    $nameWidth = $lines[0].IndexOf('Natural') + 'Natural'.Length - $script:TABLE_CELL_WIDTH
+    if ($nameWidth -le 0) { return $null }
+    $rows = [System.Collections.Generic.List[object]]::new()
+    for ($i = 1; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        if ($line.Length -eq 0 -or $line[0] -eq '*') { continue }
+        $head = $line.Substring(0, [Math]::Min($nameWidth, $line.Length))
+        $cellStart = $nameWidth - ($script:Utf8.GetByteCount($head) - $head.Length)
+        $space = $line.IndexOf(' ')
+        $token = if ($space -lt 0) { $line } else { $line.Substring(0, $space) }
+        if ($token.Length -gt $cellStart) {
+            # Longer than the column - unless the rest is one full cell (name fills the column, 10-digit number)
+            $rest = $token.Substring($cellStart)
+            if (-not ($rest.Length -eq $script:TABLE_CELL_WIDTH -and $rest -match '^\d+$')) { $cellStart = $token.Length }
+        }
+        # 8 cells of 10 characters. Pad once (editors may trim the trailing blanks); a blank cell is 0 ('0' + '', Windows
+        # PowerShell 5.1 cannot cast blanks). Unrolled on
+        # purpose: a PowerShell loop over the columns was about 6 times slower (measured, 6000 rows).
+        $c = $line.PadRight($cellStart + 80)
+        try {
+            $rows.Add([PSCustomObject]@{
+                    Table = $line.Substring(0, [Math]::Min($cellStart, $line.Length)).Trim()
+                    Natural = [long]('0' + $c.Substring($cellStart, 10).Trim()); Index = [long]('0' + $c.Substring($cellStart + 10, 10).Trim())
+                    Update = [long]('0' + $c.Substring($cellStart + 20, 10).Trim()); Insert = [long]('0' + $c.Substring($cellStart + 30, 10).Trim())
+                    Delete = [long]('0' + $c.Substring($cellStart + 40, 10).Trim()); Backout = [long]('0' + $c.Substring($cellStart + 50, 10).Trim())
+                    Purge = [long]('0' + $c.Substring($cellStart + 60, 10).Trim()); Expunge = [long]('0' + $c.Substring($cellStart + 70, 10).Trim())
+                })
+        }
+        catch {
+            Write-Verbose "Table statistics: row $i not readable, skipped"
+        }
+    }
+    if ($rows.Count -eq 0) { return $null }
+    return , $rows.ToArray()
+}
+
 # 4. Block parsing (one trace event -> one object)
 function ConvertFrom-TraceBlock {
     param([string]$block)
@@ -231,6 +295,16 @@ function ConvertFrom-TraceBlock {
         $entry.TransactionID = $m.Groups['TransactionID'].Value
         $initID = $m.Groups['InitID'].Value
         $entry.TransactionOptions = $m.Groups['TxOpts'].Value
+        # "READ_COMMITTED | REC_VERSION | WAIT 10 | READ_WRITE" -> separate fields (inline: cheaper than a function call)
+        foreach ($part in $entry.TransactionOptions.Split('|')) {
+            $p = $part.Trim()
+            $field = $script:TX_OPTION_FIELD[$p]
+            if ($field) { $entry[$field] = $p }
+            elseif ($p.StartsWith('WAIT ')) {
+                $timeout = 0
+                if ([int]::TryParse($p.Substring(5), [ref]$timeout)) { $entry.TxWaitMode = 'WAIT'; $entry.TxLockTimeout = $timeout }
+            }
+        }
         
         if (-not [string]::IsNullOrWhiteSpace($initID)) { $entry.RootTxID = $initID }
         elseif (-not [string]::IsNullOrWhiteSpace($entry.TransactionID)) { $entry.RootTxID = $entry.TransactionID }
@@ -261,6 +335,21 @@ function ConvertFrom-TraceBlock {
     $m = if ($block.Contains('Natural')) { $rxTableStats.Match($block) } else { [System.Text.RegularExpressions.Match]::Empty }
     if ($m.Success) {
         $entry.TableStats = $m.Groups['TableStats'].Value # NO TRIM to preserve column alignment
+        $entry.TableCounts = ConvertFrom-TableStat -TableStats $entry.TableStats
+    }
+
+    # --- Records fetched ---
+    # Plain string search instead of a regex: the number is the whole line before the marker; an occurrence inside the
+    # SQL text (no number-only line) is skipped
+    $at = $block.IndexOf($script:RECORDS_FETCHED, $script:Ordinal)
+    while ($at -gt 0) {
+        $lineStart = $block.LastIndexOf("`n", $at - 1) + 1
+        $rows = [long]0
+        if ([long]::TryParse($block.Substring($lineStart, $at - $lineStart), $script:DigitsOnly, $null, [ref]$rows)) {
+            $entry.RecordsFetched = $rows
+            break
+        }
+        $at = $block.IndexOf($script:RECORDS_FETCHED, $at + 1, $script:Ordinal)
     }
 
     # --- Perf ---

@@ -12,6 +12,7 @@ BeforeAll {
     $script:Pseudo = [System.IO.Path]::Combine($PSScriptRoot, '..', 'Pseudonymize-FirebirdTrace.ps1')
     $script:Fixture = [System.IO.Path]::Combine($PSScriptRoot, 'fixtures', 'trace_fb5_counts.log')
     $script:R = @(& $script:Parser -Path $script:Fixture 6>$null)
+    $script:Umlaut = 'LAGER_' + [char]0x00DC + 'BERSICHT_GR' + [char]0x00D6 + 'SSE'   # 2 Umlaute: 2 Bytes mehr als Zeichen
     $script:Cols = @('Natural', 'Index', 'Update', 'Insert', 'Delete', 'Backout', 'Purge', 'Expunge')
 
     function Get-Row([object]$TraceEvent, [string]$Table) { @($TraceEvent.TableCounts | Where-Object Table -eq $Table)[0] }
@@ -31,6 +32,23 @@ Describe 'Show-TraceStructure: RecordsFetched (I11)' {
 
     It 'liest Werte ueber 2^31' {
         $script:R[4].RecordsFetched | Should -Be 3000000000
+    }
+
+    It 'ueberspringt den Text im SQL und liest die Zeile mit der Zahl' {
+        $f = Join-Path $TestDrive 'rf_in_sql.log'
+        @(
+            '2026-11-08T11:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH'
+            "`t`t(TRA_1, CONCURRENCY | WAIT | READ_WRITE)"
+            ''
+            'Statement 1:'
+            ('-' * 79)
+            "SELECT 'max 5 records fetched' FROM T"
+            ('^' * 79)
+            '17 records fetched'
+            '      2 ms, 4 fetch(es)'
+            ''
+        ) -join "`n" | Set-Content -Path $f -NoNewline -Encoding utf8
+        @(& $script:Parser -Path $f 6>$null)[0].RecordsFetched | Should -Be 17
     }
 
     It 'liefert 0 bei "0 records fetched" und ohne die Zeile (wie die anderen Zaehler)' {
@@ -94,7 +112,7 @@ Describe 'Show-TraceStructure: Tabellenstatistik je Tabelle (I11)' {
     It 'liefert ein Objekt je Tabellenzeile in der Reihenfolge des Logs' {
         @($script:R[0].TableCounts).Count | Should -Be 3
         @($script:R[0].TableCounts | ForEach-Object Table) |
-            Should -Be @('WAREHOUSE_STOCK_MOVEMENT_HISTORY_ARCHIVE', 'ITEM', ('LAGER_' + [char]0x00DC + 'BERSICHT'))
+            Should -Be @('WAREHOUSE_STOCK_MOVEMENT_HISTORY_ARCHIVE', 'ITEM', $script:Umlaut)
     }
 
     It 'liest alle acht Spalten bei breiter Namensspalte (Firebird 4/5, langer Name)' {
@@ -104,7 +122,7 @@ Describe 'Show-TraceStructure: Tabellenstatistik je Tabelle (I11)' {
     }
 
     It 'liest Namen mit Umlaut richtig (Firebird fuellt die Spalte nach Bytes, nicht nach Zeichen)' {
-        Get-Value (Get-Row $script:R[0] ('LAGER_' + [char]0x00DC + 'BERSICHT')) | Should -Be @(1, 22, 0, 0, 0, 0, 0, 0)
+        Get-Value (Get-Row $script:R[0] $script:Umlaut) | Should -Be @(123456789, 22, 0, 0, 0, 0, 0, 0)
     }
 
     It 'liest den Firebird-3-Kopf und einen Namen, der die Spalte genau fuellt, mit zehnstelliger Zahl' {
@@ -139,6 +157,25 @@ Describe 'Show-TraceStructure: Tabellenstatistik je Tabelle (I11)' {
         Get-Value (Get-Row $e 'SHORT') | Should -Be @(9, 0, 0, 0, 0, 0, 0, 0)
     }
 
+    It 'ueberspringt eine unlesbare Zeile und liest die uebrigen' {
+        $f = Join-Path $TestDrive 'broken_row.log'
+        @(
+            '2026-11-08T11:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH'
+            "`t`t(TRA_1, CONCURRENCY | WAIT | READ_WRITE)"
+            ''
+            '      2 ms, 4 fetch(es)'
+            ''
+            'Table                             Natural     Index    Update    Insert    Delete   Backout     Purge   Expunge'
+            ('*' * 111)
+            ('BROKEN'.PadRight(31) + '      n/a')
+            ('GOOD'.PadRight(31) + '{0,10}' -f 3)
+            ''
+        ) -join "`n" | Set-Content -Path $f -NoNewline -Encoding utf8
+        $e = @(& $script:Parser -Path $f 6>$null)[0]
+        @($e.TableCounts | ForEach-Object Table) | Should -Be @('GOOD')
+        $e.TableCounts[0].Natural | Should -Be 3
+    }
+
     It 'laesst TableStats als ungetrimmten Text unveraendert' {
         $script:R[0].TableStats | Should -Match '(?m)^ITEM {43}120'
     }
@@ -158,7 +195,8 @@ Describe 'Pseudonymize-FirebirdTrace: Felder aus I11' {
     BeforeAll {
         # Eingabe im Test gebaut (fiktive Werte), Form wie die Ausgabe des Parsers
         $script:In = [pscustomobject]@{
-            User = 'APPUSER:NONE'; ClientIP = '192.0.2.40'; SqlStatement = 'SELECT ID FROM ITEM WHERE NAME = ''X'''
+            User = 'APPUSER:NONE'; ClientIP = '192.0.2.40'; ProtocolInfo = 'TCPv4:192.0.2.40/50500'
+            ApplicationPath = $null; Params = $null; SqlStatement = 'SELECT ID FROM ITEM WHERE NAME = ''X'''
             TableStats = "Table                             Natural`n***`nITEM                                 120"
             RecordsFetched = [long]1234; TxIsolation = 'READ_COMMITTED'; TxReadMode = 'REC_VERSION'; TxWaitMode = 'WAIT'
             TxLockTimeout = 10; TxAccessMode = 'READ_WRITE'

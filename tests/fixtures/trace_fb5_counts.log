@@ -18,7 +18,7 @@ Table                                      Natural     Index    Update    Insert
 ************************************************************************************************************************
 WAREHOUSE_STOCK_MOVEMENT_HISTORY_ARCHIVE                5000                                       2         3         4
 ITEM                                           120                   7         8         9                              
-LAGER_ÜBERSICHT                                 1        22                                                            
+LAGER_ÜBERSICHT_GRÖSSE                 123456789        22                                                            
 
 2026-11-08T09:00:01.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH
 	C:\DATA\SAMPLE.FDB (ATT_21, APPUSER:NONE, UTF8, TCPv4:192.0.2.40/50500)
