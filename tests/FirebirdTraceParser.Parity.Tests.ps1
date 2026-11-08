@@ -2,7 +2,8 @@
 <#
     Paritaetstest (I17, ADR-003): Show-TraceStructure.ps1 (PowerShell-Parser, Orakel) und ConvertFrom-FirebirdTrace
     (C#-Parser) laufen ueber jedes Fixture und ueber erzeugte Grenzfaelle; jedes Feld jedes Objekts muss gleich sein
-    (Name, Reihenfolge, Typ, Wert, $null gegen leer, TableCounts je Zeile). Jeder Unterschied ist rot - das ist die
+    (Name, Reihenfolge, Typ, Wert, $null gegen leer, TableCounts je Zeile), seit I18 auch Warnungen und
+    Verbose-Meldungen. Jeder Unterschied ist rot - das ist die
     Ratsche bis zur Umstellung auf C#. Nur PowerShell 7 (Owner: Prioritaet PowerShell 7); fehlt die gebaute DLL,
     ist der Test rot, nicht uebersprungen. Werte ausgedacht, IPs aus 192.0.2.0/24 und 2001:db8::/32.
 #>
@@ -102,10 +103,8 @@ BeforeAll {
     if ($PSVersionTable.PSEdition -eq 'Core' -and (Test-Path -LiteralPath $script:Dll)) { Import-Module -Name $script:Dll -Verbose:$false }
 
     function Compare-Engine([string]$Path) {
-        # Differences between both parsers for one file (objects only; warnings are compared in I18)
-        $ps = @(& $script:Parser -Path $Path 3>$null)
-        $cs = @(ConvertFrom-FirebirdTrace -Path $Path 3>$null)
-        Compare-TraceOutput -Expected $ps -Actual $cs
+        # Differences between both parsers for one file: objects, warnings and verbose messages (since I18)
+        Compare-TraceRun -Expected (Invoke-TraceEngine PowerShell $Path) -Actual (Invoke-TraceEngine CSharp $Path)
     }
 }
 
