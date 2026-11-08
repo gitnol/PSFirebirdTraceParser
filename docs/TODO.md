@@ -34,18 +34,6 @@ Split wegen der Größengrenze (KICKOFF Phase 2 Punkt 5): je Inkrement höchsten
 Gebündelt wird nichts: I8 liest andere Quellen (Security-Sweep), der Refactoring-Kandidat `Show-TraceStructure.ps1`
 (`BACKLOG.md`) wird durch I20 vielleicht überflüssig — deshalb **getrennt gelassen** und erst nach I20 entschieden.
 
-### I21: K8 beheben — Zeilensuche in beiden Parsern ordinal
-
-Herkunft: Mutationsprobe I19 (`KNOWN_ISSUES.md` K8). Vor I20, weil beide Parser betroffen sind.
-
-**Aufgaben:**
-
-- [ ] Test zuerst: Block mit 2 Mio. Zeilen bei Standard-`-MaxBlockLines` in beiden Engines unter einer festen Zeit
-  (mit großem Abstand, L10); Paritätstests bleiben grün
-- [ ] `Get-LineEnd` (Skript) und `TraceDiagnostics.GetLineEnd` (C#) im selben Commit auf die ordinale Suche nach dem
-  Zeichen `
-` umstellen; weitere kulturabhängige Suchen auf großen Texten prüfen (`LastIndexOf` bei `records fetched`)
-
 ### I20: Umstellung abschließen — PowerShell-Parsing als Referenz/Fallback behalten oder entfernen
 
 **Aufgaben:**

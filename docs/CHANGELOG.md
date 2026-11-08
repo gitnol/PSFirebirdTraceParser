@@ -13,6 +13,29 @@ und Reflexion nach I5: `changelog/ARCHIVE-CHANGELOG-I11-I15.md`.
 
 ---
 
+## 2026-11-08 I21 – K8: Zeilensuche in beiden Parsern ordinal
+
+Commits `e665a72` (Test rot), `ed913e9` (Fix in beiden Parsern im selben Commit). Klein: 2 Zeilen Code, 1 Test.
+
+**Trigger-Matrix:** Fehler beseitigt → `KNOWN_ISSUES.md` (K8 nach „Behobene Probleme"), `STATE.md`; Verhalten nur bei
+der Laufzeit geändert, Ausgabe gleich → keine Feature-Doku nötig (`features/TRACE_PARSING.md` nennt `Get-LineEnd` nicht).
+
+### Fixed
+- `Get-LineEnd` (Skript) und `TraceDiagnostics.GetLineEnd` (C#) suchen den Zeilenumbruch ordinal als Zeichen statt
+  kulturabhängig als Text. Die kulturabhängige Suche kostete je Aufruf Zeit proportional zum Rest des Textes; ein
+  Ereignis mit vielen Zeilen wurde quadratisch langsam. 300 000 Zeilen: 42,7 s → zusammen 1,6 s für beide Parser;
+  2 Mio. Zeilen bei Standard-`-MaxBlockLines`: vorher über 90 s je Parser, jetzt C# 0,2 s, PowerShell 7 1,5 s,
+  Windows PowerShell 5.1 0,4 s.
+
+### Confidence / Ungeprüft
+- RED: `Expected the actual value to be less than 15, because PowerShell … but got 42.7232228`; nach dem Fix nur im
+  Skript war C# noch rot (`… CSharp … but got 41.8270096`) — beide Hälften des Fixes sind damit je einzeln nachgewiesen
+  (zählt als Mutationsprobe mit 2 Mutanten, beide rot). GREEN: 1,58 s.
+- Gate: Build ✓, PSScriptAnalyzer ✓ 0, Pester 7.6.9: 217 passed, 1 skipped; Windows PowerShell 5.1: 153 passed,
+  65 skipped. Paritätstests unverändert grün: die ordinale Suche nach `\n` findet dieselben Stellen.
+- Andere kulturabhängige Suchen sind nur einmal je Ereignis oder auf kurzen Zeilen (`LastIndexOf` bei
+  `records fetched`, `IndexOf(") ")`, Tabellenzeilen) — nicht gemessen, bleiben wörtlich wie im Skript.
+
 ## 2026-11-08 I19 – `Show-TraceStructure.ps1 -Engine Auto|PowerShell|CSharp`, Standard Auto
 
 Commits `b7063da` (Tests rot, Stub nimmt immer PowerShell), `9965aad` (Umsetzung). Klein: Skript ~30 Zeilen,
