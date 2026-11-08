@@ -56,11 +56,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: .NET SDK installieren
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
-        with:
-          dotnet-version: '10.0.x'
-
       - name: Module installieren (gepinnt)
         shell: powershell
         run: |
@@ -68,10 +63,6 @@ jobs:
           $required = Import-PowerShellDataFile -Path ./tests/RequiredModules.psd1
           Install-Module -Name Pester -RequiredVersion $required['Pester'].RequiredVersion `
             -Repository PSGallery -Scope CurrentUser -Force -SkipPublisherCheck
-
-      - name: Build (C#-Parser)
-        shell: powershell
-        run: ./tools/Invoke-QualityGate.ps1 -Gate Build
 
       - name: Tests
         shell: powershell

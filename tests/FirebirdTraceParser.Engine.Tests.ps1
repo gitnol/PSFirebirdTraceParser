@@ -1,6 +1,7 @@
 #Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.0' }
 <#
-    Tests fuer das C#-Geruest (I16, ADR-003): die gebaute DLL laedt unter dieser PowerShell (CI: 7 und 5.1), das Cmdlet
+    Tests fuer das C#-Geruest (I16, ADR-003): die gebaute DLL laedt unter PowerShell 7 (unter Windows PowerShell 5.1
+    nicht vorgesehen - dort bleibt die PowerShell-Engine, die Tests werden uebersprungen), das Cmdlet
     prueft die Parameter wie Show-TraceStructure.ps1 und liefert je Ereignis ein Objekt mit denselben Feldern, derselben
     Reihenfolge und denselben Standardwerten; die Kopfzeile wird gleich gelesen. Orakel ist das Skript selbst.
     Vorher bauen: tools/Invoke-QualityGate.ps1 -Gate Build. Werte ausgedacht, IPs aus 192.0.2.0/24.
@@ -11,7 +12,7 @@ BeforeAll {
     $script:Parser = [System.IO.Path]::Combine($PSScriptRoot, '..', 'Show-TraceStructure.ps1')
     $script:Fixtures = [System.IO.Path]::Combine($PSScriptRoot, 'fixtures')
     $script:Dll = Get-TraceParserAssembly
-    if (Test-Path -LiteralPath $script:Dll) { Import-Module -Name $script:Dll -Verbose:$false }
+    if ($PSVersionTable.PSEdition -eq 'Core' -and (Test-Path -LiteralPath $script:Dll)) { Import-Module -Name $script:Dll -Verbose:$false }
     $script:HeaderFields = 'Timestamp', 'Action', 'ProcessID', 'SessionID', 'ErrorSource'
     $script:Conn = "`tC:\DATA\SAMPLE.FDB (ATT_9, APPUSER:NONE, UTF8, TCPv4:192.0.2.90/50900)"
 
@@ -26,7 +27,7 @@ BeforeAll {
     }
 }
 
-Describe 'C#-Parser: Build und Laden (I16)' {
+Describe 'C#-Parser: Build und Laden (I16)' -Skip:($PSVersionTable.PSEdition -ne 'Core') {
     It 'die gebaute DLL liegt unter bin/' {
         Test-Path -LiteralPath $script:Dll | Should -BeTrue -Because 'tools/Invoke-QualityGate.ps1 -Gate Build baut sie'
     }
@@ -55,7 +56,7 @@ Describe 'C#-Parser: Build und Laden (I16)' {
     }
 }
 
-Describe 'C#-Parser: Felder und Kopfzeile gleich wie Show-TraceStructure.ps1 (I16)' {
+Describe 'C#-Parser: Felder und Kopfzeile gleich wie Show-TraceStructure.ps1 (I16)' -Skip:($PSVersionTable.PSEdition -ne 'Core') {
     It 'liefert je Ereignis ein PSCustomObject mit denselben 46 Feldern in derselben Reihenfolge (<_>)' -ForEach @(
         Get-ChildItem -Path ([System.IO.Path]::Combine($PSScriptRoot, 'fixtures')) -Filter '*.log' | ForEach-Object Name
     ) {

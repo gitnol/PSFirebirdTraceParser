@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- C# parser (ADR-003). netstandard2.0 loads in Windows PowerShell 5.1 (.NET Framework 4.8) and PowerShell 7.
-       Output goes to <repo>/bin/ where Show-TraceStructure.ps1 looks for it; bin/ and obj/ are not versioned. -->
+  <!-- C# parser (ADR-003). net8.0 loads in PowerShell 7.4 and later (.NET 8, 9, 10); Windows PowerShell 5.1 keeps
+       the PowerShell engine (owner: priority PowerShell 7). Output goes to <repo>/bin/ where Show-TraceStructure.ps1 looks for it; bin/ and obj/ are not versioned. -->
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <AssemblyName>FirebirdTraceParser</AssemblyName>
