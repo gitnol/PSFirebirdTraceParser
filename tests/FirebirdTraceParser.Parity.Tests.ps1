@@ -36,6 +36,16 @@ BeforeDiscovery {
                 '2026-11-08T11:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH', $conn, ''
                 'Table Natural', ('*' * 20), 'X 1', '')
         }
+        @{ Name = 'table_only_unreadable_rows'; Lines = @(
+                '2026-11-08T11:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH', $conn, '      2 ms', ''
+                $head, ('*' * 111), ('BROKEN'.PadRight(31) + '      n/a'), ('BROKEN2'.PadRight(31) + '       ???'), '')
+        }
+        @{ Name = 'sql_followed_by_table_stats_and_error_blanks'; Lines = @(
+                '2026-11-08T11:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH', $conn, ''
+                'Statement 8:', ('-' * 79), 'SELECT 2 FROM T', $head, ('*' * 111), ('T'.PadRight(31) + '{0,10}' -f 1), ''
+                '2026-11-08T11:00:01.0000 (4321:000001A2B3C4D5E0) ERROR AT JStatement::fetch', $conn
+                '335544321 : arithmetic exception   ', '')
+        }
         @{ Name = 'errors_and_warnings'; Lines = @(
                 '2026-11-08T11:00:00.0000 (4321:000001A2B3C4D5E0) ERROR AT JStatement::execute', $conn, $app
                 '335544347 : validation error for column "T"."A", value "*** null ***"', '335544665 : violation of PRIMARY or UNIQUE KEY constraint', ''
@@ -60,6 +70,17 @@ BeforeDiscovery {
                 'Statement 5:', ('-' * 79), 'SELECT A', 'FROM T', 'WHERE B = ?', ('^' * 79)
                 'PLAN (T NATURAL)', 'PLAN (U INDEX (I1))', 'param0 = varchar(10), "x"', 'param1 = integer, <NULL>', ''
                 '4000000000 records fetched', '  99999 ms, 3000000000 read(s), 2 write(s), 4000000000 fetch(es), 5 mark(s)', '')
+        }
+        @{ Name = 'connection_duration_create_and_double_detach'; Lines = @(
+                '2026-11-08T11:00:00.0000 (4321:000001A2B3C4D5E0) CREATE_DATABASE', $conn, ''
+                '2026-11-08T11:00:01.5000 (4321:000001A2B3C4D5E0) DETACH_DATABASE', $conn, ''
+                '2026-11-08T11:00:02.0000 (4321:000001A2B3C4D5E0) DETACH_DATABASE', $conn, ''
+                '2026-11-08T11:00:03.0000 (4321:000001A2B3C4D5E0) ATTACH_DATABASE', "`tC:\DATA\OTHER.FDB (ATT_5, APPUSER:NONE, UTF8, TCPv4:192.0.2.10/50123)", ''
+                '2026-11-08T11:00:04.0000 (4321:000001A2B3C4D5E0) DETACH_DATABASE', $conn, '')
+        }
+        @{ Name = 'sql_with_blanks_around'; Lines = @(
+                '2026-11-08T11:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH', $conn, ''
+                'Statement 7:', ('-' * 79), '   SELECT 1   ', '   FROM T   ', '      3 ms', '')
         }
         @{ Name = 'services_variants'; Lines = @(
                 '2026-11-08T11:00:00.0000 (4321:0000000006B1C2D0) ATTACH_SERVICE'

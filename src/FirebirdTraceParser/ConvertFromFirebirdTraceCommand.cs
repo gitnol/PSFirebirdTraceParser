@@ -38,7 +38,7 @@ namespace FirebirdTraceParser
                 return;
             }
 
-            var parser = new TraceStreamParser(full, TimeSpan.FromSeconds(RegexTimeoutSeconds), WriteChunkProgress);
+            var parser = new TraceStreamParser(full, TimeSpan.FromSeconds(RegexTimeoutSeconds), WriteChunkProgress, WriteVerbose);
             try
             {
                 foreach (var entry in parser.Parse())

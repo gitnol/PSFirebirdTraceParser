@@ -21,10 +21,10 @@ namespace FirebirdTraceParser
         private readonly TraceBlockParser _blocks;
         private readonly TraceProgress _progress;
 
-        public TraceStreamParser(string path, TimeSpan regexTimeout, TraceProgress progress)
+        public TraceStreamParser(string path, TimeSpan regexTimeout, TraceProgress progress, Action<string> verbose)
         {
             _path = path;
-            _blocks = new TraceBlockParser(regexTimeout);
+            _blocks = new TraceBlockParser(regexTimeout, verbose);
             _progress = progress;
         }
 
