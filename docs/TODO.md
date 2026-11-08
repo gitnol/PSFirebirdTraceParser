@@ -68,6 +68,8 @@ Herkunft: Funktionsvergleich mit dem Open-Source-Projekt firebird-trace-analyzer
 ### I8: Laufzeit- und Beispielstände aus dem Security-Sweep 2026-10-23 nachziehen
 
 Herkunft: `security/DEPENDENCY_AUDIT.md` → Kadenz-Sweep 2026-10-23.
+Zusammen mit dem nächsten Kadenz-Sweep (2026-11-21) erledigen: beide lesen dieselben Quellen (Reflexion I5). Der
+erste Punkt (Vorlage versionsneutral) ist mit I4/I5 erledigt.
 
 **Aufgaben:**
 
