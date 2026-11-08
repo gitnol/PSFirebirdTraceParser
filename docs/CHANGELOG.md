@@ -13,6 +13,38 @@ und Reflexion nach I5: `changelog/ARCHIVE-CHANGELOG-I11-I15.md`.
 
 ---
 
+## 2026-11-08 I23 – Hashtable-Schlüssel: C# vergleicht ordinal wie PowerShell 7
+
+Commits `b9d78b7` (Test rot), `08a3a0a` (Fix), danach Doku. Klein: 1 Zeile Code, 1 Testfall, 2 Ratsche-Tests.
+
+**Trigger-Matrix:** Architekturentscheidung korrigiert → `architecture/ADR/ADR-003-parser-in-csharp.md`; Modulbeschreibung →
+`architecture/OVERVIEW.md`; neues Pattern → `LESSONS_LEARNED.md` L11; Aufgaben → `STATE.md`; `KNOWN_ISSUES.md`: keine
+Zeile ausgelöst (Unterschied beseitigt, nie als Problem geführt).
+
+### Fixed
+- `PowerShellSemantics.NewHashtable()` nutzt `StringComparer.OrdinalIgnoreCase` statt `CurrentCultureIgnoreCase`.
+  Gemessen (Reflection auf `_keycomparer`, Kultur de-DE): PowerShell 7.6.9 `OrdinalIgnoreCase`, Windows PowerShell
+  5.1.26100.9818 `CultureAwareComparer`. Betroffene Hashtables: `ActionCount` (Zählung je Aktion und Zusammenfassung)
+  und die Tabelle der Transaktionsoptionen; Tabellennamen (`TableCounts`) liegen in keiner Hashtable.
+- Echter Unterschied, synthetisch erzeugt: Aktionsnamen `TEST` + Kelvin-Zeichen (U+212A) und `TESTK` zählte C# zusammen
+  (3), PowerShell getrennt (2 und 1); ebenso Ångström-Zeichen (U+212B) gegen Å/å. Türkisches i, ß/ss und
+  Vollbreiten-Zeichen unterscheiden sich in keinem der Vergleicher (gemessen).
+
+### Confidence / Ungeprüft
+- RED (real): `Verbose[1]: [Summary: TEST? = 2] vs [Summary: TEST? = 3]` u. a. im Fall `summary_key_kelvin`; Lauf 27
+  passed, 1 failed. GREEN: Datei 28 passed.
+- Mutationsprobe (Neubau je Mutant, nur diese Testdatei, Kontrolle grün): `CurrentCultureIgnoreCase` rot (1 failed),
+  `Ordinal` (ohne Ignorieren der Schreibung) rot (1 failed), Original danach wiederhergestellt (Vergleich per `cmp`).
+- Nicht geprüft: andere Kulturen als de-DE (z. B. tr-TR) in C# — die Annahme `OrdinalIgnoreCase` ist kulturfrei, ein
+  Vergleich über Kulturen ist dadurch nicht mehr nötig. Reihenfolge bei gleichem Zählerstand und kulturell gleichem
+  Namen in der Zusammenfassung hängt an der Hashtable-Aufzählung; kein Testfall dafür.
+- Windows PowerShell 5.1: Messung des Vergleichers dort ist nur dokumentiert; der C#-Parser läuft dort nicht.
+
+### Lessons Learned
+- Annahme über stille Sprachsemantik messen statt vermuten (`LESSONS_LEARNED.md` L11).
+
+---
+
 ## 2026-11-08 I20 – Entscheidung: PowerShell-Parser bleibt
 
 Nur Doku. Owner-Entscheidung nach dem ersten grünen CI-Lauf mit Build (Lauf 42504200600, PowerShell 7 und 5.1).

@@ -152,6 +152,22 @@ Ausgang fest. Regel: Limit weit über der Laufzeit aller normalen Fälle, Testfa
 Warnung" ist kein Ersatz, sobald zwei Läufe gleich sein müssen. Zweiter Fall im Projekt (vorher: Fix „Zeitlimit-Test
 wackelte", 2026-11-08), ein Projekt.
 
+---
+
+## L11: Annahmen über stille Sprachsemantik messen, nicht übernehmen
+- Inkrement: I23
+- Scope: generisch-base
+- Backport-Ziel: `base/principles/ORACLE_AND_RATCHET.md` (Abschnitt Orakel = Bestandssystem), ergänzt L9
+- Gesehen mit: v37
+- Status: offen
+
+In I17 stand „Hashtable ohne Groß-/Kleinschreibung = `CurrentCultureIgnoreCase`" im Code und im ADR; gemessen ist es
+unter PowerShell 7.6.9 `OrdinalIgnoreCase` (Windows PowerShell 5.1: kulturabhängig, also nur dort stimmte die Annahme).
+Die Mutation aus L9 (`CurrentCultureIgnoreCase` → `Ordinal`) wurde damals rot, aber wegen eines anderen Falls, ohne
+den echten Unterschied (Kelvin-Zeichen U+212A, Ångström-Zeichen U+212B) zu treffen. Regel: Jede Annahme über eine stille
+Eigenschaft des Orakels (hier der Vergleicher) mit einer Messung am Orakel belegen und als Ratsche-Test festhalten;
+Grenzfälle aus den Unterschieden der beiden Kandidaten ableiten, nicht aus Beispielen. Ein Fall, ein Projekt.
+
 ## Pflege
 
 - Neuer „Lessons Learned"-Block im `CHANGELOG.md` → Eintrag `## L<N>:` hier anlegen.

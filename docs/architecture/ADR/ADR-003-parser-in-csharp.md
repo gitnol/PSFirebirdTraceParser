@@ -48,8 +48,15 @@ Wir nehmen **A**:
 - Gebaut wird nach `bin/` im Repo (`tools/Invoke-QualityGate.ps1 -Gate Build`, in CI beide Jobs). `bin/` und `obj/`
   sind nicht versioniert; im Repo liegt nie ein Binary.
 - **Gleichheit durch wörtliche Übertragung:** dieselben Regex-Muster und Optionen und dieselben .NET-Aufrufe wie im
-  Skript, auch wo PowerShell kulturabhängig vergleicht (`IndexOf(string)`, Hashtables ohne Groß-/Kleinschreibung,
-  `-eq`). Zahlen, die nicht nur aus Ziffern bestehen, wandelt das Cmdlet wie PowerShell um (`LanguagePrimitives`).
+  Skript, auch wo PowerShell kulturabhängig vergleicht (`IndexOf(string)`, `-eq`).
+  **Hashtable-Schlüssel (gemessen I23, 2026-11-08):** `@{}` vergleicht unter PowerShell 7.6.9 mit `OrdinalIgnoreCase`
+  (Reflection auf `_keycomparer`), unter Windows PowerShell 5.1.26100 mit `CultureAwareComparer`. Die erste Fassung
+  (I17) nahm `CurrentCultureIgnoreCase` an, das war falsch für PowerShell 7. Folge: Das Kelvin-Zeichen U+212A und das
+  Ångström-Zeichen U+212B sind mit der Kultur (de-DE) gleich K bzw. Å/å, mit Ordinal verschieden; ein Aktionsname
+  mit diesen Zeichen (`\S+` im Kopf) wurde im C#-Parser mit dem ASCII-Namen zusammengezählt, im Skript nicht. C#
+  nimmt jetzt `OrdinalIgnoreCase`; ein Paritätstest und eine Ratsche auf den Vergleicher halten das fest. Türkisches
+  i, ß/ss und Vollbreiten-Zeichen sind mit beiden Vergleichern verschieden (kein Unterschied). Die übrigen Schlüssel
+  (Transaktionsoptionen) sind ASCII ohne K und Å, dort gab es nie einen Unterschied. Zahlen, die nicht nur aus Ziffern bestehen, wandelt das Cmdlet wie PowerShell um (`LanguagePrimitives`).
   Da beide Parser in derselben Laufzeit laufen, nutzen sie dieselbe Regex-Engine.
 - **Ratsche:** ein Pester-Paritätstest lässt beide Parser über alle Fixtures und erzeugte Grenzfälle laufen und
   vergleicht jedes Feld jedes Objekts (Wert, Typ, `$null` gegen leer) sowie Warnungen; jeder Unterschied ist rot. Fehlt

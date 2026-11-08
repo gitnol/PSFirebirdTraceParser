@@ -84,7 +84,7 @@ src/FirebirdTraceParser/        → seit I16: C#-Parser (ADR-003), wörtliche Ü
   TraceStreamParser.cs              → 4-MB-Stücke lesen, an Zeitstempeln teilen, Rest ins nächste Stück tragen.
   TraceBlockParser.cs               → ein Ereignis → alle Felder, Abschnitt für Abschnitt wie ConvertFrom-TraceBlock (seit I17); offene Verbindungen für ConnectionDurationMs.
   TableStatParser.cs                → Tabellenstatistik → TableCounts (wie ConvertFrom-TableStat, seit I17).
-  PowerShellSemantics.cs            → was PowerShell still macht, ausdrücklich: -eq ohne Groß-/Kleinschreibung, [long]"Text", Hashtable-Schlüssel (seit I17).
+  PowerShellSemantics.cs            → was PowerShell still macht, ausdrücklich: -eq ohne Groß-/Kleinschreibung, [long]"Text", Hashtable-Schlüssel mit `OrdinalIgnoreCase` wie `@{}` unter PowerShell 7 (seit I17, korrigiert I23).
   TracePatterns.cs                  → Regex, Muster und Optionen wie im Skript.
   TraceField.cs                     → die 46 Felder in Vertrags-Reihenfolge mit Standardwerten → PSCustomObject.
   TraceDiagnostics.cs               → Warnungen mit Zeilennummer, Vorspann, Zählung je Action und Zusammenfassung (seit I18).
