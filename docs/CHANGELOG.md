@@ -12,6 +12,19 @@ Nicht alle Sektionen sind in jedem Eintrag nötig — leere Sektionen weglassen.
 
 ---
 
+## 2026-11-08 Fix – Zeitlimit-Test wackelte
+
+**Trigger-Matrix:** keine Zeile ausgelöst (nur Test).
+
+### Fixed
+- `tests/Show-TraceStructure.Diagnostics.Tests.ps1`: Der Test zum Regex-Zeitlimit (I13) schlug in etwa 1 von 6 vollen
+  Läufen fehl (keine Zeitlimit-Warnung): Ein langer Text ohne Umbrüche lief über eine schnelle Suche, bei der .NET das
+  Zeitlimit nicht zuverlässig prüft. Neu: viele Leerzeilen mit Leerzeichen, die Suche muss zurückverfolgen.
+
+### Confidence / Ungeprüft
+- 12 von 12 Läufen der Testdatei grün (vorher 2 von 8 rot); Mutation „jede Ausnahme weiterwerfen“ wird erkannt.
+  Unter Windows PowerShell 5.1 nur in der CI geprüft (lokal fehlt Pester 5.7.1 für 5.1).
+
 ## 2026-11-08 Reflexion nach I13
 
 Kein Inkrement (KICKOFF Phase 1c, `REFLECTION.md`). Begutachtet: I11, I12, I13 (drittes abgeschlossenes Inkrement

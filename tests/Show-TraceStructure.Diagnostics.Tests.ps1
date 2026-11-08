@@ -177,7 +177,10 @@ Describe 'Show-TraceStructure: Schutz vor sehr langen Bloecken (I13)' {
     It 'bricht eine zu lange Regex-Auswertung ab, meldet sie und liest die naechsten Bloecke weiter' {
         $f = Join-Path $TestDrive 'slow.log'
         $text = '2026-11-08T10:00:00.0000 (4321:000001A2B3C4D5E0) EXECUTE_STATEMENT_FINISH' + "`n" + $script:Conn + "`n`n" +
-        "Statement 1:`n" + ('-' * 79) + "`n" + ('Y' * 3000000) + "`n" +
+        # Viele Leerzeilen mit Leerzeichen: die SQL-Suche prueft an jedem Zeilenumbruch den Rest auf Plan/Parameter und muss
+        # zurueckverfolgen (quadratisch). Ein langer Text ohne Umbrueche ("Y" * 3 Mio.) liess .NET gelegentlich ohne
+        # Zeitlimit-Pruefung durchlaufen (schnelle Suche) - der Test wackelte (2026-11-08).
+        "Statement 1:`n" + ('-' * 79) + "`n" + 'SELECT 1' + ("`n     " * 90000) + 'Y' + "`n" +
         '2026-11-08T10:00:01.0000 (4321:000001A2B3C4D5E0) START_TRANSACTION' + "`n" + $script:Conn + "`n"
         [System.IO.File]::WriteAllText($f, $text)
         $r = Invoke-Parser $f @{ RegexTimeoutSeconds = 0.001 }
