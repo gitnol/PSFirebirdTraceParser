@@ -54,9 +54,10 @@ flowchart TD
     STOP -->|"erste Logzeile oder<br/>fbtracemgr -LIST nach Name"| FB
     STOP -->|"fbtracemgr -STOP -ID n"| FB
     CFG --> STOP
-    LOG --> PARSE[Show-TraceStructure.ps1 -Path<br/>4-MB-Stücke → Split je Zeitstempel → Regex je Feld]
-    LOG -.->|"seit I16, im Aufbau (ADR-003)"| CS[ConvertFrom-FirebirdTrace<br/>C#-Cmdlet, bin/FirebirdTraceParser.dll<br/>gleiche Regex, gleiche Objekte]
-    CS -.-> PIPE
+    LOG --> ENG{Show-TraceStructure.ps1 -Path -Engine<br/>Auto: PowerShell 7 und DLL vorhanden?}
+    ENG -->|"ja (Standard unter PowerShell 7)"| CS[ConvertFrom-FirebirdTrace<br/>C#-Cmdlet, FirebirdTraceParser.dll<br/>neben dem Skript oder bin/]
+    ENG -->|"nein / -Engine PowerShell / Windows PowerShell 5.1"| PARSE[PowerShell-Parser im Skript<br/>4-MB-Stücke → Split je Zeitstempel → Regex je Feld]
+    CS -->|"gleiche Objekte, Warnungen, Verbose (Paritätstest)"| PIPE
     PARSE -->|"ein Objekt je Trace-Block, sofort in die Pipeline"| PIPE{Pipeline des Nutzers}
     PIPE -->|optional| PSEUDO[Pseudonymize-FirebirdTrace.ps1<br/>HMAC-SHA256 gekürzt auf Kopie des Objekts]
     PSEUDO -->|-AnalyzeOnly| REPORT[Konsolenbericht:<br/>Literale, WHERE-, HAVING-Klauseln]
@@ -70,7 +71,7 @@ flowchart TD
 ## Modul-Verantwortlichkeiten
 
 ```
-Show-TraceStructure.ps1         → Zerlegt eine Trace-Datei in Blöcke (Zeitstempel-Trenner) und mappt Felder per Regex auf ein Objekt je Block.
+Show-TraceStructure.ps1         → Wählt die Engine (-Engine, seit I19) und zerlegt eine Trace-Datei in Blöcke (Zeitstempel-Trenner) mit Feldern per Regex je Block — selbst (PowerShell) oder über das Cmdlet ConvertFrom-FirebirdTrace (C#).
 Pseudonymize-FirebirdTrace.ps1  → Ersetzt identifizierende Werte der Parser-Objekte durch gekürzte HMAC-SHA256-Pseudonyme; -AnalyzeOnly zeigt nur, was ersetzt würde.
 trace_start.ps1                 → Prüft config.json und startet eine benannte Trace-Session; Ausgabe byte-genau in eine Datei mit Zeitstempel (PowerShell 7.4+).
 trace_stop.ps1                  → Findet die gemerkte Session (erste Logzeile, sonst fbtracemgr -LIST nach Name) und stoppt sie; -Id für gezielten Stopp.

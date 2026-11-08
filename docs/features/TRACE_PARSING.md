@@ -21,6 +21,7 @@ Zerlegt ein Firebird-Trace-Log in Blöcke (ein Block je Zeitstempel-Zeile) und g
 | Parameter | Typ | Pflicht | Default | Validierung | Beschreibung |
 |-----------|-----|---------|---------|-------------|-------------|
 | `-Path` | `[string]` | Ja (Position 0) | — | keine (nur `Test-Path` im Rumpf) | Pfad zur Trace-Datei |
+| `-Engine` | `[string]` | Nein | `Auto` | `[ValidateSet('Auto', 'PowerShell', 'CSharp')]` | seit I19 (ADR-003): `Auto` nimmt den C#-Parser (`ConvertFrom-FirebirdTrace` aus `FirebirdTraceParser.dll` neben dem Skript, sonst `bin/`), wenn PowerShell 7 läuft und die DLL da ist, sonst den PowerShell-Parser; `CSharp` ohne DLL oder unter 5.1 ist ein Fehler (kein Objekt). `-Verbose` schreibt `Engine: <Name>` |
 | `-MaxBlockLines` | `[int]` | Nein | `100000` | `[ValidateRange(1, 2147483647)]` | seit I13: Obergrenze Zeilen je Ereignis; längere Ereignisse werden auf diese Zahl gekürzt (Warnung). Begrenzt auch den Speicher, wenn eine Datei lange keinen Zeitstempel hat |
 | `-RegexTimeoutSeconds` | `[double]` | Nein | `2` | `[ValidateRange(0.001, 3600)]` | seit I13: Zeitlimit je Regex-Auswertung in einem Ereignis; danach bleiben die restlichen Felder leer (Warnung), der Parser liest das nächste Ereignis |
 
@@ -31,6 +32,9 @@ ein Ereignis hat kaum mehr als einige tausend Zeilen, und die Regex brauchen je 
 ---
 
 ## Ablauf (Ist)
+
+Seit I19 wählt das Skript zuerst die Engine (`-Engine`) und meldet `Engine: …` mit `-Verbose`. Der C#-Parser macht
+dieselben Schritte wie unten, mit denselben Regex und Texten (ADR-003); das Skript ruft dann nur das Cmdlet auf.
 
 1. Datei in Stücken von 4 MB lesen (`StreamReader`), `\r` entfernen (seit I6).
 2. Jedes Stück vor jeder Zeile teilen, die mit `JJJJ-MM-TTThh:mm:ss.ffff` beginnt; der unfertige letzte Block wandert ins

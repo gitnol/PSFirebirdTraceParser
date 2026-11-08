@@ -3,8 +3,8 @@
 Zuletzt aktualisiert: 2026-11-08
 **Initialisiert mit:** docs_template v27@5ce0f84 → v27@2268889 → v28@63b85ec (2026-10-22, Delta-Update) → v37@b5021d9 (2026-11-07, Delta-Update)
 **Stack / Overlays:** powershell-automation / keine
-**Letztes abgeschlossenes Inkrement:** I18 – C#-Parser: Diagnose (2026-11-08)
-**Nächster Schritt:** I19 (`-Engine`, Standard Auto); I8 (Rest) mit dem Security-Sweep am 2026-11-21
+**Letztes abgeschlossenes Inkrement:** I19 – -Engine im Skript (2026-11-08)
+**Nächster Schritt:** I21 (K8), dann I20; I8 (Rest) mit dem Security-Sweep am 2026-11-21
 **Nächste Reflexion:** beim dritten abgeschlossenen Inkrement nach I18 (Reflexion I18 am 2026-11-08; siehe `KICKOFF.md` Phase 1c → `docs/REFLECTION.md`)
 **Nächster Security-Sweep:** 2026-11-21 (Intervall 14 Tage; letzter Sweep 2026-11-07, `security/DEPENDENCY_AUDIT.md`; siehe `KICKOFF.md` Phase 1 Punkt 4a → `docs/principles/SECURITY_CURRENCY.md` — fällig, sobald heute ≥ diesem Datum; nach dem Sweep Marker = Sweep-Datum + Intervall)
 
@@ -12,7 +12,7 @@ Zuletzt aktualisiert: 2026-11-08
 
 ## Nächster Schritt
 
-I16–I18 umgesetzt: C#-Parser liefert auf allen Fixtures und Grenzfällen dieselben Objekte, Warnungen und Verbose-Meldungen (Paritätstests). Reflexion I18 erledigt. Als Nächstes I19 (`-Engine`, Standard Auto, Messung) und I20. Offen für den Owner: lokal .NET SDK 10 installieren (.NET 9 Supportende 2026-11-10), ersten CI-Lauf nach dem Push ansehen; `log_procedure_finish`/`log_trigger_finish` in `fbtrace50.conf` weiter offen. I8 (Rest) mit dem Security-Sweep am 2026-11-21. Empfohlenes Modell: Opus oder Sonnet, hoher Effort.
+I16–I19 umgesetzt: `Show-TraceStructure.ps1` nimmt unter PowerShell 7 mit gebauter DLL den C#-Parser (`-Engine Auto`), unter 5.1 den PowerShell-Parser; Paritätstests über das Skript. Als Nächstes I21 (K8: quadratische Zeilensuche in beiden Parsern), dann I20 (Entscheidung: PowerShell-Parser als Fallback behalten oder entfernen; Voraussetzung grüner CI-Lauf). Offen für den Owner: Push und ersten CI-Lauf ansehen, lokal .NET SDK 10 installieren, Verteilung der DLL (Release?) entscheiden; `log_procedure_finish`/`log_trigger_finish` weiter offen. I8 (Rest) mit dem Security-Sweep am 2026-11-21. Empfohlenes Modell: Sonnet, mittlerer Effort (I21), Opus für I20.
 
 ---
 
@@ -20,6 +20,7 @@ I16–I18 umgesetzt: C#-Parser liefert auf allen Fixtures und Grenzfällen diese
 
 | # | Titel | Datum | Commit |
 |---|-------|-------|--------|
+| I19 | `Show-TraceStructure.ps1 -Engine Auto|PowerShell|CSharp` (Auto = C# unter PowerShell 7 mit gebauter DLL), Paritätstests über das Skript, Pseudonymisierer mit beiden Parsern, Messung 15 MB: 1,6 s statt 13–14 s; 11 Tests | 2026-11-08 | 9965aad |
 | I18 | C#-Parser: Warnungen mit Zeilennummer, Kürzen, Zeitlimit, Zusammenfassung und CRLF/LF gleich wie das Skript (Paritätstest mit Warnungen und Verbose); 24 Tests | 2026-11-08 | c33a557 |
 | I17 | C#-Parser: alle Felder je Ereignis wie das Skript (inkl. Routinen/Trigger/Verbindungsdauer aus I12), Paritätstest auf 5 Fixtures und 10 Grenzfällen; 16 Tests | 2026-11-08 | 9c90746 |
 | I16 | C#-Parser: ADR-003, Projekt `src/FirebirdTraceParser` (`net8.0`, nur PowerShell 7), Cmdlet `ConvertFrom-FirebirdTrace` mit Kopfzeile und 46 Feldern, Build in Gate und CI; 16 Tests | 2026-11-08 | 1a33b89 |
@@ -30,7 +31,7 @@ I16–I18 umgesetzt: C#-Parser liefert auf allen Fixtures und Grenzfällen diese
 
 | # | Beschreibung | Priorität |
 |---|-------------|-----------|
-| I19 | `Show-TraceStructure.ps1 -Engine Auto\|PowerShell\|CSharp`, Standard Auto | Hoch |
+| I21 | K8: Zeilensuche in beiden Parsern ordinal (quadratische Laufzeit bei sehr vielen Zeilen) | Hoch |
 | I20 | Umstellung abschließen: PowerShell-Parsing als Fallback behalten oder entfernen | Hoch |
 | I8 | Laufzeit- und Beispielstände aus dem Security-Sweep nachziehen | Niedrig |
 

@@ -62,6 +62,18 @@ Streams the file in 4 MB chunks (memory stays bounded, independent of file size)
 
 Events that cannot be assigned (unreadable header, `Unknown event …`, text before the first event) are reported as warnings with the line number; the warning shows no trace content. Protection against very long events: `-MaxBlockLines` (default `100000`; longer events are cut, warning) and `-RegexTimeoutSeconds` (default `2` per field; when reached, the remaining fields stay empty, warning). The objects are the same as before; only these rare cases add a warning.
 
+**Two parsers, same result (`-Engine`):** Since November 2026 the parser also exists in C# (`src/FirebirdTraceParser`,
+a binary cmdlet for PowerShell 7.4+). `-Engine Auto` (default) uses it when PowerShell 7 runs and the built
+`FirebirdTraceParser.dll` lies next to the script or in `bin/`; otherwise the PowerShell parser runs (always under
+Windows PowerShell 5.1). `-Engine PowerShell` / `-Engine CSharp` choose explicitly (`CSharp` without the DLL or under 5.1
+is an error). Both give the same objects, warnings and verbose messages — a parity test compares every field. The C#
+parser is much faster (measured on a 15 MB synthetic log: 1.6 s instead of 13–14 s, peak memory 196 MB instead of 287 MB). Build it once with the .NET SDK:
+
+```powershell
+pwsh -File ./tools/Invoke-QualityGate.ps1 -Gate Build    # -> bin/FirebirdTraceParser.dll
+.\Show-TraceStructure.ps1 -Path trace.log -Verbose        # "Engine: CSharp"
+```
+
 **Output Objects Properties:**
 *   `Timestamp`: Time of event.
 *   `DurationMs`: Execution time in milliseconds.

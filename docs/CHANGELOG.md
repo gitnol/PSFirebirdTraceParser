@@ -13,6 +13,57 @@ und Reflexion nach I5: `changelog/ARCHIVE-CHANGELOG-I11-I15.md`.
 
 ---
 
+## 2026-11-08 I19 – `Show-TraceStructure.ps1 -Engine Auto|PowerShell|CSharp`, Standard Auto
+
+Commits `b7063da` (Tests rot, Stub nimmt immer PowerShell), `9965aad` (Umsetzung). Klein: Skript ~30 Zeilen,
+Tests ~110 Zeilen.
+
+**Trigger-Matrix:** neuer Parameter → `README.md`, `README.de.md`, `features/TRACE_PARSING.md` (Parameter, Ablauf),
+`architecture/CONFIGURATION.md`; Datenfluss → `architecture/OVERVIEW.md` (Mermaid mit Engine-Wahl,
+Modul-Verantwortung); neue Begriffe → `GLOSSARY.md` (Engine, Parität); neues Problem gefunden →
+`KNOWN_ISSUES.md` K8, `TODO.md` I21.
+
+### Added
+- `-Engine` (`[ValidateSet('Auto', 'PowerShell', 'CSharp')]`, Standard `Auto`): Auto nimmt den C#-Parser, wenn
+  PowerShell 7 läuft und `FirebirdTraceParser.dll` neben dem Skript oder unter `bin/` liegt, sonst den PowerShell-Parser.
+  `-Engine CSharp` unter 5.1 oder ohne DLL ist ein Fehler ohne Ausgabe. `-Verbose` schreibt `Engine: <Name>`.
+  Gleiche Parameter, gleiche Startmeldung; Warnungen und Verbose kommen aus dem Cmdlet über die Streams des Skripts.
+- `tests/Show-TraceStructure.Engine.Tests.ps1` (11 Tests): Werteprüfung, Wahl unter 7 und 5.1, ohne DLL, DLL neben dem
+  Skript (eigener Prozess, geprüft wird auch der Ladepfad), Pseudonymisierer mit beiden Parsern auf jedem Fixture
+  (gleicher Schlüssel, `-RedactLiterals`, jedes Feld gleich).
+- Paritätstests laufen jetzt über das Skript (`-Engine PowerShell` gegen `-Engine CSharp`) und prüfen, dass wirklich die
+  verlangte Engine lief (sonst würde ein Parser mit sich selbst verglichen).
+
+### Changed
+- Unter PowerShell 7 mit gebauter DLL laufen jetzt **alle** bestehenden Parser-Tests gegen den C#-Parser (Standard
+  Auto); unter Windows PowerShell 5.1 gegen den PowerShell-Parser. Beide Läufe grün.
+
+### Messung (kleine Dateien, je frischer `pwsh`-Prozess, Zeit inkl. Zählen in der Pipeline)
+
+| Datei | Größe | Ereignisse | PowerShell | C# | Speicher (Spitze) PowerShell / C# |
+|---|---|---|---|---|---|
+| synthetisch (Fixtures wiederholt) | 15 MB | 35 779 | 13,9 s / 12,8 s | 1,57 s / 1,58 s | 287 / 196 MB |
+| echtes Log (nur gezählt) | 3,1 MB | 9 424 | 3,37 s / 3,36 s | 0,44 s / 0,49 s | 203 / 132 MB |
+
+Parität auf beiden Dateien: 0 Unterschiede (nur Anzahl ausgegeben, kein Inhalt). Etwa 8-mal schneller über das Skript;
+der Versuch vom 2026-11-07 maß das Cmdlet direkt (Faktor ~30) — die Pipeline in PowerShell kostet mit.
+
+### Confidence / Ungeprüft
+- RED: 23 von 26 Tests rot gegen den Stub (z. B. `Expected engine CSharp, the script reported [Engine: PowerShell]`).
+  Die 5 Pseudonymisierer-Tests waren zuerst auch gegen den Stub grün (beide Läufe PowerShell) — deshalb prüfen sie jetzt
+  zusätzlich, dass `-Engine CSharp` wirklich C# nimmt.
+- Gate: Build ✓, PSScriptAnalyzer ✓ 0, Pester 7.6.9: 216 passed, 1 skipped (5.1-Test); Windows PowerShell 5.1:
+  153 passed, 64 skipped.
+- Mutationsprobe (Skript, Kindprozess, Kontrolle 0): 8 Mutanten, alle rot. Einer nur unter 5.1 erkennbar
+  (`$isCore` in der Wahl entfernt: unter 5.1 24 rot), einer durch Aufhängen (ohne `-MaxBlockLines` an das Cmdlet lief
+  der Test über 10 Minuten, abgebrochen) — dabei gefunden: K8.
+- **Gefunden: K8** — `Get-LineEnd` sucht mit kulturabhängigem `IndexOf("`n", start)`; das kostet je Aufruf Zeit
+  proportional zum Rest des Textes (gemessen: 2000 Aufrufe auf 6 MB 6,6 s, mit `[char]` 14 ms). Ein Ereignis mit
+  sehr vielen Zeilen wird damit quadratisch langsam — in **beiden** Parsern gleich (wörtliche Übertragung). Nicht in
+  I19 behoben (Verhaltensänderung in beiden Parsern, eigener Test): `TODO.md` I21.
+- Nicht geprüft: PowerShell 7.4/7.5 (nicht installiert); Laden einer zweiten DLL-Kopie im selben Prozess (anderer Pfad,
+  gleicher Name) — der Test dafür läuft bewusst in einem eigenen Prozess.
+
 ## 2026-11-08 Reflexion nach I18
 
 Kein Inkrement (KICKOFF Phase 1c, `REFLECTION.md`). Begutachtet: I16, I17, I18 (drittes abgeschlossenes Inkrement nach

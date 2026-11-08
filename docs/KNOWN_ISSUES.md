@@ -17,7 +17,7 @@ Sicherheitsrelevante Schwächen stehen in `security/THREAT_MODEL.md` und `STATE.
 
 | # | Beschreibung | Reproduktion | Workaround | Akzeptanzgrund | Geplant für |
 |---|---|---|---|---|---|
-| — | (noch keine Einträge) | — | — | — | — |
+| K8 | Ereignis (oder Text ohne Zeitstempel) mit sehr vielen Zeilen macht beide Parser quadratisch langsam: `Get-LineEnd` sucht je Zeile mit kulturabhängigem `IndexOf("`n", start)`, jeder Aufruf kostet Zeit proportional zum Rest des Textes (gemessen: 2000 Aufrufe auf 6 MB 6,6 s, ordinal 14 ms) | 2 Mio. Zeilen `xx` in einem Block, Standard `-MaxBlockLines 100000`: über 90 s in beiden Engines | `-MaxBlockLines` klein setzen (z. B. 1000) | in echten Traces bisher nicht gesehen (Ereignisse haben wenige Zeilen); gefunden bei der Mutationsprobe I19 | I21 |
 
 ---
 

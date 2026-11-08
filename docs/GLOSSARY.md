@@ -12,6 +12,8 @@ Commit-Messages oder in Doku verwenden.
 
 | Begriff | Bedeutung | Wo verwendet | Nicht zu verwechseln mit |
 |---|---|---|---|
+| Engine | Welcher Parser die Trace-Datei liest: `PowerShell` (im Skript) oder `CSharp` (Cmdlet `ConvertFrom-FirebirdTrace` aus `FirebirdTraceParser.dll`, ADR-003); `-Engine Auto` wählt | `Show-TraceStructure.ps1 -Engine` (seit I19) | Firebird-Server, `fbtracemgr` |
+| Parität | Beide Engines liefern für dieselbe Datei dieselben Objekte (jedes Feld, Typ, Reihenfolge), Warnungen und Verbose-Meldungen; geprüft von den Paritätstests | `tests/FirebirdTraceParser.*Parity.Tests.ps1`, `tests/TraceParity.ps1` | „gleiche Felder" ohne Typ- und Wertvergleich |
 | Trace-Session | Vom Firebird-Server geführte Protokollierung, gestartet per `fbtracemgr -START -NAME <sitzungsname>`, identifiziert durch die Trace-Session-ID | `trace_start.ps1`, `trace_stop.ps1` | Datenbankverbindung (Attachment); Property `SessionID` |
 | Trace-Session-ID | Nummer der Sitzung beim Server (erste Zeile der Ausgabe `Trace session ID <n> started`, auch in `fbtracemgr -LIST`), nötig für `-STOP -ID` | `Stop-TraceSession` (`TraceCommon.ps1`) | Property `SessionID` der Trace-Objekte |
 | Sitzungsname | Name der Trace-Session, `<SessionName>_<yyyyMMdd_HHmmss>`; darüber findet der Stopp die Sitzung | `config.json` → `SessionName`, `trace_session.json` | Trace-Session-ID |
