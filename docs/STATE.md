@@ -23,9 +23,6 @@ I16–I18 umgesetzt: C#-Parser liefert auf allen Fixtures und Grenzfällen diese
 | I18 | C#-Parser: Warnungen mit Zeilennummer, Kürzen, Zeitlimit, Zusammenfassung und CRLF/LF gleich wie das Skript (Paritätstest mit Warnungen und Verbose); 24 Tests | 2026-11-08 | c33a557 |
 | I17 | C#-Parser: alle Felder je Ereignis wie das Skript (inkl. Routinen/Trigger/Verbindungsdauer aus I12), Paritätstest auf 5 Fixtures und 10 Grenzfällen; 16 Tests | 2026-11-08 | 9c90746 |
 | I16 | C#-Parser: ADR-003, Projekt `src/FirebirdTraceParser` (`net8.0`, nur PowerShell 7), Cmdlet `ConvertFrom-FirebirdTrace` mit Kopfzeile und 46 Feldern, Build in Gate und CI; 16 Tests | 2026-11-08 | 1a33b89 |
-| I13 | Parser: Robustheit und Diagnose (Warnungen mit Zeilennummer, Zusammenfassung je `Action` mit `-Verbose`, `-RegexTimeoutSeconds`, `-MaxBlockLines`; Rest ohne Zeitstempel wird gekürzt); 14 Tests | 2026-11-08 | 30b4b43 |
-| I12 | Parser: Prozeduren, Funktionen und Trigger als Ereignisse (`RoutineType`, `RoutineName`, `TriggerTable`, `TriggerTime`, `TriggerEvent`; Trigger-Zeile Firebird 4 und 5), `ConnectionDurationMs`; 16 Tests | 2026-11-08 | 263b43d |
-| I11 | Parser: `RecordsFetched`, Transaktionsoptionen als fünf Felder (`Tx…`), Tabellenstatistik als `TableCounts` je Tabelle (Spalten relativ zum Kopf, Umlaute, überlange Namen); Pseudonymisierer kopiert `TableCounts`; 21 Tests | 2026-11-08 | 6450b79 |
 
 ---
 
