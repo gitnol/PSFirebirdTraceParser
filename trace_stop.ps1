@@ -1,50 +1,47 @@
-﻿# siehe: https://ib-aid.com/articles/wie-analysiert-man-firebird-traces-mit-ibsurgeon-performance-analysis
-# Interactive console script: Write-Host is intended (until I5 replaces this script).
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification = 'interactive console script')]
-param()
+#Requires -Version 7.4
+<#
+.SYNOPSIS
+    Stops the Firebird trace session started with trace_start.ps1 (Firebird 4.0 / 5.0).
 
-# Config laden
-$ScriptDir = $PSScriptRoot
-$ConfigPath = Join-Path $ScriptDir "config.json"
-Write-Host("Config Pfad: $ConfigPath")
-if (-not (Test-Path $ConfigPath)) { 
-    Write-Error "KRITISCH: config.json fehlt!"
-    exit 1 
-}
+.DESCRIPTION
+    Finds the session without guessing from file names:
+      1. trace_session.json (written by trace_start.ps1) names the session and its log file.
+      2. The trace ID is in the first line of that log file ("Trace session ID 7 started").
+      3. If it is not there (yet), "fbtracemgr -LIST" is searched for the session name.
+    Without trace_session.json: -LIST is searched for sessions whose name starts with SessionName
+    from config.json. Exactly one found -> stop it; several -> list them and stop (then use -Id).
+
+.PARAMETER Id
+    Optional: trace ID to stop (e.g. from "fbtracemgr -LIST"). Skips the search.
+
+.EXAMPLE
+    pwsh -File .\trace_stop.ps1
+
+.EXAMPLE
+    pwsh -File .\trace_stop.ps1 -Id 7
+
+.NOTES
+    Exit codes: 0 = stopped, 1 = config.json missing, 2 = configuration invalid, 3 = no session found,
+    4 = several sessions match, 5 = fbtracemgr error or stop not confirmed, 6 = unexpected error.
+#>
+[CmdletBinding()]
+param(
+    [ValidateRange(1, [int]::MaxValue)]
+    [int]$Id
+)
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
+$InformationPreference = 'Continue'
+. (Join-Path $PSScriptRoot 'TraceCommon.ps1')
+
 try {
-    $Config = Get-Content -Path $ConfigPath -Raw | ConvertFrom-Json
+    $config = Read-TraceConfig -ScriptRoot $PSScriptRoot
+    $result = Stop-TraceSession -Config $config -ScriptRoot $PSScriptRoot -Id $Id
+    Write-Information "Trace-ID $($result.Id) gestoppt."
+    if ($result.LogFile) { Write-Information "Log-Datei: $($result.LogFile)" }
+    exit 0
 }
 catch {
-    Write-Error "KRITISCH: config.json ist kein gültiges JSON."
-    exit 2
-}
-
-$MyUser = $Config.Firebird.Username
-$MyPass = $Config.Firebird.Password
-$MyPfad = $Config.Firebird.FirebirdPath
-
-# Neueste Logdatei ermitteln
-$LogFile = Get-ChildItem -Path "E:\*.log" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-
-if (-not $LogFile) {
-    Write-Host "Keine Logdatei gefunden" -ForegroundColor Red
-    exit 3
-}
-
-Write-Host "Datei: $($LogFile.FullName)"
-
-# Erste Zeile lesen und Trace-ID extrahieren
-$FirstLine = Get-Content -Path $LogFile.FullName -TotalCount 1
-
-if ($FirstLine -match "Trace session ID (\d+) started") {
-    $MyTraceId = $Matches[1]
-    Write-Host "Trace-ID: $MyTraceId"
-    
-    Write-Host "Stoppe Trace..."
-    & "$MyPfad\fbtracemgr" -SE service_mgr -USER $MyUser -PASS $MyPass -STOP -ID $MyTraceId
-}
-else {
-    Write-Host "Konnte Trace-ID nicht aus erster Zeile extrahieren:" -ForegroundColor Red
-    Write-Host $FirstLine
-    exit 4
+    exit (Resolve-TraceExitCode -ErrorRecord $_)
 }

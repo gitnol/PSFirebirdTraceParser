@@ -6,6 +6,8 @@ Logs
 # Synthetische Test-Fixtures sind versioniert (sonst scheitern die Tests im frischen Klon)
 !tests/fixtures/*.log
 trace_output*
+# Zustandsdatei von trace_start.ps1 (laufende Sitzung), lokal
+/trace_session.json
 _archive
 
 # --- docs_template-Baseline (docs/BOOTSTRAP.md Schritt 1) ---

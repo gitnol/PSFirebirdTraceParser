@@ -1,8 +1,12 @@
 {
   "Firebird": {
-    "Username": "SYSDBA",
-    "Password": "masterkey",
-    "FirebirdPath": "C:\\Program Files\\Firebird\\Firebird_4_0_3",
-    "TraceConfigFilename": "fbtrace30.conf"
+    "FirebirdPath": "C:\\Program Files\\Firebird\\Firebird_5_0",
+    "Username": "TRACE_USER",
+    "PasswordFile": "%LOCALAPPDATA%\\PSFirebirdTraceParser\\firebird-trace.pass",
+    "UseTrustedAuth": false,
+    "Role": "TRACER",
+    "TraceConfigFilename": "fbtrace50.conf",
+    "OutputDirectory": "D:\\FirebirdTrace",
+    "SessionName": "PSFirebirdTrace"
   }
 }

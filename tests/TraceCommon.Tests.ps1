@@ -254,6 +254,16 @@ Describe 'Stop-TraceSession (I5)' {
         $e.ExitCode | Should -Be 3
     }
 
+    It 'vergisst eine gemerkte Sitzung, die nicht mehr laeuft (Exit-Code 3)' {
+        $null = Write-TestState $script:Root $null
+        Mock Invoke-FbTraceMgr { [pscustomobject]@{ ExitCode = 0; Output = [string[]]@() } } -ParameterFilter {
+            $ArgumentList -contains '-LIST'
+        }
+        $e = ({ Stop-TraceSession -Config $script:Config -ScriptRoot $script:Root 6>$null } | Should -Throw -PassThru).Exception
+        $e.ExitCode | Should -Be 3
+        Get-TraceStatePath -ScriptRoot $script:Root | Should -Not -Exist
+    }
+
     It 'meldet Exit-Code 4 bei mehreren passenden Sitzungen' {
         $c = Get-TestConfig $script:Root @{ SessionName = 'A' }
         Mock Invoke-FbTraceMgr { [pscustomobject]@{ ExitCode = 0; Output = [string[]]@(
@@ -336,7 +346,7 @@ Describe 'Trace-Skripte als Prozess (Exit-Codes, I5)' {
         $r.ExitCode | Should -Be 1
     }
 
-    It 'trace_start.ps1 endet mit Exit-Code 2, wenn fbtracemgr.exe fehlt, und startet nichts' -Skip {
+    It 'trace_start.ps1 endet mit Exit-Code 2, wenn fbtracemgr.exe fehlt, und startet nichts' {
         $root = Initialize-TestRoot -Firebird @{ FirebirdPath = 'C:\gibt-es-nicht' }
         $r = Invoke-TraceScript $root 'trace_start.ps1'
         $r.ExitCode | Should -Be 2
@@ -344,7 +354,7 @@ Describe 'Trace-Skripte als Prozess (Exit-Codes, I5)' {
         @(Get-ChildItem -LiteralPath (Join-Path $root 'out')).Count | Should -Be 0
     }
 
-    It 'trace_stop.ps1 endet mit Exit-Code 2 bei Passwort in config.json' -Skip {
+    It 'trace_stop.ps1 endet mit Exit-Code 2 bei Passwort in config.json' {
         $r = Invoke-TraceScript (Initialize-TestRoot -Firebird @{ Password = $script:Secret }) 'trace_stop.ps1'
         $r.ExitCode | Should -Be 2
         $r.Text | Should -Not -Match ([regex]::Escape($script:Secret))
