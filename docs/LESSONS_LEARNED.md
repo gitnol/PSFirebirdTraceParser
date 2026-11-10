@@ -168,6 +168,21 @@ den echten Unterschied (Kelvin-Zeichen U+212A, Ångström-Zeichen U+212B) zu tre
 Eigenschaft des Orakels (hier der Vergleicher) mit einer Messung am Orakel belegen und als Ratsche-Test festhalten;
 Grenzfälle aus den Unterschieden der beiden Kandidaten ableiten, nicht aus Beispielen. Ein Fall, ein Projekt.
 
+---
+
+## L12: Virenscanner meldet Test mit Zeichencodes — dieselbe Lehre wie `firebird-trace-report-generator/L47`
+- Inkrement: Wartung 2026-11-10
+- Scope: generisch-stack
+- Backport-Ziel: siehe `firebird-trace-report-generator/L47` (docs_template, powershell-automation, Testregeln)
+- Gesehen mit: v37
+- Status: offen
+
+Zweiter Beleg für L47 des Report-Generators (dort der volle Text samt Nachtrag vom 2026-11-10, hier nicht wiederholt):
+G DATA entfernte `tests/FirebirdTraceParser.Diagnostics.Parity.Tests.ps1`, weil die Datei Sonderzeichen (Kelvin, Å, å)
+aus `[char]`-Umwandlungen bzw. `[char]::ConvertFromUtf32` zusammensetzte. Projektbezug: der erste Fix (`ffeca05`) ersetzte
+nur einen Teil; `9e61a9c` schrieb alle vier Fälle als `` `u{…} ``-Escapes. Die zentrale Reflexion behandelt beide Einträge
+als eine Lehre.
+
 ## Pflege
 
 - Neuer „Lessons Learned"-Block im `CHANGELOG.md` → Eintrag `## L<N>:` hier anlegen.

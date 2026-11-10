@@ -13,6 +13,27 @@ und Reflexion nach I5: `changelog/ARCHIVE-CHANGELOG-I11-I15.md`.
 
 ---
 
+## 2026-11-10 Wartung – G-DATA-Fund in der Diagnose-Paritätsdatei
+
+Commits `ffeca05` (Reflexion und `[char]`-Casts entfernt), `9e61a9c` (`[char]::ConvertFromUtf32` durch `` `u{…} ``-Escapes
+ersetzt), dieser Doku-Commit. Der Virenscanner entfernte `tests/FirebirdTraceParser.Diagnostics.Parity.Tests.ps1` als
+`CMD:Heur.BZC.PZQ.Pantera.181.CF786406` (Fehlalarm, dasselbe Muster wie im Report-Generator, dort L47).
+
+**Trigger-Matrix:** Lehre → `LESSONS_LEARNED.md` L12 (Verweis auf `firebird-trace-report-generator/L47`, Nachtrag
+2026-11-10). Kein Paket, keine Konfiguration.
+
+### Changed
+- Vier Testfälle mit Kelvin-/Ångström-Zeichen schreiben die Zeichen als `` `u{212A} ``, `` `u{212B} ``, `` `u{00C5} ``,
+  `` `u{00E5} ``; Schlüssel über `[regex]::Unescape('\u212A')`. Datei bleibt ASCII.
+
+### Confidence / Ungeprüft
+- 28 Tests der Datei grün; Datei nach dem Fix von G DATA nicht erneut entfernt. Vollständiger Scan steht aus.
+
+### Lessons Learned
+- L12: Teilfix genügt nicht, das Muster („Zeichencodes zur Laufzeit zusammensetzen“) ersetzen; Fassungen nicht als Datei ablegen.
+
+---
+
 ## 2026-11-08 I23 – Hashtable-Schlüssel: C# vergleicht ordinal wie PowerShell 7
 
 Commits `b9d78b7` (Test rot), `08a3a0a` (Fix), danach Doku. Klein: 1 Zeile Code, 1 Testfall, 2 Ratsche-Tests.
