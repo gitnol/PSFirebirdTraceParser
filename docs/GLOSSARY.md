@@ -25,8 +25,10 @@ Commit-Messages oder in Doku verwenden.
 | Trace-Objekt | `PSCustomObject`, das der Parser je Trace-Block ausgibt; Property-Namen sind Vertrag | `features/TRACE_PARSING.md` | Rohtext des Blocks |
 | Action | Ereignisname der Kopfzeile eines Blocks (z. B. Ende eines Statements, Transaktionsstart) | Property `Action` | Skript-Aktion (Start/Stopp) |
 | `SessionID` (Property) | Zweiter, hexadezimaler Wert in der Klammer der Kopfzeile `(PID:…)` | Property `SessionID` | Trace-Session-ID |
-| Attachment | Datenbankverbindung eines Clients (`ATT_<n>`) | Property `AttachID` | Trace-Session |
-| RootTxID | Ursprungs-Transaktion: `INIT_<n>` falls vorhanden, sonst die eigene `TRA_<n>`, sonst `NoTx` | Property `RootTxID` | `TransactionID` |
+| Fehlerereignis | Trace-Block der Art `ERROR AT …` oder `WARNING AT …` (`Action` `ERROR`/`WARNING`): Verbindung, Quelle, Codes, Meldungen; enthält **kein** SQL und keine Transaktion | `features/TRACE_PARSING.md` → „Felder je Ereignistyp“ | `FAILED EXECUTE_STATEMENT_FINISH` (Statement-Ereignis ohne Fehlertext) |
+| Fehlerquelle | Komponente, die den Fehler meldet, aus `ERROR AT <Komponente>` (z. B. `JStatement::prepare`); Property `ErrorSource` | Property `ErrorSource` | Fehlercode (`ErrorCodes`) |
+| Attachment | Datenbankverbindung eines Clients (`ATT_<n>` im Log; die Property `AttachID` trägt nur die Nummer `<n>`) | Property `AttachID` | Trace-Session |
+| RootTxID | Ursprungs-Transaktion: die Nummer aus `INIT_<n>` falls vorhanden, sonst die eigene Nummer (`TransactionID`), sonst `NoTx` | Property `RootTxID` | `TransactionID` |
 | Pseudonym | Gekürzter Hex-Hash, der einen Klartextwert ersetzt (`<HASH:…>` in SQL, sonst nur der Hex-Wert) | `Pseudonymize-FirebirdTrace.ps1` (`Get-ShortHash`) | Anonymisierung |
 | Pseudonymisierung | Ersetzen identifizierender Werte durch Pseudonyme; Ergebnis bleibt personenbezogen | `Pseudonymize-FirebirdTrace.ps1`, README | Anonymisierung |
 | Literal | In einfache Anführungszeichen gesetzter Wert in einem SQL-Statement (`'…'`); numerische Werte zählen im Bestand nicht dazu | `$RxStringLiteral` | Parameter (`paramN = …`) |

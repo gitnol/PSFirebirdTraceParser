@@ -50,7 +50,11 @@ dieselben Schritte wie unten, mit denselben Regex und Texten (ADR-003); das Skri
    gezählt. Am Ende mit `-Verbose` je `Action` eine Zeile `Summary: <Action> = <Anzahl>` (unlesbare Kopfzeile als
    `(header not readable)`) und `Summary: <n> warning(s)`. Die Pipeline-Ausgabe bleibt gleich.
 
-## Ausgabe-Vertrag (Properties, Reihenfolge wie im Code)
+## Ausgabe-Vertrag (46 Properties, Reihenfolge wie im Code)
+
+Jedes Objekt hat immer alle 46 Properties (`src/FirebirdTraceParser/TraceField.cs`; ein Probelauf mit beiden Engines
+zählt 46). Nicht zutreffende Felder sind `$null`, Zähler `0` (Spalte „Default“). Welche Felder bei welchem Ereignis
+gefüllt sind, steht im Abschnitt „Felder je Ereignistyp“ darunter.
 
 | Property | Typ | Default | Quelle im Block |
 |---|---|---|---|
@@ -58,13 +62,13 @@ dieselben Schritte wie unten, mit denselben Regex und Texten (ADR-003); das Skri
 | `Action` | string | `$null` | Ereignisname der Kopfzeile (z. B. Statement-, Transaktions-, Verbindungsereignis); `FAILED …`/`UNAUTHORIZED …` vollständig (seit I10); bei `ERROR AT …`/`WARNING AT …` nur `ERROR`/`WARNING` |
 | `ProcessID`, `SessionID` | string | `$null` | `(PID:Adresse)` der Kopfzeile; die Adresse ist plattformabhängig: Windows `000001A2B3C4D5E0`, Linux `0x7f3a1c2b4d10` (beide werden erkannt, unverändert übernommen) |
 | `DatabasePath` | string | `$null` | Verbindungszeile, Pfad bis `.FDB`; jede Endung, jede Rolle, auch `<internal>` und Protokolle ohne Port (seit K3-Fix 2026-11-07) |
-| `AttachID` | string | `$null` | `ATT_<n>` |
+| `AttachID` | string | `$null` | die Nummer aus `ATT_<n>`, **ohne** Präfix (`ATT_399921` → `399921`) |
 | `User` | string | `$null` | Benutzer **inklusive** `:NONE` (Rolle) |
 | `ProtocolInfo` | string | `$null` | z. B. `TCPv4:<ip>/<port>` |
 | `ClientIP`, `ClientPort` | string | `$null` | aus `ProtocolInfo` |
 | `ApplicationPath`, `ApplicationPID` | string | `$null` | Zeile `<Laufwerk-/UNC-Pfad>:<pid>` |
-| `TransactionID` | string | `$null` | `TRA_<n>` |
-| `RootTxID` | string | `"NoTx"` | `INIT_<n>`, sonst `TransactionID` |
+| `TransactionID` | string | `$null` | die Nummer aus `TRA_<n>`, ohne Präfix |
+| `RootTxID` | string | `"NoTx"` | die Nummer aus `INIT_<n>` (ohne Präfix), sonst `TransactionID`, sonst `NoTx` |
 | `TransactionOptions` | string | `$null` | Optionen in der Transaktionszeile |
 | `Params` | string | `$null` | zusammenhängende `paramN = …`-Zeilen |
 | `SqlStatement` | string | `$null` | Text nach `Statement <n>:` und Trennlinie bis Plan/Parameter/Statistik |
@@ -73,7 +77,7 @@ dieselben Schritte wie unten, mit denselben Regex und Texten (ADR-003); das Skri
 | `ErrorSource` | string | `$null` | Komponente aus `ERROR AT <Komponente>` bzw. `WARNING AT …` (seit I10) |
 | `ErrorCodes` | string | `$null` | Fehlercodes der Zeilen `%9lu : <Text>`, mit `, ` verbunden (nur bei `ERROR`/`WARNING`) |
 | `ErrorMessages` | string | `$null` | Fehlertexte derselben Zeilen, mit ` \| ` verbunden; können Werte enthalten (`Problematic key value is (…)`) |
-| `DurationMs`, `Reads`, `Writes`, `Fetches`, `Marks` | int | `0` | Performance-Zeile `<n> ms, … read(s), … write(s), … fetch(es), … mark(s)` (auch bei `SWEEP_PROGRESS/FINISH/FAILED`) |
+| `DurationMs`, `Reads`, `Writes`, `Fetches`, `Marks` | long (`Int64`) | `0` | Performance-Zeile `<n> ms, … read(s), … write(s), … fetch(es), … mark(s)` (auch bei `SWEEP_PROGRESS/FINISH/FAILED`) |
 | `ServiceName` | string | `$null` | seit I15: Dienstname in Anführungszeichen bei `START_SERVICE`/`QUERY_SERVICE`, z. B. `Backup Database`, `Incremental Backup Database`, `Restore Database`, `Validate Database` (Liste in Firebird `src/jrd/svc.cpp`) |
 | `ServiceID` | string | `$null` | seit I15: Adresse aus `(Service <Adresse>, …)` bei allen `*_SERVICE`-Ereignissen; Benutzer, Adresse und Programm der Dienstzeile stehen in `User`, `ProtocolInfo`/`ClientIP`/`ClientPort`, `ApplicationPath`/`ApplicationPID` |
 | `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext` | long | `$null` | seit I15: Block `Transaction counters:` bei `SWEEP_START` und `SWEEP_FINISH` (Oldest interesting/active/snapshot, Next transaction); bei `SWEEP_PROGRESS`/`SWEEP_FAILED` leer |
@@ -90,6 +94,50 @@ dieselben Schritte wie unten, mit denselben Regex und Texten (ADR-003); das Skri
 | `TriggerTime` | string | `$null` | seit I12: `BEFORE`, `AFTER`, `ON` (Datenbank-Trigger) oder `<unknown>` |
 | `TriggerEvent` | string | `$null` | seit I12: `INSERT`, `UPDATE`, `DELETE`, `CONNECT`, `DISCONNECT`, `TRANSACTION_START`, `TRANSACTION_COMMIT`, `TRANSACTION_ROLLBACK`, `DDL` |
 | `ConnectionDurationMs` | long | `$null` | seit I12: nur bei `DETACH_DATABASE`: Millisekunden seit `ATTACH_DATABASE`/`CREATE_DATABASE` derselben Verbindung (Datenbankpfad + `AttachID`) in dieser Datei; leer, wenn die Verbindung vor dem Trace begann |
+
+### Felder je Ereignistyp
+
+Der Parser gibt für **jeden** Block ein Objekt mit allen 46 Properties aus; gefüllt ist nur, was der Block enthält.
+Die Tabelle fasst zusammen, welche Felder bei welcher `Action` gefüllt sind. Quelle: Probelauf beider Engines
+(`-Engine PowerShell` und `-Engine CSharp`, gleiches Ergebnis) über die synthetischen Fixtures in `tests/fixtures/` und
+einen kleinen eigens erzeugten synthetischen Trace mit fiktiven Werten; Stand 2026-11-11. Ereignisse, die in keinem
+dieser Dateien vorkommen, sind nicht aufgeführt (Firebird kennt weitere, z. B. `EXECUTE_STATEMENT_START`).
+
+Bausteine (kurz, in der Tabelle verwendet):
+
+| Baustein | Felder |
+|---|---|
+| **Kopf** | `Timestamp`, `Action`, `ProcessID`, `SessionID` — immer gefüllt |
+| **Verbindung** | `DatabasePath`, `AttachID`, `User`, `ProtocolInfo`, `ClientIP`, `ClientPort` |
+| **Programm** | `ApplicationPath`, `ApplicationPID` — nur wenn der Block die Programmzeile hat (sie kann fehlen, z. B. bei internen Verbindungen) |
+| **Transaktion** | `TransactionID`, `RootTxID`, `TransactionOptions`, `TxIsolation`, `TxReadMode`, `TxWaitMode`, `TxLockTimeout`, `TxAccessMode` (`TxReadMode` nur bei `READ_COMMITTED`, `TxLockTimeout` nur bei `WAIT <n>`) |
+| **Leistung** | `DurationMs`, `Reads`, `Writes`, `Fetches`, `Marks` — nur die Zähler, die die Zeile `… ms, … read(s), …` nennt; sonst `0` |
+
+| `Action` | Zusätzlich zu Kopf gefüllt |
+|---|---|
+| `ATTACH_DATABASE` | Verbindung, Programm |
+| `DETACH_DATABASE` | Verbindung, Programm (falls vorhanden), `ConnectionDurationMs` (nur wenn der `ATTACH_DATABASE` derselben Verbindung in dieser Datei steht) |
+| `START_TRANSACTION` | Verbindung, Programm, Transaktion (`RootTxID` = `TransactionID`) |
+| `COMMIT_TRANSACTION`, `ROLLBACK_TRANSACTION` | Verbindung, Programm, Transaktion (`RootTxID` aus `INIT_<n>`, falls vorhanden), `Fetches`, `Marks`; `Writes` und `DurationMs`, wenn die Leistungszeile sie nennt |
+| `COMMIT_RETAINING` | wie `COMMIT_TRANSACTION`; die Zeile `New number <n>` wird nicht gelesen (kein Feld dafür) |
+| `EXECUTE_STATEMENT_FINISH` | Verbindung, Programm, Transaktion, `SqlStatement`, `SqlPlan` (mit `print_plan`), `Params`, `TableStats` und `TableCounts` (mit `print_perf`), `RecordsFetched`, Leistung |
+| `FAILED EXECUTE_STATEMENT_FINISH` | wie oben, in den Fixtures ohne `SqlPlan`, `TableStats`, `RecordsFetched`. **Enthält keinen Fehlertext:** `ErrorSource`, `ErrorCodes` und `ErrorMessages` bleiben leer; der Fehler steht in einem eigenen `ERROR`-Ereignis |
+| `EXECUTE_PROCEDURE_FINISH` | Verbindung, Programm, Transaktion, `RoutineType`, `RoutineName`, `Params`, `SqlPlan`, `TableStats`, `RecordsFetched` (nur wenn ≠ 0), Leistung; **kein** `SqlStatement` |
+| `EXECUTE_FUNCTION_FINISH` | Verbindung, Programm, Transaktion, `RoutineType`, `RoutineName`, `Params`, `DurationMs`, `Fetches` |
+| `EXECUTE_TRIGGER_FINISH` (auch `FAILED …`) | Verbindung, Programm, Transaktion, `RoutineType`, `RoutineName`, `TriggerTable`, `TriggerTime`, `TriggerEvent`, Leistung; mit Plan/Statistik auch `SqlPlan`, `TableStats`, `TableCounts` |
+| `ERROR`, `WARNING` | Verbindung, Programm, `ErrorSource`, `ErrorCodes`, `ErrorMessages`. **Kein** SQL, **keine** Transaktion, **keine** Leistung: ein Fehlerereignis sagt nicht, welches Statement ihn ausgelöst hat |
+| `START_SERVICE`, `ATTACH_SERVICE`, `DETACH_SERVICE` | `User`, `ProtocolInfo`, `ClientIP`, `ClientPort`, Programm, `ServiceID`; `ServiceName` nur bei `START_SERVICE`/`QUERY_SERVICE`; kein `DatabasePath`, keine `AttachID` |
+| `UNAUTHORIZED START_SERVICE` | `User`, `ProtocolInfo`, `ClientIP`, `ClientPort`, `ServiceID`, `ServiceName` (ohne Programm) |
+| `SWEEP_START` | Verbindung, Programm, `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext` |
+| `SWEEP_PROGRESS` | Verbindung, Programm, `DurationMs`, `Reads`, `Fetches`, `TableStats` |
+| `SWEEP_FINISH` | Verbindung, Programm, `SweepOIT`/`OAT`/`OST`/`Next`, Leistung, `TableStats`, `TableCounts` |
+| `SWEEP_FAILED` | Verbindung, Programm, `DurationMs`, `Fetches` |
+
+Daraus folgt für Auswertungen: Felder wie `SqlStatement`, `Params` oder `RecordsFetched` nur über die passenden
+`Action`-Werte filtern (`$_.Action -eq 'EXECUTE_STATEMENT_FINISH'`); `0` bei Zählern heißt „nicht angegeben“ oder „null“,
+nicht immer „gemessen null“. Die Zuordnung eines Fehlers zu dem Statement, das ihn ausgelöst hat, ist **nicht** Sache des
+Parsers (kein Verweis im Trace); der Report-Generator leitet sie über Verbindung und Zeit ab (`README.md`, Schwester-Repo).
+Wie sich `ErrorSource` dafür lesen lässt, steht im Benutzerhandbuch (`handbuch/BENUTZERHANDBUCH.md`).
 
 **Tabellenstatistik lesen (seit I11):** Firebird (`appendTableCounts`) füllt die Namensspalte auf
 max(32, längster Name in Bytes) auf (Firebird 3: fest 31) und schreibt jede Zahl rechtsbündig in 10 Zeichen, 0 als
@@ -154,6 +202,11 @@ gemeinsam (`CONVENTIONS.md` §8). Die READMEs nennen seit I7 dieselben Namen (K1
 
 ## Bekannte Fallstricke
 
+- `AttachID`, `TransactionID` und `RootTxID` enthalten nur die Nummer, nicht `ATT_`/`TRA_`/`INIT_`; Werte sind Texte
+  (nicht `[int]`), auch `ProcessID`, `ApplicationPID`, `ClientPort`.
+- Ein `ERROR`-Ereignis hat kein `SqlStatement` und keine Transaktion (Tabelle „Felder je Ereignistyp“); wer Fehler mit
+  Statements verknüpfen will, tut das über `AttachID` und `Timestamp` — und weiß dabei, dass es dafür keine Garantie gibt
+  (Beobachtung je `ErrorSource` im Benutzerhandbuch).
 - Ein Block ohne `Statement`-Abschnitt (z. B. Verbindungs- oder Transaktionsereignis) liefert `SqlStatement = $null` — beim Gruppieren berücksichtigen.
 - `TableCounts` ist eine Liste: `Export-Csv` schreibt dafür nur `System.Object[]`. Für CSV die Liste aufklappen oder
   `TableStats` exportieren.

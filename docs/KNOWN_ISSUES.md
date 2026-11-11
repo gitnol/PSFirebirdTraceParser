@@ -18,7 +18,7 @@ Sicherheitsrelevante Schwächen stehen in `security/THREAT_MODEL.md` und `STATE.
 | # | Beschreibung | Reproduktion | Workaround | Akzeptanzgrund | Geplant für |
 |---|---|---|---|---|---|
 | ~~K8~~ | Ereignis mit sehr vielen Zeilen machte beide Parser quadratisch langsam (kulturabhängige Zeilensuche in `Get-LineEnd`) | `I21` (2026-11-08) | ed913e9 |
-| — | (noch keine Einträge) | — | — | — | — |
+| K9 | Fehlerereignisse (`ERROR`/`WARNING`) enthalten kein SQL und keine Transaktion, und ein `FAILED EXECUTE_STATEMENT_FINISH` hat keinen Fehlertext: das auslösende Statement lässt sich aus einem Objekt allein nicht bestimmen | Fixtures in `tests/fixtures/` (`ERROR`-Ereignisse); `features/TRACE_PARSING.md` → „Felder je Ereignistyp“ | Zuordnung über `AttachID` und `Timestamp` in der Auswertung (Benutzerhandbuch Kapitel 8; der Report-Generator macht das); keine Garantie | Firebird schreibt das Statement nicht in das Fehlerereignis; der Parser erfindet keine Zuordnung | — |
 
 ---
 
