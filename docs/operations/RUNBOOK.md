@@ -52,9 +52,11 @@ leer: keine Statements über `time_threshold` → in der Trace-Konfiguration sen
 `-TRUSTED` scheitert: der Server erlaubt keine Windows-Anmeldung (`AuthServer = Srp256, Win_Sspi` in `firebird.conf`).
 
 ### Parser braucht sehr lange
-→ Seit I6 liest der Parser in 4-MB-Stücken (Speicher bleibt begrenzt, K2 behoben); die Laufzeit wächst mit der
-Dateigröße. Fortschritt mit `-Verbose`; bei sehr großen Dateien Ausgabe direkt in `Export-Csv` leiten statt in
-`Out-GridView`.
+→ Zuerst prüfen, welche Engine läuft: `Show-TraceStructure.ps1 -Path <datei> -Verbose` meldet `Engine: CSharp` oder
+`Engine: PowerShell`. Der PowerShell-Parser braucht bei großen Dateien Minuten; der C#-Parser ist um ein Vielfaches
+schneller (DLL bauen: `handbuch/ADMINHANDBUCH.md` Kapitel 4). Seit I6 liest der Parser in 4-MB-Stücken (Speicher bleibt
+begrenzt, K2 behoben); die Laufzeit wächst mit der Dateigröße. Fortschritt mit `-Verbose`; bei sehr großen Dateien Ausgabe
+direkt in `Export-Csv` leiten statt in `Out-GridView` oder eine Variable.
 
 ### Felder `DatabasePath`, `User`, `ClientIP` sind leer
 → Seit dem K3-Fix (2026-11-07) liest der Parser alle bekannten Formen der Verbindungszeile. Bleiben die Felder leer,

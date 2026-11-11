@@ -1,5 +1,10 @@
 # Entwicklungsumgebung Setup – PSFirebirdTraceParser
 
+Für Anwender und Administratoren gibt es zusätzlich zwei Handbücher: [Adminhandbuch](../handbuch/ADMINHANDBUCH.md)
+(Installation, Trace aufzeichnen, C#-Parser, Schlüssel, Updates) und
+[Benutzerhandbuch](../handbuch/BENUTZERHANDBUCH.md) (Auswerten). Diese Datei ist die Einrichtung für Entwicklung und
+Trace-Skripte im Detail.
+
 ---
 
 ## Voraussetzungen
@@ -12,7 +17,7 @@
 - Für die Trace-Skripte: Firebird-Installation mit `fbtracemgr.exe` auf dem Datenbankserver, Zugang für den
   Service-Manager (`security/AUTHENTICATION.md`), ein Ausgabeordner mit ausreichend Platz (`OutputDirectory`)
 - Für Entwicklung: Pester und PSScriptAnalyzer (Versionen in `tests/RequiredModules.psd1`) und seit I16 das .NET SDK
-  (mindestens 9.0.300 laut `global.json`, empfohlen 10.0 LTS — .NET 9 hat am 2026-11-10 Supportende) für den C#-Parser
+  (mindestens 9.0.300 laut `global.json`, empfohlen 10.0 LTS — .NET 9 hatte am 2026-11-10 Supportende) für den C#-Parser
 
 ---
 

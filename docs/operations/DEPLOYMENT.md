@@ -32,7 +32,7 @@ Die `.ps1`-Dateien werden direkt ausgeführt. Seit I16 gibt es den C#-Parser (AD
 (`RestoreLockedMode`). `bin/` ist nicht versioniert. Ein PowerShell-Prozess, der die DLL geladen hat, sperrt sie —
 vor einem Neubau diesen Prozess beenden. Die DLL läuft nur unter PowerShell 7.4+ (`net8.0`).
 
-Auslieferungsartefakt: Git-Commit bzw. -Tag des Repositories (Skripte, `TraceCommon.ps1`, `fbtrace50.conf`/`fbtrace30.conf`, `config.sample.json`, READMEs). Die DLL wird bisher nicht ausgeliefert, nur lokal gebaut (Verteilung: I22).
+Auslieferungsartefakt: Git-Commit bzw. -Tag des Repositories (Skripte, `TraceCommon.ps1`, `fbtrace50.conf`/`fbtrace30.conf`, `config.sample.json`, READMEs, Handbücher in `docs/handbuch/`). Die DLL wird bisher nicht ausgeliefert, nur lokal gebaut (Verteilung: I22).
 
 **Reproduzierbar:**
 - [ ] Entwickler-Module gepinnt (`tests/RequiredModules.psd1`, seit I9)

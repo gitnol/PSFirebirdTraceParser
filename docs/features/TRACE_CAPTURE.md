@@ -53,7 +53,9 @@ Alle übrigen Werte kommen aus `config.json` neben den Skripten (Vorlage `config
 - **Anmeldung** (`<Anmeldung>`): `-USER <Username> -FETCH_PASSWORD <PasswordFile>` oder `-TRUSTED`, jeweils mit
   `-ROLE <Role>`, wenn gesetzt.
 
-Exit-Codes: `architecture/ERROR_HANDLING.md`.
+Exit-Codes: `architecture/ERROR_HANDLING.md`. Die Optionen der Trace-Konfiguration (`fbtrace50.conf`/`fbtrace30.conf`), den
+Betrieb einer Aufzeichnung und die Einrichtung eines Trace-Benutzers fasst das [Adminhandbuch](../handbuch/ADMINHANDBUCH.md)
+(Kapitel 5 bis 7) zusammen.
 
 ---
 

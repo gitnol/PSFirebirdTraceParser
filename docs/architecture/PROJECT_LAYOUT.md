@@ -58,7 +58,10 @@ PSFirebirdTraceParser/
 │   ├── RequiredModules.psd1        # gepinnte Versionen von Pester und PSScriptAnalyzer
 │   ├── TraceParity.ps1             # seit I16: strenger Vergleich der Objekte beider Parser (Dot-Sourcing)
 │   └── fixtures/                   # synthetische Trace-Dateien mit fiktiven Daten
-└── docs/                           # Dieses Doku-Set (docs/local/ gitignored)
+└── docs/                           # Dieses Doku-Set (docs/local/ gitignored); Einstieg: docs/README.md
+    ├── handbuch/                   # Benutzerhandbuch (Analyst) und Adminhandbuch (seit 2026-11-11)
+    ├── features/                   # TRACE_PARSING (Ausgabe-Vertrag, Felder je Ereignistyp), TRACE_CAPTURE, PSEUDONYMIZATION
+    ├── architecture/ · operations/ · security/ · principles/
 ```
 
 ## Regeln

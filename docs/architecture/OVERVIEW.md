@@ -27,6 +27,9 @@ Architekturentscheidungen nachvollziehbar.
 
 - **Keine Auswertung/Reports:** Das Repository liefert Objekte (`[PSCustomObject]`); Analysen, Gruppierungen und
   Reports baut der Nutzer selbst (README: „Core Parsing Engine"). Frühere Analyse-Skripte wurden bewusst entfernt.
+  Den HTML-Bericht mit Diagrammen und Empfehlungen erzeugt das Schwesterprojekt `firebird-trace-report-generator`
+  (eigenes Repository); die Property-Namen und -Typen der Objekte sind der Vertrag zwischen beiden
+  (`features/TRACE_PARSING.md`, Änderungen nur gemeinsam).
 - **Keine Anonymisierung:** Der Pseudonymisierer ersetzt Werte deterministisch; Ergebnisse bleiben personenbezogene
   Daten (`security/DATA_HANDLING.md`).
 - **Keine Datenbankverbindung:** Kein Skript liest oder schreibt Datenbankinhalte; die Trace-Skripte sprechen nur den

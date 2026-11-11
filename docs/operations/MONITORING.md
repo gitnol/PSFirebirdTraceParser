@@ -13,7 +13,7 @@ weil sie unbegrenzt Daten schreibt und den Datenbankserver belastet.
 | Kopfzeile der Trace-Datei | `Trace session ID <n> started` | `Get-Content <datei> -TotalCount 1` |
 | Trace-Datei wächst während der Session | Dateigröße steigt | `(Get-Item <datei>).Length` |
 | Session nach dem Stopp beendet | keine eigene Session mehr gelistet | `fbtracemgr -SE service_mgr -LIST …` |
-| Parser-Lauf | „Parsed <n> records" ≈ Anzahl Zeitstempel-Zeilen | Konsolenausgabe von `Show-TraceStructure.ps1` |
+| Parser-Lauf | „Parsed <n> events in <s> seconds.“ ≈ Anzahl Zeitstempel-Zeilen; `Engine: CSharp` oder `Engine: PowerShell`; je `Action` eine Zeile `Summary: …` | `-Verbose`-Ausgabe von `Show-TraceStructure.ps1` |
 
 ---
 

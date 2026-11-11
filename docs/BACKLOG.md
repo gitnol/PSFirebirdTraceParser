@@ -25,6 +25,9 @@ Wenn ein Backlog-Punkt für ein Inkrement vorgesehen wird → Verschiebung von
   `security/THREAT_MODEL.md` Bedrohung 4)
 - Trace-Skripte: Rechte der Passwortdatei prüfen und warnen, wenn andere Konten sie lesen dürfen (Idee aus I4, ADR-002)
 - Veröffentlichung als Modul in der PowerShell Gallery (dann Manifest mit expliziten `FunctionsToExport`)
+- Die Tabelle „Felder je Ereignistyp“ (`features/TRACE_PARSING.md`) von einem Test gegen die Fixtures prüfen lassen, damit sie nicht veraltet (heute von Hand per Probelauf erstellt, 2026-11-11)
+- Handbücher (`docs/handbuch/`) zusätzlich auf Englisch, falls Nutzer außerhalb des deutschsprachigen Raums dazukommen
+- Optional: eigene Zuordnung Fehler → Statement als Hilfsfunktion in diesem Repository (heute Sache des Report-Generators); erst, wenn ein zweiter Verbraucher sie braucht ([[YAGNI]])
 
 ---
 
