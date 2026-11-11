@@ -13,6 +13,43 @@ und Reflexion nach I5: `changelog/ARCHIVE-CHANGELOG-I11-I15.md`.
 
 ---
 
+## 2026-11-11 Doku – Überarbeitung README, Handbücher (I24)
+
+Nur Dokumentation, kein Code. Anlass: Wunsch des Owners, README und `docs/` beider Repositories (Parser und
+Report-Generator) zu überarbeiten, mit Benutzer- und Adminhandbuch.
+
+**Trigger-Matrix:** Ausgabe-Vertrag → `features/TRACE_PARSING.md`; Modulbeschreibung → `architecture/OVERVIEW.md`,
+`architecture/PROJECT_LAYOUT.md`; Begriffe → `GLOSSARY.md`; bekanntes Problem → `KNOWN_ISSUES.md` (K9); Ideen → `BACKLOG.md`;
+Betrieb → `operations/*`; Secrets → `operations/SECRETS_MANAGEMENT.md`; Aufgaben → `STATE.md`.
+
+### Added
+- `docs/handbuch/BENUTZERHANDBUCH.md` (Analyst: parsen, Felder lesen, Auswertungen, pseudonymisieren, Report-Generator,
+  Grenzen) und `docs/handbuch/ADMINHANDBUCH.md` (Installation, Trace-Konfiguration, Zugang, Betrieb, C#-Parser,
+  Pseudonymisierungsschlüssel, Datenschutz, Updates, Qualitätssicherung, Virenscanner-Fehlalarme, Fehlersuche).
+- `docs/README.md` (Übersicht des Doku-Sets).
+- `features/TRACE_PARSING.md` → „Felder je Ereignistyp“: welche der 46 Properties je `Action` gefüllt sind, aus einem
+  Probelauf beider Engines über die Fixtures und einen kleinen synthetischen Trace (gleiches Ergebnis).
+- `KNOWN_ISSUES.md` K9 (Fehlerereignisse ohne Statement und Transaktion, `FAILED …` ohne Fehlertext).
+
+### Changed
+- README (en/de) neu gegliedert: Zweck, Schnellstart, Voraussetzungen, Dokumentation, Referenz (Felder nach Gruppen,
+  Ereignis-Kurztabelle, Pseudonymisierer, Trace aufzeichnen), Verweis auf das Schwesterprojekt.
+- `features/TRACE_PARSING.md` korrigiert: Zähler sind `long` (stand `int`); `AttachID`, `TransactionID` und `RootTxID`
+  enthalten nur die Nummer ohne `ATT_`/`TRA_`/`INIT_`. `GLOSSARY.md` entsprechend, neue Begriffe Fehlerereignis, Fehlerquelle.
+- `operations/MONITORING.md`: die Laufzeitmeldung heißt `Parsed <n> events in <s> seconds.` und erscheint nur mit `-Verbose`
+  (stand als „Konsolenausgabe“ und „records“). `operations/*`, `STATE.md` (CI-Risiko neu bewertet: die CI läuft seit
+  2026-11-08, SDK-9-Supportende erreicht), `PSEUDONYMIZATION.md` (`ErrorMessages` ohne `-RedactLiterals` im Klartext).
+
+### Confidence / Ungeprüft
+- Die Rezepte des Benutzerhandbuchs (Kapitel 5) liefen gegen die Fixtures und einen synthetischen Trace; die Ausgaben sehen
+  wie erwartet aus. Beide Engines lieferten für den synthetischen Trace dieselben gefüllten Felder je `Action`.
+- Nicht geprüft: Ereignisse, die in keinem Fixture vorkommen (z. B. `EXECUTE_STATEMENT_START`); `-TRUSTED` und die Rolle
+  `TRACER` gegen einen echten Server (wie bisher); die Einschätzung zu `ErrorSource` (`prepare`/`openCursor` ohne Statement,
+  `fetchNext` mit dem Statement davor) stammt aus Beobachtungen in Praxis-Traces, nicht aus dem Firebird-Quelltext.
+- Die Commits seit I23 (G-DATA-Fix, diese Doku) sind lokal und noch nicht in der CI gelaufen.
+
+---
+
 ## 2026-11-10 Wartung – G-DATA-Fund in der Diagnose-Paritätsdatei
 
 Commits `ffeca05` (Reflexion und `[char]`-Casts entfernt), `9e61a9c` (`[char]::ConvertFromUtf32` durch `` `u{…} ``-Escapes
