@@ -4,25 +4,33 @@
 
 **High-Performance PowerShell Parser & Pseudonymizer für Firebird Trace Logs.**
 
-> **Hinweis**: Dieses Repository enthält die **Core Parsing Engine** und **Pseudonymisierungs-Tools**. Es generiert strukturierte PowerShell-Objekte, die du weiterverarbeiten, analysieren oder in deine eigenen Reporting-Systeme exportieren kannst.
+> **Hinweis**: Dieses Repository enthält die **Core Parsing Engine**, die **Pseudonymisierungs-Tools** und die Skripte zum **Aufzeichnen** eines Traces. Es generiert strukturierte PowerShell-Objekte, die du weiterverarbeiten, analysieren oder in deine eigenen Reporting-Systeme exportieren kannst. Diagramme und Empfehlungen liefert das Schwesterprojekt [firebird-trace-report-generator](https://github.com/gitnol/firebird-trace-report-generator).
 
 ---
 
 ## 📋 Inhaltsverzeichnis
 1. [Funktionalität](#functionality)
 2. [Schnellstart](#quickstart)
-3. [Nutzungsdetails](#usage)
-4. [Haftungsausschluss (Disclaimer)](#disclaimer)
+3. [Voraussetzungen](#requirements)
+4. [Dokumentation](#documentation)
+5. [Referenz](#usage)
+6. [Haftungsausschluss (Disclaimer)](#disclaimer)
 
 ---
 
 <a id="functionality"></a>
 ## ⚡ Funktionalität
-Firebird Trace Logs sind textbasiert und durch ihre Blockstruktur schwer programmgesteuert zu parsen. Dieses Projekt löst das Problem:
+Firebird Trace Logs sind Textdateien mit einem mehrzeiligen Block je Ereignis und deshalb schwer programmgesteuert zu verarbeiten. Dieses Projekt löst das Problem:
 
-1.  **Parsen (`Show-TraceStructure.ps1`)**: Liest rohe Trace Logs (auch mehrere GB) und konvertiert sie in strukturierte PowerShell-Objekte (`[PSObject]`).
-2.  **Pseudonymisieren (`Pseudonymize-FirebirdTrace.ps1`)**: Hasht sensible Daten (Benutzernamen, IP-Adressen, SQL Strings) sicher, um Logs für externe Analysen teilbar zu machen.
+1.  **Parsen (`Show-TraceStructure.ps1`)**: Liest rohe Trace Logs (auch mehrere GB, der Speicherbedarf bleibt begrenzt) und gibt je Ereignis ein strukturiertes PowerShell-Objekt (`[PSObject]`, 46 Eigenschaften) aus.
+2.  **Pseudonymisieren (`Pseudonymize-FirebirdTrace.ps1`)**: Ersetzt sensible Daten (Benutzernamen, IP-Adressen, SQL-Werte) durch Pseudonyme (Hash mit Schlüssel), um Logs für externe Analysen teilbar zu machen.
 3.  **Aufzeichnen (`trace_start.ps1`, `trace_stop.ps1`)**: Startet und stoppt eine benannte Trace-Sitzung mit `fbtracemgr`, ohne Passwort in der Befehlszeile.
+
+```
+trace.log ──► Show-TraceStructure.ps1 ──► Objekte ──► deine Auswertung / Export-Csv
+                                             └──► Pseudonymize-FirebirdTrace.ps1 ──► sicherer Export
+                                             └──► New-TraceReport.ps1 (Report-Generator) ──► HTML-Bericht
+```
 
 ---
 
@@ -30,72 +38,95 @@ Firebird Trace Logs sind textbasiert und durch ihre Blockstruktur schwer program
 ## 🚀 Schnellstart
 
 ### 1. Parsen und Anzeigen (GridView)
-Analysiere eine Logdatei sofort mit der integrierten PowerShell-Ansicht:
-
 ```powershell
-.\Show-TraceStructure.ps1 -Path "C:\db\trace.log" | Out-GridView
+.\Show-TraceStructure.ps1 -Path "C:\db\trace.log" -Verbose | Out-GridView
 ```
+`-Verbose` zeigt die verwendete Engine, die Zahl der Ereignisse je `Action`, Warnungen und die Laufzeit.
 
 ### 2. Export nach CSV (Excel)
-Konvertiere das Trace Log in eine CSV-Datei für Excel oder PowerBI:
-
 ```powershell
 .\Show-TraceStructure.ps1 -Path "trace.log" | Export-Csv -Path "trace_export.csv" -NoTypeInformation
 ```
 
 ### 3. Parsen, Bereinigen und Exportieren
 Verarbeite ein sensibles Produktions-Log, verstecke spezifische Schlüsselwörter und alle Zeichenfolgen (Strings) und exportiere es dann:
-
 ```powershell
 .\Show-TraceStructure.ps1 -Path "prod_trace.log" | `
-.\Pseudonymize-FirebirdTrace.ps1 -SensitiveKeywords "SecretClient", "Vertraulich" -RedactLiterals | `
+.\Pseudonymize-FirebirdTrace.ps1 -SensitiveKeywords "SecretClient", "Vertraulich" -RedactLiterals -KeyFile "C:\keys\trace.key" | `
 Export-Csv "safe_trace.csv"
+```
+
+### 4. HTML-Bericht erzeugen
+```powershell
+.\Show-TraceStructure.ps1 -Path "trace.log" | ..\firebird-trace-report-generator\New-TraceReport.ps1 -FilePath "Report.html"
 ```
 
 ---
 
+<a id="requirements"></a>
+## 🛠 Voraussetzungen
+*   **Parser und Pseudonymisierer:** PowerShell 7.x (empfohlen 7.6 LTS) oder Windows PowerShell 5.1; keine Module, kein Netzwerk.
+*   **Trace aufzeichnen:** PowerShell **7.4 oder neuer**, `fbtracemgr.exe` einer Firebird-4.0/5.0-Installation, Zugang zum lokalen Service-Manager.
+*   **C#-Parser (optional, schneller):** .NET SDK, um `FirebirdTraceParser.dll` einmal zu bauen (siehe unten); läuft in PowerShell 7.4+.
+*   Entwicklung: Pester und PSScriptAnalyzer in den Versionen aus `tests/RequiredModules.psd1`.
+
+---
+
+<a id="documentation"></a>
+## 📚 Dokumentation
+Die Dokumentation in `docs/` ist auf Deutsch.
+
+| Für | Dokument |
+|---|---|
+| Analysten: parsen, Objekte lesen, filtern, pseudonymisieren, weitergeben | [Benutzerhandbuch](docs/handbuch/BENUTZERHANDBUCH.md) |
+| Administratoren: installieren, Trace aufzeichnen, C#-Parser bauen, Schlüssel, Updates, Fehlersuche | [Adminhandbuch](docs/handbuch/ADMINHANDBUCH.md) |
+| Jedes Ausgabefeld, je Ereignistyp | [docs/features/TRACE_PARSING.md](docs/features/TRACE_PARSING.md) |
+| Was pseudonymisiert wird und was nicht | [docs/features/PSEUDONYMIZATION.md](docs/features/PSEUDONYMIZATION.md) |
+| Trace aufzeichnen, Konfiguration, Exit-Codes | [docs/features/TRACE_CAPTURE.md](docs/features/TRACE_CAPTURE.md) |
+| Architektur und Entscheidungen | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md), `docs/architecture/ADR/` |
+| Projektstand, Changelog, bekannte Probleme | [docs/STATE.md](docs/STATE.md), [docs/CHANGELOG.md](docs/CHANGELOG.md), [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) |
+
+---
+
 <a id="usage"></a>
-## 🛠 Nutzungsdetails
+## 🔎 Referenz
 
 ### Der Parser: `Show-TraceStructure.ps1`
 Liest die Datei in 4-MB-Stücken (Speicherbedarf begrenzt, unabhängig von der Dateigröße) und gibt jedes Trace-Ereignis sofort als Objekt in die Pipeline. Statusmeldungen: `-Verbose` (am Ende auch eine Zusammenfassung: Zahl der Ereignisse je `Action` und der Warnungen).
 
-Ereignisse, die sich nicht zuordnen lassen (unlesbare Kopfzeile, `Unknown event …`, Text vor dem ersten Ereignis), meldet der Parser als Warnung mit Zeilennummer; die Warnung zeigt keinen Trace-Inhalt. Schutz vor sehr langen Ereignissen: `-MaxBlockLines` (Standard `100000`; längere Ereignisse werden gekürzt, Warnung) und `-RegexTimeoutSeconds` (Standard `2` je Feld; danach bleiben die restlichen Felder leer, Warnung). Die Objekte sind dieselben wie vorher; nur in diesen seltenen Fällen kommt eine Warnung dazu.
+Ereignisse, die sich nicht zuordnen lassen (unlesbare Kopfzeile, `Unknown event …`, Text vor dem ersten Ereignis), meldet der Parser als Warnung mit Zeilennummer; die Warnung zeigt keinen Trace-Inhalt. Schutz vor sehr langen Ereignissen: `-MaxBlockLines` (Standard `100000`; längere Ereignisse werden gekürzt, Warnung) und `-RegexTimeoutSeconds` (Standard `2` je Feld; danach bleiben die restlichen Felder leer, Warnung).
 
-**Zwei Parser, gleiches Ergebnis (`-Engine`):** Seit 2026-11 gibt es den Parser auch in C# (`src/FirebirdTraceParser`,
-ein Binär-Cmdlet für PowerShell 7.4+). `-Engine Auto` (Standard) nimmt ihn, wenn PowerShell 7 läuft und die gebaute
-`FirebirdTraceParser.dll` neben dem Skript oder unter `bin/` liegt; sonst läuft der PowerShell-Parser (unter Windows
-PowerShell 5.1 immer). `-Engine PowerShell` / `-Engine CSharp` wählen ausdrücklich (`CSharp` ohne DLL oder unter 5.1
-ist ein Fehler). Beide liefern dieselben Objekte, Warnungen und Verbose-Meldungen — ein Paritätstest vergleicht jedes
-Feld. Der C#-Parser ist deutlich schneller (gemessen an einem synthetischen 15-MB-Log: 1,6 s statt 13–14 s, höchster Arbeitsspeicher 196 MB statt 287 MB). Einmal mit dem .NET SDK bauen:
+**Zwei Parser, gleiches Ergebnis (`-Engine`):** Den Parser gibt es auch in C# (`src/FirebirdTraceParser`, ein Binär-Cmdlet `ConvertFrom-FirebirdTrace` für PowerShell 7.4+). `-Engine Auto` (Standard) nimmt ihn, wenn PowerShell 7 läuft und die gebaute `FirebirdTraceParser.dll` neben dem Skript oder unter `bin/` liegt; sonst läuft der PowerShell-Parser (unter Windows PowerShell 5.1 immer). `-Engine PowerShell` / `-Engine CSharp` wählen ausdrücklich (`CSharp` ohne DLL oder unter 5.1 ist ein Fehler). Beide liefern dieselben Objekte, Warnungen und Verbose-Meldungen — ein Paritätstest vergleicht jedes Feld. Der C#-Parser ist deutlich schneller (gemessen an einem synthetischen 15-MB-Log: 1,6 s statt 13–14 s, höchster Arbeitsspeicher 196 MB statt 287 MB). Einmal mit dem .NET SDK bauen:
 
 ```powershell
 pwsh -File ./tools/Invoke-QualityGate.ps1 -Gate Build    # -> bin/FirebirdTraceParser.dll
 .\Show-TraceStructure.ps1 -Path trace.log -Verbose        # "Engine: CSharp"
 ```
 
-**Eigenschaften der Ausgabe-Objekte:**
-*   `Timestamp`: Zeitstempel des Events.
-*   `DurationMs`: Ausführungsdauer in Millisekunden.
-*   `SqlStatement`: Die vollständige SQL-Abfrage.
-*   `SqlPlan`: Ausführungsplan (z.B. `NATURAL`, `INDEX`).
-*   `Fetches`, `Reads`, `Writes`, `Marks`: E/A-Statistiken.
-*   `User` (`BENUTZER:ROLLE`), `ClientIP`, `ClientPort`, `ProtocolInfo`, `DatabasePath`, `AttachID`: Verbindungsdetails.
-*   `ApplicationPath`, `ApplicationPID`: Client-Anwendung.
-*   `TransactionID`, `RootTxID`, `TransactionOptions`: Transaktion (`RootTxID` = Ausgangstransaktion, `NoTx` wenn keine).
-*   `Params`: Statement-Parameter (`param0 = typ, "wert"`).
-*   `TableStats`: Tabellenstatistik je Tabelle (`Natural`, `Index`, …), Spaltenausrichtung bleibt erhalten.
-*   `Timestamp`, `ProcessID`, `SessionID`: Kopfzeile jedes Trace-Ereignisses.
-*   `Action`: Ereignisname, z. B. `EXECUTE_STATEMENT_FINISH`, `FAILED EXECUTE_STATEMENT_FINISH`, `ERROR`, `WARNING`, `SWEEP_FINISH`, `START_SERVICE`.
-*   `ErrorSource`, `ErrorCodes`, `ErrorMessages`: Bei `ERROR AT …` / `WARNING AT …` (z. B. Deadlocks, Sperrkonflikte).
-*   `ServiceName`, `ServiceID`: Bei Dienst-Ereignissen (`ATTACH_SERVICE`, `START_SERVICE`, …), z. B. `Backup Database`; Benutzer, Adresse und Programm des Dienstes stehen in den Verbindungsfeldern. Braucht `log_services` (in `fbtrace50.conf` an).
-*   `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext`: Transaktionszähler bei `SWEEP_START` / `SWEEP_FINISH`. Braucht `log_sweep` (in `fbtrace50.conf` an).
-*   `RecordsFetched`: Zahl der gelieferten Datensätze (`N records fetched`); `Fetches` zählt dagegen Seitenzugriffe. `0`, wenn die Zeile fehlt (Firebird lässt sie bei Prozeduren mit 0 Datensätzen weg).
-*   `TxIsolation` (`READ_COMMITTED`, `CONCURRENCY`, `CONSISTENCY`), `TxReadMode` (`REC_VERSION`, `NO_REC_VERSION`, `READ_CONSISTENCY`; nur bei `READ_COMMITTED`), `TxWaitMode` (`WAIT`, `NOWAIT`), `TxLockTimeout` (Sekunden bei `WAIT <n>`, sonst leer), `TxAccessMode` (`READ_WRITE`, `READ_ONLY`): die Teile von `TransactionOptions`.
-*   `TableCounts`: `TableStats` als Liste mit einem Objekt je Tabelle (`Table`, `Natural`, `Index`, `Update`, `Insert`, `Delete`, `Backout`, `Purge`, `Expunge`; leere Zelle = `0`). Es ist eine Liste: für CSV aufklappen (`$_.TableCounts | Select-Object …`) oder `TableStats` exportieren.
-*   `RoutineType` (`Procedure`, `Function`, `Trigger`), `RoutineName`: Bei `EXECUTE_PROCEDURE_FINISH`, `EXECUTE_FUNCTION_FINISH`, `EXECUTE_TRIGGER_FINISH` (auch `FAILED …`); Laufzeit, I/O, Parameter und Tabellenstatistik stehen in den üblichen Feldern. Filtern über `Action` oder `RoutineType`; Statements bleiben unverändert. Braucht `log_procedure_finish` / `log_function_finish` / `log_trigger_finish` (in `fbtrace50.conf` aus; Trigger können sehr viele Ereignisse erzeugen).
-*   `TriggerTable`, `TriggerTime` (`BEFORE`, `AFTER`, `ON` bei Datenbank-Triggern), `TriggerEvent` (`INSERT`, `UPDATE`, `DELETE`, `CONNECT`, …): Die Trigger-Zeile; Firebird 4 und 5 schreiben sie verschieden, beide werden gelesen.
-*   `ConnectionDurationMs`: Bei `DETACH_DATABASE` die Zeit seit dem `ATTACH_DATABASE` derselben Verbindung in dieser Datei; leer, wenn die Verbindung vor dem Trace begann.
+**Ausgabe-Objekte.** Jedes Objekt hat alle 46 Eigenschaften; was zu einem Ereignis nicht passt, ist `$null` (Zähler `0`). Welches Ereignis welche Felder füllt, steht je `Action` in [docs/features/TRACE_PARSING.md](docs/features/TRACE_PARSING.md).
+
+| Gruppe | Eigenschaften |
+|---|---|
+| Ereignis | `Timestamp` (Text), `Action` (z. B. `EXECUTE_STATEMENT_FINISH`, `FAILED EXECUTE_STATEMENT_FINISH`, `START_TRANSACTION`, `ERROR`, `WARNING`, `SWEEP_FINISH`, `START_SERVICE`), `ProcessID`, `SessionID` |
+| Verbindung | `AttachID` (die Nummer aus `ATT_<n>`), `User` (`BENUTZER:ROLLE`), `ClientIP`, `ClientPort`, `ProtocolInfo`, `DatabasePath` |
+| Anwendung | `ApplicationPath`, `ApplicationPID` |
+| Transaktion | `TransactionID`, `RootTxID` (Ausgangstransaktion, `NoTx` wenn keine), `TransactionOptions` und seine Teile `TxIsolation`, `TxReadMode`, `TxWaitMode`, `TxLockTimeout`, `TxAccessMode` |
+| SQL | `SqlStatement`, `SqlPlan`, `Params` (`param0 = typ, "wert"`) |
+| Leistung | `DurationMs`, `Reads`, `Writes`, `Fetches`, `Marks` (Zähler, `long`), `RecordsFetched` (gelieferte Datensätze; `Fetches` zählt Seitenzugriffe; `0`, wenn die Zeile fehlt) |
+| Tabellenstatistik | `TableStats` (Text, Spaltenausrichtung bleibt erhalten) und `TableCounts` (Liste, je Tabelle ein Objekt: `Table`, `Natural`, `Index`, `Update`, `Insert`, `Delete`, `Backout`, `Purge`, `Expunge`; für CSV aufklappen oder `TableStats` exportieren) |
+| Fehler | `ErrorSource`, `ErrorCodes`, `ErrorMessages` — bei `ERROR AT …` / `WARNING AT …` (Deadlocks, Sperrkonflikte, SQL-Fehler) |
+| Routinen | `RoutineType` (`Procedure`, `Function`, `Trigger`), `RoutineName`, `TriggerTable`, `TriggerTime`, `TriggerEvent`; braucht `log_procedure_finish` / `log_function_finish` / `log_trigger_finish` (in `fbtrace50.conf` aus; Trigger können sehr viele Ereignisse erzeugen) |
+| Sonstiges | `ConnectionDurationMs` (bei `DETACH_DATABASE`: Zeit seit dem `ATTACH_DATABASE` derselben Verbindung in dieser Datei; leer, wenn die Verbindung vor dem Trace begann), `ServiceName`, `ServiceID` (braucht `log_services`), `SweepOIT`, `SweepOAT`, `SweepOST`, `SweepNext` (braucht `log_sweep`) |
+
+Nicht jedes Ereignis hat jedes Feld. Die wichtigsten Fälle:
+
+| Ereignis | Enthält | Enthält **nicht** |
+|---|---|---|
+| `EXECUTE_STATEMENT_FINISH` | SQL, Plan, Parameter, Tabellenstatistik, Leistung, Transaktion, Verbindung | — |
+| `EXECUTE_PROCEDURE/FUNCTION/TRIGGER_FINISH` | Routinenname, Parameter, Leistung | `SqlStatement` |
+| `ERROR`, `WARNING` | Verbindung, Quelle, Codes, Meldungen | SQL, Transaktion, Leistung — **ein Fehlerereignis sagt nicht, welches Statement es ausgelöst hat** |
+| `FAILED EXECUTE_STATEMENT_FINISH` | SQL und Parameter | den Fehlertext (er steht in einem eigenen `ERROR`-Ereignis) |
+| `START_/COMMIT_/ROLLBACK_TRANSACTION` | Transaktion, Verbindung | SQL |
 
 ### Der Pseudonymisierer: `Pseudonymize-FirebirdTrace.ps1`
 Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
@@ -109,17 +140,16 @@ Entwickelt für DSGVO/GDPR-Konformität beim Teilen von Logs.
 **Parameter:**
 *   `-SensitiveKeywords "A", "B"`: Liste von Wörtern, die immer gehasht werden sollen.
 *   `-RedactLiterals`: Zwingt das Hashen **ALLER** Zeichenfolgen (empfohlen für maximale Sicherheit).
-*   `-AnalyzeOnly`: Vorschau, was geschwärzt würde, ohne Daten zu ändern.
+*   `-AnalyzeOnly`: Vorschau, was geschwärzt würde, ohne Daten zu ändern (der Bericht geht nur auf die Konsole, im Klartext).
 *   `-KeyFile <pfad>`: Geheimer Schlüssel (wird erzeugt, wenn er fehlt). Gleicher Schlüssel = gleiche Pseudonyme über mehrere Läufe. Ohne ihn gilt ein Zufallsschlüssel nur für diesen Lauf.
 *   `-MappingFile <pfad>`: Optionale CSV `Pseudonym;Original`, damit der Verantwortliche Ergebnisse zurückführen kann. Enthält Klartext.
+*   `-HashLength <8..64>`: Länge des Pseudonyms (Standard 12).
 
 **Pseudonymisiert:** `User`, `ClientIP` (auch in `ProtocolInfo`), `ApplicationPath`, `DatabasePath`, Werte in `Params`; mit `-RedactLiterals` zusätzlich alle Zeichenketten und Zahlen in `SqlStatement` und Werte in `ErrorMessages`.
 **Nicht pseudonymisiert:** `SqlPlan`, `TableStats`, `TableCounts` sowie Tabellen-/Indexnamen (für die Analyse nötig; `-SensitiveKeywords` verbirgt sie nicht — müssen Tabellennamen geheim bleiben, diese Felder weglassen), technische IDs, Zeitstempel, Zähler (auch `RecordsFetched`, `ConnectionDurationMs`), Transaktionsoptionen, `ServiceName`/`ServiceID` und Sweep-Zähler, Namen von Prozeduren, Funktionen und Triggern (`RoutineName`, `TriggerTable`; Schema-Namen wie Tabellennamen).
 
 > [!WARNING]
 > **Sicherheitshinweis**: Dieses Werkzeug pseudonymisiert (Hash mit Schlüssel, HMAC-SHA256), es anonymisiert nicht. Wer den Schlüssel hat, kann vermutete Werte prüfen; für den Verantwortlichen bleiben die Daten personenbezogen (DSGVO). Schlüssel- und Zuordnungsdatei (`-MappingFile`) nie weitergeben.
-
----
 
 ### Trace aufzeichnen: `trace_start.ps1` / `trace_stop.ps1`
 Startet und stoppt eine Firebird-Trace-Sitzung (Firebird 4.0 / 5.0) mit `fbtracemgr`. Braucht **PowerShell 7.4+** (die Logdatei wird byte-genau geschrieben).
@@ -145,8 +175,7 @@ Startet und stoppt eine Firebird-Trace-Sitzung (Firebird 4.0 / 5.0) mit `fbtrace
 | `OutputDirectory` | Ziel der Logdatei `trace_output_<Zeitstempel>.log` (`%VAR%` erlaubt) |
 | `SessionName` | Präfix des Sitzungsnamens; `trace_stop.ps1` findet die Sitzung über diesen Namen |
 
-#### Eigener Trace-Benutzer statt SYSDBA (Firebird 4/5)
-Ein normaler Benutzer darf fremde Verbindungen tracen, wenn eine Rolle mit dem Systemrecht `TRACE_ANY_ATTACHMENT` aktiv ist. Als SYSDBA, verbunden mit der Datenbank, die aufgezeichnet werden soll (Namen sind Beispiele):
+Ein Trace-Benutzer mit Rolle statt SYSDBA (Firebird 4/5; Namen sind Beispiele), als SYSDBA, verbunden mit der Datenbank, die aufgezeichnet werden soll:
 
 ```sql
 CREATE USER TRACE_USER PASSWORD '<neues Passwort>';
@@ -154,7 +183,7 @@ CREATE ROLE TRACER SET SYSTEM PRIVILEGES TO TRACE_ANY_ATTACHMENT;
 GRANT DEFAULT TRACER TO USER TRACE_USER;
 ```
 
-Danach in `config.json`: `"Username": "TRACE_USER"`, `"Role": "TRACER"` und das Passwort von `TRACE_USER` in die Passwortdatei (oder `"UseTrustedAuth": true`). Stand das SYSDBA-Passwort je auf einer Befehlszeile (z. B. `fbtracemgr -PASS`), das Passwort ändern. Ausführlich: [docs/operations/SETUP.md](docs/operations/SETUP.md).
+Danach in `config.json`: `"Username": "TRACE_USER"`, `"Role": "TRACER"` und das Passwort von `TRACE_USER` in die Passwortdatei (oder `"UseTrustedAuth": true`). Stand das SYSDBA-Passwort je auf einer Befehlszeile (z. B. `fbtracemgr -PASS`), das Passwort ändern. Ausführlich: [docs/operations/SETUP.md](docs/operations/SETUP.md) und das [Adminhandbuch](docs/handbuch/ADMINHANDBUCH.md).
 
 Exit-Codes: 0 ok, 1 `config.json` fehlt, 2 Konfiguration ungültig (alle Fehler werden genannt; auch, wenn noch ein Schlüssel `Password` drinsteht), 3 keine Sitzung gefunden, 4 mehrere Sitzungen passen, 5 Fehler von `fbtracemgr`, 6 unerwarteter Fehler.
 
